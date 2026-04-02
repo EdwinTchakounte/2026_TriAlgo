@@ -1,11 +1,4 @@
-@startuml TRIALGO_Entites
-
-' =============================================================
-' DIAGRAMME DE CLASSES DES ENTITES — TRIALGO v3.1
-' =============================================================
-' Uniquement les entites du systeme avec leurs relations.
-' Les elements [NEW] comblent les ecarts wireframes <-> backend.
-' =============================================================
+@startuml TRIALGO_Entites_v32
 
 skinparam classAttributeIconSize 0
 skinparam linetype ortho
@@ -34,22 +27,37 @@ skinparam enum {
   FontColor #FFFFFF
 }
 
-title **TRIALGO v3.1 — Diagramme de Classes des Entites**\n(avec corrections wireframes ↔ backend)
+title **TRIALGO v3.2 — Diagramme de Classes des Entités**\n(Deck + Mode Individuel + Mode Collectif)
 
-' =============================================================
-' ENUM
-' =============================================================
-
+' === ENUMS ===
 enum CardType {
   emettrice
   cable
   receptrice
 }
 
-' =============================================================
-' ENTITE : CardEntity
-' =============================================================
+enum GameMode <<NEW>> {
+  solo
+  coop
+}
 
+' === DECK ===
+class CardDeckEntity <<NEW>> #2A1A0A {
+  + id : String
+  + name : String
+  + description : String?
+  + cardCount : int = 50
+  + isActive : bool = true
+}
+
+note right of CardDeckEntity
+  1 boîte physique = 1 deck.
+  Toutes les cartes, trios et
+  codes d'activation pointent
+  vers un deck.
+end note
+
+' === CARD ===
 class CardEntity {
   + id : String
   + cardType : CardType
@@ -65,7 +73,9 @@ class CardEntity {
   + rootEmettriceId : String?
   + difficultyScore : double = 0.5
   + isActive : bool = true
-  **+ label : String  [NEW]**
+  **+ label : String [NEW]**
+  **+ deckId : String [NEW]**
+  **+ qrCode : String? [NEW]**
   --
   + <<get>> imageUrl : String
   + <<get>> isRootEmettrice : bool
@@ -73,19 +83,7 @@ class CardEntity {
   + <<get>> isReceptrice : bool
 }
 
-note right of CardEntity
-  **[NEW] label** : nom affichable
-  de la carte ("Lion", "Miroir"...).
-  Utilise dans le jeu, la galerie
-  et les choix de la ScrollView.
-  Correspond a une colonne
-  **label TEXT** dans la table cards.
-end note
-
-' =============================================================
-' ENTITE : CardTrioEntity
-' =============================================================
-
+' === TRIO ===
 class CardTrioEntity {
   + id : String
   + emettriceId : String
@@ -94,12 +92,39 @@ class CardTrioEntity {
   + distanceLevel : int {1..3}
   + parentTrioId : String?
   + difficulty : double = 0.5
+  **+ deckId : String [NEW]**
 }
 
-' =============================================================
-' ENTITE : UserEntity
-' =============================================================
+' === QUESTION (MODE INDIVIDUEL) ===
+class GameQuestionEntity {
+  + visibleCards : List<CardEntity> {2}
+  + maskedCard : CardEntity {1}
+  + choices : List<CardEntity> {10}
+  + config : String {"A"|"B"|"C"}
+  + correctCardId : String
+  + trioId : String
+  + timeLimitSeconds : int
+}
 
+' === SCAN (MODE COLLECTIF) ===
+class ScanValidationEntity <<NEW>> #2A1A0A {
+  + scannedCardIds : List<String> {3}
+  + emettriceId : String?
+  + cableId : String?
+  + receptriceId : String?
+  + isValid : bool
+  + matchedTrioId : String?
+  + deckId : String
+}
+
+note bottom of ScanValidationEntity
+  Mode collectif : le joueur
+  scanne 3 QR codes physiques.
+  On vérifie si E+C=R dans
+  le même deck.
+end note
+
+' === USER ===
 class UserEntity {
   + id : String
   + username : String
@@ -108,26 +133,10 @@ class UserEntity {
   + currentLevel : int
   + lives : int {0..5}
   + livesLastRefill : DateTime?
+  **+ activeDeckId : String? [NEW]**
 }
 
-' =============================================================
-' ENTITE : GameQuestionEntity
-' =============================================================
-
-class GameQuestionEntity {
-  + visibleCards : List<CardEntity> {size=2}
-  + maskedCard : CardEntity
-  + choices : List<CardEntity> {size=10}
-  + config : String {"A"|"B"|"C"}
-  + correctCardId : String
-  + trioId : String
-  + timeLimitSeconds : int
-}
-
-' =============================================================
-' ENTITE : GameSessionEntity [NEW]
-' =============================================================
-
+' === SESSION ===
 class GameSessionEntity <<NEW>> #2A1A0A {
   + id : String
   + userId : String
@@ -139,29 +148,16 @@ class GameSessionEntity <<NEW>> #2A1A0A {
   + malusReceived : int = 0
   + durationSeconds : int?
   + completed : bool = false
-  **+ passed : bool = false  [NEW]**
-  **+ totalQuestions : int  [NEW]**
-  **+ maxStreak : int = 0  [NEW]**
+  **+ passed : bool = false [NEW]**
+  **+ totalQuestions : int [NEW]**
+  **+ maxStreak : int = 0 [NEW]**
+  **+ deckId : String [NEW]**
+  **+ gameMode : GameMode [NEW]**
   + startedAt : DateTime
   + endedAt : DateTime?
 }
 
-note left of GameSessionEntity
-  **[NEW] Entite manquante.**
-  Le code existant utilisait
-  Map<String, dynamic> au lieu
-  d'une vraie entite.
-  --
-  Ajouts pour les wireframes :
-  • **passed** : niveau reussi ?
-  • **totalQuestions** : nb total
-  • **maxStreak** : meilleure serie
-end note
-
-' =============================================================
-' ENTITE : UserLevelProgressEntity [NEW]
-' =============================================================
-
+' === PROGRESS ===
 class UserLevelProgressEntity <<NEW>> #2A1A0A {
   + id : String
   + userId : String
@@ -172,18 +168,7 @@ class UserLevelProgressEntity <<NEW>> #2A1A0A {
   + completedAt : DateTime?
 }
 
-note right of UserLevelProgressEntity
-  **[NEW] Table + entite a creer.**
-  Stocke la progression par niveau :
-  etoiles obtenues, meilleur score,
-  completion. Requis par le wireframe
-  **level_map** et **game_result**.
-end note
-
-' =============================================================
-' ENTITE : ActivationCodeEntity [NEW]
-' =============================================================
-
+' === ACTIVATION ===
 class ActivationCodeEntity <<NEW>> #2A1A0A {
   + id : String
   + codeValue : String
@@ -191,19 +176,10 @@ class ActivationCodeEntity <<NEW>> #2A1A0A {
   + deviceId : String?
   + userId : String?
   + activatedAt : DateTime?
+  **+ deckId : String [NEW]**
 }
 
-note bottom of ActivationCodeEntity
-  **[NEW] Entite manquante.**
-  Le code existant utilisait
-  directement l'Edge Function
-  sans entite structuree.
-end note
-
-' =============================================================
-' ENTITE : UnlockedCardEntity [NEW]
-' =============================================================
-
+' === UNLOCKED ===
 class UnlockedCardEntity <<NEW>> #2A1A0A {
   + id : String
   + userId : String
@@ -212,17 +188,7 @@ class UnlockedCardEntity <<NEW>> #2A1A0A {
   + unlockCount : int = 1
 }
 
-note bottom of UnlockedCardEntity
-  **[NEW] Entite pour la galerie.**
-  Represente une carte debloquee
-  par un joueur. Correspond a la
-  table **user_unlocked_cards**.
-end note
-
-' =============================================================
-' ENTITE : LevelConfig (Core — incluse car reference directe)
-' =============================================================
-
+' === LEVEL CONFIG ===
 class LevelConfig <<core>> #0D1A2E {
   + distance : int
   + configs : List<String>
@@ -233,61 +199,59 @@ class LevelConfig <<core>> #0D1A2E {
   + basePoints : int
 }
 
-' =============================================================
-' RELATIONS
-' =============================================================
+' === RELATIONS ===
 
-' --- CardEntity ---
-CardEntity --> CardType : cardType
-CardEntity "0..1" --> "0..1" CardEntity : parentEmettriceId\n(auto-reference)
-CardEntity "0..1" --> "0..1" CardEntity : parentCableId\n(auto-reference)
-CardEntity "0..1" --> "0..1" CardEntity : rootEmettriceId\n(auto-reference)
+' Deck → tout
+CardDeckEntity "1" --> "*" CardEntity : deckId
+CardDeckEntity "1" --> "*" CardTrioEntity : deckId
+CardDeckEntity "1" --> "*" ActivationCodeEntity : deckId
+CardDeckEntity "1" --> "*" GameSessionEntity : deckId
 
-' --- CardTrioEntity ---
-CardTrioEntity "1" --> "1" CardEntity : emettriceId\n(E)
-CardTrioEntity "1" --> "1" CardEntity : cableId\n(C)
-CardTrioEntity "1" --> "1" CardEntity : receptriceId\n(R)
-CardTrioEntity "0..1" --> "0..1" CardTrioEntity : parentTrioId\n(chaine D1→D2→D3)
+' Card
+CardEntity --> CardType
+CardEntity "0..1" --> "0..1" CardEntity : parentEmettriceId
+CardEntity "0..1" --> "0..1" CardEntity : parentCableId
+CardEntity "0..1" --> "0..1" CardEntity : rootEmettriceId
 
-' --- GameQuestionEntity ---
+' Trio → Card
+CardTrioEntity "1" --> "1" CardEntity : emettriceId
+CardTrioEntity "1" --> "1" CardEntity : cableId
+CardTrioEntity "1" --> "1" CardEntity : receptriceId
+CardTrioEntity "0..1" --> "0..1" CardTrioEntity : parentTrioId
+
+' Question (individuel)
 GameQuestionEntity "1" *-- "2" CardEntity : visibleCards
 GameQuestionEntity "1" *-- "1" CardEntity : maskedCard
 GameQuestionEntity "1" *-- "10" CardEntity : choices
 GameQuestionEntity "1" --> "1" CardTrioEntity : trioId
-GameQuestionEntity ..> LevelConfig : timeLimitSeconds\n(derive de)
 
-' --- GameSessionEntity ---
-GameSessionEntity "0..*" --> "1" UserEntity : userId
-GameSessionEntity ..> LevelConfig : levelNumber\n(derive config de)
+' Scan (collectif)
+ScanValidationEntity "1" --> "3" CardEntity : scannedCardIds
+ScanValidationEntity "0..1" --> "0..1" CardTrioEntity : matchedTrioId
+ScanValidationEntity "1" --> "1" CardDeckEntity : deckId
 
-' --- UserLevelProgressEntity ---
-UserLevelProgressEntity "0..*" --> "1" UserEntity : userId
-UserLevelProgressEntity ..> GameSessionEntity : calcule depuis\nmeilleure session
-
-' --- ActivationCodeEntity ---
+' User
+UserEntity "0..1" --> "0..1" CardDeckEntity : activeDeckId
+GameSessionEntity "*" --> "1" UserEntity : userId
+GameSessionEntity --> GameMode
+UserLevelProgressEntity "*" --> "1" UserEntity : userId
 ActivationCodeEntity "0..1" --> "0..1" UserEntity : userId
+UnlockedCardEntity "*" --> "1" UserEntity : userId
+UnlockedCardEntity "*" --> "1" CardEntity : cardId
 
-' --- UnlockedCardEntity ---
-UnlockedCardEntity "0..*" --> "1" UserEntity : userId
-UnlockedCardEntity "0..*" --> "1" CardEntity : cardId
-
-' =============================================================
-' LEGENDE
-' =============================================================
-
-legend bottom
+legend right
   |= Couleur |= Signification |
-  | <#1A1A2E> | Entite existante |
-  | <#2A1A0A> | **[NEW]** Entite a creer |
-  | <#0D1A2E> | Classe Core (reference) |
+  | <#1A1A2E> | Entité existante |
+  | <#2A1A0A> | **[NEW]** Entité à créer |
+  | <#0D1A2E> | Classe Core |
   --
-  **6 corrections appliquees :**
-  1. **label** ajoute dans CardEntity
-  2. **GameSessionEntity** creee (remplace Map<String, dynamic>)
-  3. **passed / totalQuestions / maxStreak** ajoutes dans GameSessionEntity
-  4. **UserLevelProgressEntity** creee (etoiles + completion par niveau)
-  5. **ActivationCodeEntity** creee (structure le code d'activation)
-  6. **UnlockedCardEntity** creee (galerie des cartes debloquees)
+  **v3.2 — Ajouts :**
+  1. **CardDeckEntity** (1 boîte = 1 deck)
+  2. **deckId** partout (cards, trios, sessions, codes)
+  3. **qrCode** sur CardEntity (scan physique)
+  4. **activeDeckId** sur UserEntity
+  5. **ScanValidationEntity** (mode collectif)
+  6. **GameMode** enum (solo/coop)
 endlegend
 
 @enduml
