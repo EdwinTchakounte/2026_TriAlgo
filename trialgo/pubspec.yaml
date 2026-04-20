@@ -60,6 +60,22 @@ dependencies:
   # Utilise pour lier un code d'activation a UN seul telephone.
   device_info_plus: ^11.1.1
 
+  # shared_preferences : stockage local cle/valeur (settings, cache).
+  # Utilise pour stocker l'etat utilisateur en local (vies, score, etc.)
+  # et garantir que le jeu fonctionne meme hors-ligne.
+  shared_preferences: ^2.3.3
+
+  # audioplayers : lecture audio (effets sonores et musique de fond).
+  # Multi-plateforme (Android, iOS, Web, Desktop).
+  audioplayers: ^6.1.0
+
+  # app_links : ecoute les deep-links entrants ("trialgo://...").
+  # Utilise pour le flux de reset password : l'email contient un
+  # lien qui rouvre l'app sur la page "nouveau mot de passe".
+  # Le package expose un Stream<Uri> et getInitialLink() pour
+  # traiter le cas ou l'app a ete LANCEE par un lien (cold start).
+  app_links: ^6.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -49,6 +49,28 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- =============================================================
+	     DEEP LINK : rouvre l'app depuis "trialgo://..." (reset mdp)
+	     =============================================================
+	     - CFBundleURLSchemes : liste les schemes que l'app sait gerer.
+	     - CFBundleURLName    : identifiant libre, reverse-DNS par
+	       convention, independant du scheme reel.
+	     - CFBundleTypeRole   : "Editor" (on est l'app qui gere ce scheme),
+	       vs "Viewer" (on peut seulement le lire).
+	     ============================================================= -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.trialgo.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>trialgo</string>
+			</array>
+		</dict>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

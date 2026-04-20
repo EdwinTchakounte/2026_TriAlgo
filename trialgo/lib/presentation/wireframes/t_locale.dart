@@ -104,12 +104,28 @@ class TLocale extends InheritedWidget {
     'auth.password': 'Mot de passe',
     'auth.login': 'Se connecter',
     'auth.signup': 'Creer mon compte',
-    'auth.or': 'ou',
-    'auth.google': 'Continuer avec Google',
     'auth.no_account': 'Pas de compte ? ',
     'auth.has_account': 'Deja un compte ? ',
     'auth.signup_link': 'S\'inscrire',
     'auth.login_link': 'Se connecter',
+    'auth.forgot_password': 'Mot de passe oublie ?',
+
+    // --- Forgot password ---
+    'forgot.title': 'Mot de passe oublie',
+    'forgot.desc': 'Entrez votre email, nous vous enverrons un lien pour le reinitialiser.',
+    'forgot.send': 'Envoyer le lien',
+    'forgot.sent_title': 'Email envoye',
+    'forgot.sent_desc': 'Consultez votre boite mail et cliquez sur le lien pour choisir un nouveau mot de passe.',
+    'forgot.back_to_login': 'Retour a la connexion',
+
+    // --- New password ---
+    'newpwd.title': 'Nouveau mot de passe',
+    'newpwd.desc': 'Choisissez un nouveau mot de passe pour votre compte.',
+    'newpwd.new': 'Nouveau mot de passe',
+    'newpwd.confirm': 'Confirmer le mot de passe',
+    'newpwd.submit': 'Enregistrer',
+    'newpwd.success': 'Mot de passe mis a jour !',
+    'newpwd.mismatch': 'Les deux mots de passe ne correspondent pas',
 
     // --- Activation ---
     'activation.title': 'Activez votre jeu',
@@ -121,6 +137,8 @@ class TLocale extends InheritedWidget {
 
     // --- Home ---
     'home.play': 'JOUER',
+    'home.tagline_small': 'TRIALGO',
+    'home.tagline_big': 'Observe. Deduis. Gagne.',
     'home.tutorial': 'Tutoriel',
     'home.tutorial_desc': 'Apprendre',
     'home.gallery': 'Galerie',
@@ -133,6 +151,23 @@ class TLocale extends InheritedWidget {
     'home.streak': 'Serie',
     'home.next_life': '+1 dans',
     'home.min': 'min',
+    'home.instr_observe': 'Observe les cartes du trio',
+    'home.instr_find': 'Trouve la carte manquante',
+    'home.instr_tap': 'Tap la carte du jeu pour commencer',
+    'home.instr_zoom': 'Double-tap pour zoomer une carte',
+
+    // --- Onboarding (premier login) ---
+    'onb.skip': 'Passer',
+    'onb.next': 'Suivant',
+    'onb.start': 'Commencer',
+    'onb.1_title': 'Bienvenue sur TRIALGO',
+    'onb.1_body': 'Le jeu d\'observation ou chaque carte compte. Prouve ta logique.',
+    'onb.2_title': 'Le trio magique',
+    'onb.2_body': 'Emettrice + Cable = Receptrice. Trouve la carte manquante pour gagner.',
+    'onb.3_title': 'Observe et deduis',
+    'onb.3_body': 'Tap une carte pour repondre. Double-tap pour la voir en grand.',
+    'onb.4_title': 'Pret a jouer ?',
+    'onb.4_body': 'Gagne des points, debloque de nouveaux niveaux. L\'aventure commence.',
 
     // --- Game ---
     'game.question': 'Quelle image complete ce trio ?',
@@ -247,6 +282,8 @@ class TLocale extends InheritedWidget {
     'help.a6': 'Entrez le code de 16 caracteres qui se trouve dans votre boite de jeu TRIALGO. Le code est lie a un seul appareil.',
     'help.q7': 'Comment progresser dans les niveaux ?',
     'help.a7': 'Reussissez le seuil de bonnes reponses pour debloquer le niveau suivant. Les niveaux avances utilisent des distances plus grandes (D2, D3) et des configurations plus difficiles.',
+    'help.q8': 'Comment jouer au quotidien ?',
+    'help.a8': 'Trouvez la carte manquante parmi les choix proposes. Vous pouvez double-tapper une carte pour la zoomer et mieux observer les details.',
 
     // --- Edit username ---
     'edit_username.title': 'Modifier le pseudo',
@@ -280,12 +317,28 @@ class TLocale extends InheritedWidget {
     'auth.password': 'Password',
     'auth.login': 'Sign in',
     'auth.signup': 'Create account',
-    'auth.or': 'or',
-    'auth.google': 'Continue with Google',
     'auth.no_account': 'No account? ',
     'auth.has_account': 'Already have an account? ',
     'auth.signup_link': 'Sign up',
     'auth.login_link': 'Sign in',
+    'auth.forgot_password': 'Forgot password?',
+
+    // --- Forgot password ---
+    'forgot.title': 'Forgot password',
+    'forgot.desc': 'Enter your email, we will send you a link to reset it.',
+    'forgot.send': 'Send link',
+    'forgot.sent_title': 'Email sent',
+    'forgot.sent_desc': 'Check your inbox and click the link to choose a new password.',
+    'forgot.back_to_login': 'Back to sign in',
+
+    // --- New password ---
+    'newpwd.title': 'New password',
+    'newpwd.desc': 'Pick a new password for your account.',
+    'newpwd.new': 'New password',
+    'newpwd.confirm': 'Confirm password',
+    'newpwd.submit': 'Save',
+    'newpwd.success': 'Password updated!',
+    'newpwd.mismatch': 'Passwords do not match',
 
     // --- Activation ---
     'activation.title': 'Activate your game',
@@ -297,6 +350,8 @@ class TLocale extends InheritedWidget {
 
     // --- Home ---
     'home.play': 'PLAY',
+    'home.tagline_small': 'TRIALGO',
+    'home.tagline_big': 'Observe. Deduce. Win.',
     'home.tutorial': 'Tutorial',
     'home.tutorial_desc': 'Learn',
     'home.gallery': 'Gallery',
@@ -309,6 +364,23 @@ class TLocale extends InheritedWidget {
     'home.streak': 'Streak',
     'home.next_life': '+1 in',
     'home.min': 'min',
+    'home.instr_observe': 'Observe the trio cards',
+    'home.instr_find': 'Find the missing card',
+    'home.instr_tap': 'Tap the game card to begin',
+    'home.instr_zoom': 'Double-tap to zoom a card',
+
+    // --- Onboarding (first login) ---
+    'onb.skip': 'Skip',
+    'onb.next': 'Next',
+    'onb.start': 'Start',
+    'onb.1_title': 'Welcome to TRIALGO',
+    'onb.1_body': 'The observation game where every card matters. Prove your logic.',
+    'onb.2_title': 'The magic trio',
+    'onb.2_body': 'Emitter + Cable = Receiver. Find the missing card to win.',
+    'onb.3_title': 'Observe and deduce',
+    'onb.3_body': 'Tap a card to answer. Double-tap to see it full screen.',
+    'onb.4_title': 'Ready to play?',
+    'onb.4_body': 'Earn points, unlock new levels. The adventure begins.',
 
     // --- Game ---
     'game.question': 'Which image completes this trio?',
@@ -426,6 +498,8 @@ class TLocale extends InheritedWidget {
     'help.a6': 'Enter the 16-character code found in your TRIALGO game box. The code is linked to a single device.',
     'help.q7': 'How to progress through levels?',
     'help.a7': 'Reach the correct answer threshold to unlock the next level. Advanced levels use greater distances (D2, D3) and harder configurations.',
+    'help.q8': 'How to play daily?',
+    'help.a8': 'Find the missing card among the choices. You can double-tap a card to zoom in and observe the details more closely.',
 
     // --- Edit username ---
     'edit_username.title': 'Edit username',

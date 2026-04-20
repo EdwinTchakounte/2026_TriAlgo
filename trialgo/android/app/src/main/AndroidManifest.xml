@@ -24,6 +24,28 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- =============================================================
+                 DEEP LINK : reset de mot de passe
+                 =============================================================
+                 Intercepte les URIs "trialgo://..." pour rouvrir l'app
+                 depuis l'exterieur (par ex. un clic dans un email).
+                 Exemple d'URI recue : trialgo://reset-password#access_token=...
+
+                 - action VIEW + category BROWSABLE : requis pour qu'une URL
+                   cliquee dans un navigateur/mail puisse ouvrir l'app.
+                 - category DEFAULT : permet l'ouverture implicite sans
+                   composant explicite cote appelant.
+                 - autoVerify="false" : ce n'est PAS une App Link verifiee
+                   (on n'a pas besoin d'App Links Digital Asset Link ici,
+                   c'est un scheme custom, pas https://).
+                 ============================================================= -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="trialgo"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
