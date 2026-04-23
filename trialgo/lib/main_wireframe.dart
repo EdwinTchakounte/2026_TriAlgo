@@ -34,6 +34,10 @@ import 'package:trialgo/core/network/supabase_client.dart';
 // pour traiter les tokens contenus dans les URIs entrantes.
 import 'package:trialgo/data/services/deep_link_service.dart';
 
+// Etat global (langue + theme mode). loadFromPrefs() doit etre
+// appele avant runApp pour restaurer les preferences utilisateur.
+import 'package:trialgo/presentation/wireframes/t_app_state.dart';
+
 // Import du widget racine du wireframe.
 import 'package:trialgo/presentation/wireframes/t_wireframe_app.dart';
 
@@ -51,6 +55,12 @@ void main() async {
   // Apres cet appel, on peut utiliser le getter global "supabase"
   // pour faire des requetes (cards, nodes, auth, etc.).
   await initSupabase();
+
+  // Restaure les preferences utilisateur (langue + mode de theme)
+  // depuis SharedPreferences. Sans ce chargement, l'app demarre
+  // toujours en FR / system theme, meme si l'utilisateur avait
+  // change ces reglages a sa derniere session.
+  await appState.loadFromPrefs();
 
   // Initialise le service d'ecoute des deep-links.
   // Declenche immediatement le traitement du lien qui a lance l'app

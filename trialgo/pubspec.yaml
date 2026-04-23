@@ -76,6 +76,12 @@ dependencies:
   # traiter le cas ou l'app a ete LANCEE par un lien (cold start).
   app_links: ^6.3.2
 
+  # mobile_scanner : scan QR code via la camera pour le mode collectif.
+  # Utilise pour verifier qu'un trio de 3 cartes physiques forme
+  # une relation valide dans le graphe (appel RPC verify_trio_cards).
+  # Chaque carte physique a un QR code encodant son UUID (cards.id).
+  mobile_scanner: ^5.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

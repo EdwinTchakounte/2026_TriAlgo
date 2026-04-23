@@ -1,22 +1,47 @@
 // =============================================================
 // FICHIER : lib/presentation/wireframes/t_game_result_page.dart
-// ROLE   : Ecran de resultats premium avec animation
+// ROLE   : Ecran de resultat de partie - celebration theatrale
 // COUCHE : Presentation > Wireframes
 // =============================================================
 //
-// Design premium : animation de fondu, etoiles animees,
-// statistiques en cards, boutons d'action.
+// REFONTE (vs version precedente) :
+// ---------------------------------
+//   - Remplace le fade-in generique par une SEQUENCE theatrale 2.8s :
+//     1. (0-400ms)     Titre + mascot bounce in
+//     2. (400-1600ms)  Mascotte (trio si succes, duo si echec)
+//     3. (1600-2000ms) 3 etoiles en stagger (200ms entre chaque)
+//     4. (2000-2800ms) Score count-up animated
+//   - Particules dorees en fond (cohesion avec splash/activation)
+//   - Stats en 3 cartes avec icones colorees (plus de liste plate)
+//   - CTA principal gradient + CTA ghost retour accueil
+//   - Theme-aware via TColors.of(context)
 //
-// REFERENCE : Recueil v3.0, section 12.7
+// CONTRAT PRESERVE :
+// ------------------
+//   - Meme constructeur (passed, level, score, correct, wrong,
+//     total, maxStreak)
+//   - Meme navigation : TGamePage(level+1 si success ou level si retry)
+//     et THomePage en fallback
 // =============================================================
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/design_system/tokens/radius.dart';
+import 'package:trialgo/core/design_system/tokens/spacing.dart';
+import 'package:trialgo/core/design_system/tokens/typography.dart';
+import 'package:trialgo/presentation/widgets/core/app_button.dart';
+import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
 import 'package:trialgo/presentation/wireframes/t_game_page.dart';
 import 'package:trialgo/presentation/wireframes/t_home_page.dart';
 import 'package:trialgo/presentation/wireframes/t_locale.dart';
-import 'package:trialgo/presentation/wireframes/t_theme.dart';
+import 'package:trialgo/presentation/wireframes/t_mock_data.dart';
 
-/// Ecran de resultats premium apres un niveau.
+
+/// Ecran de resultat apres une partie (celebration theatrale).
 class TGameResultPage extends StatefulWidget {
   final bool passed;
   final int level;
@@ -27,9 +52,14 @@ class TGameResultPage extends StatefulWidget {
   final int maxStreak;
 
   const TGameResultPage({
-    required this.passed, required this.level, required this.score,
-    required this.correctAnswers, required this.wrongAnswers,
-    required this.totalQuestions, required this.maxStreak, super.key,
+    required this.passed,
+    required this.level,
+    required this.score,
+    required this.correctAnswers,
+    required this.wrongAnswers,
+    required this.totalQuestions,
+    required this.maxStreak,
+    super.key,
   });
 
   @override
@@ -37,209 +67,486 @@ class TGameResultPage extends StatefulWidget {
 }
 
 class _TGameResultPageState extends State<TGameResultPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeIn;
-  late Animation<double> _slideUp;
+    with TickerProviderStateMixin {
+
+  /// Controller de la sequence principale (2800ms).
+  late final AnimationController _sequence;
+
+  /// Controller en boucle infinie pour les particules de fond.
+  late final AnimationController _particles;
+
+  /// Liste de particules dorees en fond.
+  final List<_ResultParticle> _particleList = [];
+  final math.Random _rnd = math.Random();
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _sequence = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 2800),
     );
-    _fadeIn = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _slideUp = Tween<double>(begin: 30, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
-    _controller.forward();
+
+    _particles = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )
+      ..addListener(() {
+        for (final p in _particleList) {
+          p.update();
+        }
+      })
+      ..repeat();
+
+    // Plus de particules si succes 3 etoiles (effet confetti).
+    final particleCount = widget.passed ? 40 : 16;
+    for (int i = 0; i < particleCount; i++) {
+      _particleList.add(_ResultParticle.random(_rnd));
+    }
+
+    // Demarrer la sequence theatrale.
+    _playSequence();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _sequence.dispose();
+    _particles.dispose();
     super.dispose();
+  }
+
+  /// Joue la sequence + haptic/son synchronises aux moments cles.
+  Future<void> _playSequence() async {
+    // Demarre l'animation globale.
+    _sequence.forward();
+
+    // Haptic medium au depart.
+    HapticFeedback.mediumImpact();
+
+    // Petits haptics a chaque etoile (1600ms, 1800ms, 2000ms si 3/3).
+    final stars = _computeStars();
+    for (int i = 0; i < stars; i++) {
+      await Future.delayed(Duration(milliseconds: 1600 + i * 200));
+      if (!mounted) return;
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  /// Calcule le nombre d'etoiles obtenu (0-3).
+  int _computeStars() {
+    if (!widget.passed) return 0;
+    final accuracy = widget.totalQuestions > 0
+        ? (widget.correctAnswers / widget.totalQuestions * 100).round()
+        : 0;
+    if (accuracy >= 90) return 3;
+    if (accuracy >= 70) return 2;
+    return 1;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = TColors.of(context);
     final tr = TLocale.of(context);
+    final stars = _computeStars();
     final accuracy = widget.totalQuestions > 0
         ? (widget.correctAnswers / widget.totalQuestions * 100).round()
         : 0;
 
-    final int stars;
-    if (!widget.passed) { stars = 0; }
-    else if (accuracy >= 90) { stars = 3; }
-    else if (accuracy >= 70) { stars = 2; }
-    else { stars = 1; }
+    return PageScaffold(
+      // Pas de back : on force le choix entre continuer ou retour accueil.
+      showBack: false,
+      child: Stack(
+        children: [
+          // --- Layer 1 : particules en fond (celebration subtile) ---
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _ResultParticlePainter(
+                particles: _particleList,
+                repaint: _particles,
+                gold: TColors.primaryVariant,
+              ),
+            ),
+          ),
 
-    return Scaffold(
-      body: TTheme.patterned(
-        child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _controller,
+          // --- Layer 2 : contenu orchestre ---
+          AnimatedBuilder(
+            animation: _sequence,
             builder: (context, _) {
-              return FadeTransition(
-                opacity: _fadeIn,
-                child: Transform.translate(
-                  offset: Offset(0, _slideUp.value),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 24),
+              final t = _sequence.value;
 
-                        // --- Icone de resultat ---
-                        Container(
-                          width: 100, height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: widget.passed
-                                  ? [const Color(0xFFF7C948).withValues(alpha: 0.3), const Color(0xFFFF6B35).withValues(alpha: 0.1)]
-                                  : [const Color(0xFFEF5350).withValues(alpha: 0.2), const Color(0xFFEF5350).withValues(alpha: 0.05)],
-                            ),
-                          ),
-                          child: Icon(
-                            widget.passed ? Icons.emoji_events_rounded : Icons.replay_rounded,
-                            size: 52,
-                            color: widget.passed ? const Color(0xFFF7C948) : const Color(0xFFEF5350),
-                          ),
-                        ),
+              // Intervalles narratifs (cf commentaire du header).
+              final titleIn = _interval(t, 0.0, 0.143);     // 0-400ms
+              final mascotIn = _interval(t, 0.143, 0.571);  // 400-1600ms
+              final starsIn = _interval(t, 0.571, 0.714);   // 1600-2000ms
+              final scoreIn = _interval(t, 0.714, 1.0);     // 2000-2800ms
 
-                        const SizedBox(height: 20),
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TSpacing.xxl,
+                  vertical: TSpacing.xxl,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: TSpacing.xl),
 
-                        Text(
-                          widget.passed ? '${tr('result.success')} ${widget.level}' : '${tr('result.failed')} ${widget.level}',
-                          style: TextStyle(
-                            fontSize: 26, fontWeight: FontWeight.w800,
-                            color: widget.passed ? Colors.white : const Color(0xFFEF5350),
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          widget.passed ? tr('result.congrats') : tr('result.retry_msg'),
-                          style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.4)),
-                        ),
-
-                        // --- Etoiles ---
-                        if (widget.passed) ...[
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(3, (i) => Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Icon(
-                                i < stars ? Icons.star_rounded : Icons.star_border_rounded,
-                                size: 44,
-                                color: i < stars ? const Color(0xFFF7C948) : Colors.white.withValues(alpha: 0.15),
+                    // --- Titre conditionnel ---
+                    Opacity(
+                      opacity: titleIn,
+                      child: Transform.scale(
+                        scale: _bouncyScale(titleIn),
+                        child: Column(
+                          children: [
+                            Text(
+                              widget.passed
+                                  ? tr('result.bravo')
+                                  : tr('result.almost'),
+                              style: TTypography.displaySm(
+                                color: widget.passed
+                                    ? TColors.primaryVariant
+                                    : TColors.info,
                               ),
-                            )),
+                            ),
+                            const SizedBox(height: TSpacing.xs),
+                            Text(
+                              (widget.passed
+                                      ? tr('result.level_passed')
+                                      : tr('result.level_retry'))
+                                  .replaceAll('{n}', '${widget.level}'),
+                              style: TTypography.bodyMd(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: TSpacing.xl),
+
+                    // --- Mascot qui surgit ---
+                    // Trio (img1) si succes, duo (img2) si echec.
+                    // Scale bounce avec easeOutBack.
+                    Opacity(
+                      opacity: mascotIn,
+                      child: Transform.scale(
+                        scale: _bouncyScale(mascotIn),
+                        child: Image.asset(
+                          widget.passed
+                              ? MockData.mascotMain
+                              : MockData.mascotDuo,
+                          height: 140,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: TSpacing.lg),
+
+                    // --- Etoiles (si succes) ou message d'echec ---
+                    if (widget.passed)
+                      _buildStars(stars, starsIn)
+                    else
+                      Opacity(
+                        opacity: starsIn,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: TSpacing.lg,
+                            vertical: TSpacing.md,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color.fromARGB(
+                              0x26,
+                              TColors.info.r.round(),
+                              TColors.info.g.round(),
+                              TColors.info.b.round(),
+                            ),
+                            borderRadius: TRadius.mdAll,
+                          ),
+                          child: Text(
+                            tr('result.keep_going'),
+                            style: TTypography.bodyMd(color: TColors.info),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: TSpacing.xxl),
+
+                    // --- Score anime count-up ---
+                    Opacity(
+                      opacity: scoreIn,
+                      child: Column(
+                        children: [
+                          Text(
+                            tr('result.score_label'),
+                            style:
+                                TTypography.labelSm(color: colors.textTertiary),
+                          ),
+                          const SizedBox(height: TSpacing.xs),
+                          // TweenAnimationBuilder pour count-up sur 800ms
+                          // demarre quand scoreIn > 0 (via AnimatedSwitcher
+                          // cle sur la valeur cible).
+                          TweenAnimationBuilder<int>(
+                            tween: IntTween(begin: 0, end: widget.score),
+                            duration: const Duration(milliseconds: 800),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, _) => Text(
+                              '$value',
+                              style: TTypography.displayMd(
+                                color: TColors.primary,
+                              ),
+                            ),
                           ),
                         ],
-
-                        const SizedBox(height: 28),
-
-                        // --- Stats ---
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                          ),
-                          child: Column(
-                            children: [
-                              _stat(tr('result.score'), '${widget.score} ${tr('common.pts')}', Icons.star_rounded, const Color(0xFFF7C948)),
-                              _divider(),
-                              _stat(tr('result.correct'), '${widget.correctAnswers}/${widget.totalQuestions}', Icons.check_circle_rounded, const Color(0xFF66BB6A)),
-                              _divider(),
-                              _stat(tr('result.accuracy'), '$accuracy%', Icons.percent_rounded, const Color(0xFF42A5F5)),
-                              _divider(),
-                              _stat(tr('result.max_streak'), '${widget.maxStreak}', Icons.local_fire_department_rounded, const Color(0xFFFF6B35)),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // --- Bouton principal ---
-                        SizedBox(
-                          width: double.infinity, height: 54,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: widget.passed
-                                    ? [const Color(0xFFFF6B35), const Color(0xFFFF8F5E)]
-                                    : [const Color(0xFF42A5F5), const Color(0xFF64B5F6)],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (widget.passed ? const Color(0xFFFF6B35) : const Color(0xFF42A5F5)).withValues(alpha: 0.4),
-                                  blurRadius: 16, offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (_) => TGamePage(level: widget.passed ? widget.level + 1 : widget.level),
-                                  ),
-                                );
-                              },
-                              icon: Icon(widget.passed ? Icons.arrow_forward_rounded : Icons.replay_rounded),
-                              label: Text(widget.passed ? tr('result.next_level') : tr('result.retry'),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent, shadowColor: Colors.transparent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        TextButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (_) => const THomePage()),
-                              (route) => false,
-                            );
-                          },
-                          icon: const Icon(Icons.home_rounded, color: Colors.white38, size: 18),
-                          label: Text(tr('result.home'), style: const TextStyle(color: Colors.white38)),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: TSpacing.xxl),
+
+                    // --- Stats en 3 cartes (apparaissent apres score) ---
+                    Opacity(
+                      opacity: scoreIn,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.check_circle_outline,
+                              label: tr('result.stat_correct'),
+                              value: '${widget.correctAnswers}'
+                                  '/${widget.totalQuestions}',
+                              color: TColors.success,
+                            ),
+                          ),
+                          const SizedBox(width: TSpacing.sm),
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.percent_rounded,
+                              label: tr('result.stat_accuracy'),
+                              value: '$accuracy%',
+                              color: TColors.info,
+                            ),
+                          ),
+                          const SizedBox(width: TSpacing.sm),
+                          Expanded(
+                            child: _StatCard(
+                              icon: Icons.local_fire_department_rounded,
+                              label: tr('result.stat_combo'),
+                              value: 'x${widget.maxStreak}',
+                              color: TColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: TSpacing.xxl),
+
+                    // --- CTA principaux (apres tout le reste) ---
+                    Opacity(
+                      opacity: scoreIn,
+                      child: Column(
+                        children: [
+                          AppButton.primary(
+                            label: widget.passed
+                                ? tr('result.cta_next_level')
+                                : tr('result.cta_retry'),
+                            trailingIcon: widget.passed
+                                ? Icons.arrow_forward_rounded
+                                : Icons.replay_rounded,
+                            fullWidth: true,
+                            size: AppButtonSize.lg,
+                            onPressed: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) => TGamePage(
+                                    level: widget.passed
+                                        ? widget.level + 1
+                                        : widget.level,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: TSpacing.sm),
+                          AppButton.ghost(
+                            label: tr('result.cta_home'),
+                            icon: Icons.home_rounded,
+                            fullWidth: true,
+                            onPressed: () {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const THomePage(),
+                                ),
+                                (_) => false,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _stat(String label, String value, IconData icon, Color color) {
+  // =============================================================
+  // WIDGET : etoiles avec stagger
+  // =============================================================
+
+  Widget _buildStars(int filled, double starsIn) {
+    final colors = TColors.of(context);
     return Row(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 12),
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.6))),
-        const Spacer(),
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
-      ],
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        // Chaque etoile apparait a partir de i/3 du temps de starsIn.
+        final localStart = i / 3;
+        final localEnd = localStart + 0.33;
+        final starT = ((starsIn - localStart) / (localEnd - localStart))
+            .clamp(0.0, 1.0);
+        final isFilled = i < filled;
+        final scale = Curves.easeOutBack.transform(starT);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: TSpacing.sm),
+          child: Transform.scale(
+            scale: isFilled ? scale : 1.0,
+            child: Icon(
+              isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
+              size: 52,
+              color: isFilled
+                  ? TColors.primaryVariant
+                  : colors.borderStrong,
+            ),
+          ),
+        );
+      }),
     );
   }
 
-  Widget _divider() => Divider(color: Colors.white.withValues(alpha: 0.06), height: 20);
+  // =============================================================
+  // HELPERS
+  // =============================================================
+
+  double _interval(double t, double start, double end) {
+    if (t < start) return 0;
+    if (t > end) return 1;
+    return (t - start) / (end - start);
+  }
+
+  double _bouncyScale(double t) => Curves.easeOutBack.transform(t);
+}
+
+
+// =============================================================
+// WIDGET : _StatCard
+// =============================================================
+// Petite carte stat avec icone + valeur + label.
+// =============================================================
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = TColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(TSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: TRadius.lgAll,
+        border: Border.all(color: colors.borderSubtle),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color.fromARGB(
+                0x26,
+                color.r.round(),
+                color.g.round(),
+                color.b.round(),
+              ),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: TSpacing.sm),
+          Text(value, style: TTypography.titleLg(color: colors.textPrimary)),
+          const SizedBox(height: TSpacing.xxs),
+          Text(label, style: TTypography.labelSm(color: colors.textTertiary)),
+        ],
+      ),
+    );
+  }
+}
+
+
+// =============================================================
+// CLASSE + PAINTER : particules dorees en fond
+// =============================================================
+
+class _ResultParticle {
+  double x, y, vx, vy, size, opacity;
+  _ResultParticle({
+    required this.x,
+    required this.y,
+    required this.vx,
+    required this.vy,
+    required this.size,
+    required this.opacity,
+  });
+
+  factory _ResultParticle.random(math.Random r) => _ResultParticle(
+        x: r.nextDouble(),
+        y: r.nextDouble(),
+        vx: (r.nextDouble() - 0.5) * 0.001,
+        vy: (r.nextDouble() - 0.8) * 0.0015, // montent plus qu'elles ne descendent
+        size: 1.5 + r.nextDouble() * 3,
+        opacity: 0.15 + r.nextDouble() * 0.35,
+      );
+
+  void update() {
+    x = (x + vx + 1) % 1.0;
+    y = (y + vy + 1) % 1.0;
+  }
+}
+
+
+class _ResultParticlePainter extends CustomPainter {
+  final List<_ResultParticle> particles;
+  final Color gold;
+
+  _ResultParticlePainter({
+    required this.particles,
+    required Listenable repaint,
+    required this.gold,
+  }) : super(repaint: repaint);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    for (final p in particles) {
+      paint.color = gold.withValues(alpha: p.opacity);
+      canvas.drawCircle(
+        Offset(p.x * size.width, p.y * size.height),
+        p.size,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ResultParticlePainter old) => false;
 }

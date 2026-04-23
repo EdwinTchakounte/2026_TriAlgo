@@ -58,6 +58,16 @@
 	     - CFBundleTypeRole   : "Editor" (on est l'app qui gere ce scheme),
 	       vs "Viewer" (on peut seulement le lire).
 	     ============================================================= -->
+	<!-- =============================================================
+	     PERMISSION CAMERA (iOS)
+	     =============================================================
+	     NSCameraUsageDescription est OBLIGATOIRE si l'app accede a
+	     la camera. Le texte est affiche dans la popup systeme quand
+	     iOS demande l'autorisation la premiere fois. Un texte clair
+	     augmente le taux d'acceptation.
+	     ============================================================= -->
+	<key>NSCameraUsageDescription</key>
+	<string>TRIALGO a besoin de la camera pour scanner les QR codes des cartes et verifier vos trios en mode collectif.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

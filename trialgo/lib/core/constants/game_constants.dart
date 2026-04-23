@@ -85,108 +85,161 @@ class GameConstants {
   //   - pointsBase   : points de base par bonne reponse
   // ---------------------------------------------------------------
 
-  /// Retourne les parametres du niveau demande.
+  // ---------------------------------------------------------------
+  // NOUVEAU SYSTEME DE NIVEAUX BASE SUR LES TABLES
+  // ---------------------------------------------------------------
+  // Chaque niveau correspond a UNE partie. Une partie utilise une
+  // table specifique de noeuds logiques pour eviter que deux trios
+  // de la meme chaine se retrouvent dans la meme partie.
+  //
+  // Le numero de niveau est mappé a (distance, tableIndex) via la
+  // fonction buildLevelPlan() qui prend en entree le nombre de
+  // tables disponibles pour chaque distance (calcul dynamique depuis
+  // le graphe).
+  //
+  // Progression :
+  //   Niveau 1 a N_D1 : D1 (1 table)
+  //   Niveau N_D1+1 a N_D1+N_D2 : D2 (nombre de tables D2)
+  //   Niveau ... : D3, D4, D5
+  // ---------------------------------------------------------------
+
+  /// Retourne les parametres du niveau [level] en fonction du nombre
+  /// de tables disponibles pour chaque distance.
   ///
-  /// [level] : numero du niveau (1 a 23+)
-  /// Retourne un [LevelConfig] contenant tous les parametres de ce niveau.
+  /// [tablesPerDistance] : liste [nb_D1, nb_D2, nb_D3, nb_D4, nb_D5].
+  /// Typiquement : [1, 5, 14, 27, 44] si toutes les distances ont
+  /// au moins une chaine disponible, ou [1, 5, 14, 0, 0] si le
+  /// graphe n'a que 3 niveaux de profondeur.
+  ///
+  /// Si [level] depasse le nombre total de niveaux disponibles,
+  /// retourne la config du dernier niveau (bouclage).
+  static LevelConfig getLevelConfigForTables(
+    int level,
+    List<int> tablesPerDistance,
+  ) {
+    // Parcourir les distances 1 a 5 et calculer l'intervalle de
+    // niveaux qui leur appartient.
+    int cumulativeLevel = 0;
+
+    for (int k = 1; k <= 5; k++) {
+      final nbTables = tablesPerDistance[k - 1];
+      if (nbTables == 0) continue;
+
+      // Niveaux pour cette distance : [cumulativeLevel + 1, cumulativeLevel + nbTables]
+      final startLevel = cumulativeLevel + 1;
+      final endLevel = cumulativeLevel + nbTables;
+
+      if (level >= startLevel && level <= endLevel) {
+        final tableIndex = level - startLevel;
+        return _configForDistance(k, tableIndex);
+      }
+
+      cumulativeLevel = endLevel;
+    }
+
+    // Depassement : retourner la derniere config disponible.
+    // (En pratique, l'UI devrait empecher cela.)
+    return _configForDistance(1, 0);
+  }
+
+  /// Parametres par defaut pour une distance donnee.
+  static LevelConfig _configForDistance(int distance, int tableIndex) {
+    switch (distance) {
+      case 1:
+        return LevelConfig(
+          distance: 1,
+          tableIndex: tableIndex,
+          configs: const ['A'],
+          questions: 8,
+          threshold: 6,
+          livesPerWrong: 3,
+          turnTimeSeconds: 30,
+          basePoints: 10,
+        );
+      case 2:
+        return LevelConfig(
+          distance: 2,
+          tableIndex: tableIndex,
+          configs: tableIndex < 3 ? const ['A', 'B'] : const ['B'],
+          questions: 10,
+          threshold: 7,
+          livesPerWrong: 2,
+          turnTimeSeconds: 40,
+          basePoints: 20,
+        );
+      case 3:
+        return LevelConfig(
+          distance: 3,
+          tableIndex: tableIndex,
+          configs: tableIndex < 7 ? const ['B', 'C'] : const ['C'],
+          questions: 12,
+          threshold: 8,
+          livesPerWrong: 2,
+          turnTimeSeconds: 50,
+          basePoints: 35,
+        );
+      case 4:
+        return LevelConfig(
+          distance: 4,
+          tableIndex: tableIndex,
+          configs: const ['B', 'C'],
+          questions: 12,
+          threshold: 9,
+          livesPerWrong: 1,
+          turnTimeSeconds: 55,
+          basePoints: 50,
+        );
+      case 5:
+        return LevelConfig(
+          distance: 5,
+          tableIndex: tableIndex,
+          configs: const ['C'],
+          questions: 15,
+          threshold: 11,
+          livesPerWrong: 1,
+          turnTimeSeconds: 55,
+          basePoints: 75,
+        );
+      default:
+        return LevelConfig(
+          distance: 1,
+          tableIndex: 0,
+          configs: const ['A'],
+          questions: 8,
+          threshold: 6,
+          livesPerWrong: 3,
+          turnTimeSeconds: 30,
+          basePoints: 10,
+        );
+    }
+  }
+
+  /// API de compatibilite : retourne une config par defaut sans
+  /// tenir compte du nombre de tables. Utilise comme fallback.
+  ///
+  /// Pour la nouvelle API complete, utiliser [getLevelConfigForTables].
   static LevelConfig getLevelConfig(int level) {
-    // Niveaux 1-3 : Introduction (D1, config A uniquement)
-    // Le joueur apprend le mecanisme de base avec les trios simples.
-    if (level <= 3) {
-      return const LevelConfig(
-        distance: 1,          // Trios simples (3 images)
-        configs: ['A'],       // Trouver la Receptrice uniquement
-        questions: 8,         // Peu de questions
-        threshold: 6,         // Seuil bas (6/8 = 75%)
-        livesPerWrong: 3,     // Tolerant (perd 1 vie pour 3 erreurs)
-        turnTimeSeconds: 30,  // 30 secondes par question
-        basePoints: 10,       // Points de base faibles
-      );
-    }
-    // Niveaux 4-6 : Decouverte config B (D1, configs A+B)
-    // Le joueur doit maintenant aussi trouver le Cable.
-    if (level <= 6) {
-      return const LevelConfig(
-        distance: 1,
-        configs: ['A', 'B'],   // Ajout de la config B
-        questions: 10,
-        threshold: 7,          // Seuil 7/10
-        livesPerWrong: 3,
-        turnTimeSeconds: 35,
-        basePoints: 15,
-      );
-    }
-    // Niveaux 7-10 : Introduction Distance 2 (D1+D2, configs A+B)
-    // Les trios deviennent plus complexes (chaines de 5 images).
-    if (level <= 10) {
-      return const LevelConfig(
-        distance: 2,           // Ajout des quintettes
-        configs: ['A', 'B'],
-        questions: 10,
-        threshold: 7,
-        livesPerWrong: 2,      // Moins tolerant
-        turnTimeSeconds: 40,
-        basePoints: 20,
-      );
-    }
-    // Niveaux 11-14 : Config B exclusive (D2, config B)
-    // Le joueur doit identifier visuellement les transformations.
-    if (level <= 14) {
-      return const LevelConfig(
-        distance: 2,
-        configs: ['B'],        // Config B uniquement
-        questions: 10,
-        threshold: 7,
-        livesPerWrong: 2,
-        turnTimeSeconds: 45,
-        basePoints: 25,
-      );
-    }
-    // Niveaux 15-18 : Introduction Distance 3 + Config C (D2+D3, B+C)
-    if (level <= 18) {
-      return const LevelConfig(
-        distance: 3,
-        configs: ['B', 'C'],   // Ajout de la config C (difficile)
-        questions: 12,
-        threshold: 8,
-        livesPerWrong: 2,
-        turnTimeSeconds: 50,
-        basePoints: 35,
-      );
-    }
-    // Niveaux 19-22 : Expert (D3, config C)
-    if (level <= 22) {
-      return const LevelConfig(
-        distance: 3,
-        configs: ['C'],        // Config C uniquement (la plus dure)
-        questions: 12,
-        threshold: 9,
-        livesPerWrong: 1,      // Chaque erreur coute 1 vie
-        turnTimeSeconds: 55,
-        basePoints: 50,
-      );
-    }
-    // Niveau 23+ : Maitre (toutes configs, toutes distances)
-    return const LevelConfig(
-      distance: 3,
-      configs: ['A', 'B', 'C'], // Toutes les configs
-      questions: 15,
-      threshold: 11,
-      livesPerWrong: 1,
-      turnTimeSeconds: 45,      // Moins de temps !
-      basePoints: 75,
-    );
+    // Approximation : 1 D1 + 5 D2 + 14 D3 = 20 niveaux (graphe standard)
+    return getLevelConfigForTables(level, const [1, 5, 14, 0, 0]);
   }
 
   // ---------------------------------------------------------------
   // MULTIPLICATEURS DE DISTANCE
   // ---------------------------------------------------------------
-  // Reference : Recueil v3.0, section 7.2
+  // Reference : Recueil v3.0, section 7.2 (etendu D4/D5)
   //
   // Plus la distance est grande, plus les points sont multiplies.
-  // D1 = trios simples      -> x1.0 (pas de bonus)
-  // D2 = quintettes         -> x1.5
-  // D3 = septettes          -> x2.0
+  // D1 = trios simples       -> x1.0 (pas de bonus)
+  // D2 = quintettes          -> x1.5
+  // D3 = septettes           -> x2.0
+  // D4 = chaines longues     -> x2.5
+  // D5 = chaines legendaires -> x3.0
+  //
+  // La progression de +0.5 par distance garde une reward lineaire :
+  // passer de D3 a D4 rapporte +25% par rapport a D3, puis D5 rapporte
+  // +20% par rapport a D4. L'effort supplementaire reste bien paye
+  // sans creer de ruptures exponentielles qui decourageraient les
+  // joueurs intermediaires.
   // ---------------------------------------------------------------
 
   /// Retourne le multiplicateur de score selon la distance du trio.
@@ -195,6 +248,8 @@ class GameConstants {
       1 => 1.0,   // D1 : pas de multiplicateur
       2 => 1.5,   // D2 : +50%
       3 => 2.0,   // D3 : +100%
+      4 => 2.5,   // D4 : +150%
+      5 => 3.0,   // D5 : +200%
       _ => 1.0,   // Securite : valeur par defaut
     };
   }
@@ -277,8 +332,17 @@ class GameConstants {
 // =============================================================
 
 class LevelConfig {
-  /// Distance maximale des trios utilises (1, 2 ou 3).
+  /// Distance des trios utilises (1, 2, 3, 4 ou 5).
   final int distance;
+
+  /// Index de la table a utiliser pour cette partie.
+  /// Chaque distance a un nombre different de tables :
+  ///   D1 : 1 table (index 0)
+  ///   D2 : 5 tables (index 0 a 4)
+  ///   D3 : 14 tables (index 0 a 13)
+  ///   D4 : 27 tables
+  ///   D5 : 44 tables
+  final int tableIndex;
 
   /// Configurations de question disponibles (['A'], ['A','B'], etc.).
   final List<String> configs;
@@ -290,7 +354,6 @@ class LevelConfig {
   final int threshold;
 
   /// Combien d'erreurs pour perdre 1 vie.
-  /// 3 = tolerant (1 vie pour 3 erreurs), 1 = strict (1 erreur = 1 vie).
   final int livesPerWrong;
 
   /// Temps maximum en secondes pour repondre a une question.
@@ -301,6 +364,7 @@ class LevelConfig {
 
   const LevelConfig({
     required this.distance,
+    required this.tableIndex,
     required this.configs,
     required this.questions,
     required this.threshold,

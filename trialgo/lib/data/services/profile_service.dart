@@ -528,6 +528,22 @@ class ProfileService {
   // METHODE : updateAvatar
   // =============================================================
 
+  /// Change le username (pseudo) du joueur.
+  Future<void> updateUsername(String username) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final trimmed = username.trim();
+    await supabase.from('user_profiles').update({
+      'username': trimmed,
+    }).eq('id', user.id);
+
+    // Synchroniser le cache local.
+    if (_profile != null) {
+      _profile = {..._profile!, 'username': trimmed};
+    }
+  }
+
   /// Change l'avatar du joueur.
   Future<void> updateAvatar(String avatarId) async {
     final user = supabase.auth.currentUser;
@@ -541,6 +557,52 @@ class ProfileService {
     if (_profile != null) {
       _profile = {..._profile!, 'avatar_id': avatarId};
     }
+  }
+
+  // =============================================================
+  // METHODE : loseLife
+  // =============================================================
+  // Decrement atomique du compteur de vies (-1), clamped a 0.
+  // Appele pendant le gameplay des qu'une vie doit etre consommee
+  // (ex: toutes les N mauvaises reponses selon la regle du niveau).
+  //
+  // POURQUOI ATOMIQUE EN DB MAINTENANT ?
+  // ------------------------------------
+  // Avant : les vies etaient deduites en UNE SEULE FOIS a la fin de
+  // partie via updateStats(livesUsed). Probleme : pendant la partie
+  // le compteur cote home page restait a 5 meme si le joueur avait
+  // perdu 3 vies -> desync visuelle et logique. Pire : la partie
+  // demarrait toujours avec un _lives hardcode, sans lire la DB.
+  //
+  // Maintenant : chaque perte est persistee immediatement, donc la
+  // home page reflete la realite en temps reel (via listener provider)
+  // et la prochaine partie demarre avec le bon compteur.
+  // =============================================================
+
+  /// Decremente de 1 la vie cote DB + cache, clamped a 0.
+  /// Retourne le nouveau nombre de vies apres decrement.
+  Future<int> loseLife() async {
+    final user = supabase.auth.currentUser;
+    if (user == null || _currentGameStats == null) {
+      return _currentGameStats?['lives'] as int? ?? 0;
+    }
+
+    final current = _currentGameStats!['lives'] as int;
+    if (current <= 0) return 0;
+    final next = current - 1;
+
+    await supabase
+        .from('user_games')
+        .update({'lives': next})
+        .eq('user_id', user.id)
+        .eq('game_id', selectedGameId!);
+
+    _currentGameStats = {
+      ..._currentGameStats!,
+      'lives': next,
+    };
+
+    return next;
   }
 
   // =============================================================
@@ -583,6 +645,108 @@ class ProfileService {
     };
 
     return true;
+  }
+
+  // =============================================================
+  // ECONOMIE ETOILES
+  // =============================================================
+  // Les etoiles sont une monnaie cumulative sur user_profiles.
+  //   - regen : +1 toutes les 5 min jusqu'au plafond stars_max
+  //   - depense : echange 10 etoiles -> 1 vie (RPC atomique)
+  //
+  // La regen est calculee cote client a chaque reload du profil :
+  // on lit stars_last_regen, on calcule combien de cycles de 5 min
+  // se sont ecoules, on avance le compteur et le timestamp.
+  // Pas de cron serveur -> simple et fiable.
+  // =============================================================
+
+  /// Applique la regen des etoiles (1 toutes les 5 min) si du temps
+  /// s'est ecoule depuis le dernier regen. Idempotent : ne fait rien
+  /// si aucun cycle complet n'est passe, ou si deja au plafond.
+  ///
+  /// Retourne le nouveau nombre d'etoiles apres regen.
+  Future<int> applyStarsRegen() async {
+    final user = supabase.auth.currentUser;
+    if (user == null || _profile == null) {
+      return _profile?['stars'] as int? ?? 0;
+    }
+
+    final stars = _profile!['stars'] as int? ?? 0;
+    final starsMax = _profile!['stars_max'] as int? ?? 50;
+    if (stars >= starsMax) return stars;
+
+    final lastRegenRaw = _profile!['stars_last_regen'] as String?;
+    if (lastRegenRaw == null) return stars;
+    final lastRegen = DateTime.tryParse(lastRegenRaw);
+    if (lastRegen == null) return stars;
+
+    // Combien de cycles de 5 min se sont ecoules depuis le dernier regen ?
+    final now = DateTime.now().toUtc();
+    final elapsedMin = now.difference(lastRegen).inMinutes;
+    final cycles = elapsedMin ~/ 5;
+    if (cycles <= 0) return stars;
+
+    // On ne peut pas depasser le plafond : on borne le gain a la marge
+    // encore disponible. Le timestamp avance seulement du nombre de
+    // cycles reellement credites pour eviter de "perdre" les minutes
+    // deja ecoulees non gainables (ne change rien si on est plafonne).
+    final availableSlots = starsMax - stars;
+    final credited = cycles.clamp(0, availableSlots);
+    if (credited == 0) return stars;
+
+    final newStars = stars + credited;
+    final newTimestamp = lastRegen.add(Duration(minutes: credited * 5));
+
+    await supabase
+        .from('user_profiles')
+        .update({
+          'stars': newStars,
+          'stars_last_regen': newTimestamp.toIso8601String(),
+        })
+        .eq('id', user.id);
+
+    _profile = {
+      ..._profile!,
+      'stars': newStars,
+      'stars_last_regen': newTimestamp.toIso8601String(),
+    };
+
+    return newStars;
+  }
+
+  /// Echange [cost] etoiles contre 1 vie via la RPC atomique.
+  /// Retourne null si pas autorise ou pas d'user connecte, sinon
+  /// un Map avec les nouvelles valeurs { stars, lives } ou
+  /// { success: false, reason } si le serveur refuse.
+  Future<Map<String, dynamic>?> exchangeStarsForLife({int cost = 10}) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      final response = await supabase.rpc('exchange_stars_for_life', params: {
+        'p_user_id': user.id,
+        'p_cost': cost,
+      });
+
+      final result = response as Map<String, dynamic>;
+      final success = result['success'] as bool? ?? false;
+      if (success) {
+        // Synchroniser les caches locaux pour refleter immediatement.
+        _profile = {
+          ...?_profile,
+          'stars': result['stars'] as int,
+        };
+        if (_currentGameStats != null) {
+          _currentGameStats = {
+            ..._currentGameStats!,
+            'lives': result['lives'] as int,
+          };
+        }
+      }
+      return result;
+    } catch (_) {
+      return null;
+    }
   }
 
   // =============================================================

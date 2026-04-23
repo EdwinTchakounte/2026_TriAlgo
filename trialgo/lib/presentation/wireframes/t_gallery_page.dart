@@ -1,397 +1,476 @@
 // =============================================================
 // FICHIER : lib/presentation/wireframes/t_gallery_page.dart
-// ROLE   : Galerie des cartes debloquees (wireframe)
+// ROLE   : Galerie des cartes - collection du joueur
 // COUCHE : Presentation > Wireframes
 // =============================================================
 //
-// QU'EST-CE QUE LA GALERIE ?
-// ---------------------------
-// C'est un ecran de COLLECTION qui affiche toutes les cartes
-// que le joueur a decouvertes au fil des niveaux.
-//
-// Elle est organisee en 3 onglets (filtres par type) :
-//   - Emettrices (images de base)
-//   - Cables (transformations)
-//   - Receptrices (resultats)
-//
-// Chaque carte est affichee en grille avec son image et son nom.
-// Les cartes non debloquees sont affichees en silhouette.
-//
-// REFERENCE : Recueil v3.0, section 12.11
+// REFONTE (vs version precedente) :
+// ---------------------------------
+//   - Stats header : "X/Y cartes debloquees" + progress bar
+//   - Filter chips : Toutes / Debloquees / A decouvrir
+//   - Role chips : Tous / E / C / R
+//   - Grille 2 colonnes de cartes (AppCard.glass)
+//   - Carte unlocked : image pleine + label + badge de role
+//   - Carte locked : silhouette + "?" + cadenas superpose
+//   - Tap unlocked : reveal fullscreen dialog
+//   - Empty state si le filtre ne matche aucune carte
 // =============================================================
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:trialgo/presentation/wireframes/t_locale.dart';
-import 'package:trialgo/presentation/wireframes/t_theme.dart';
-import 'package:trialgo/presentation/wireframes/t_mock_data.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Galerie des cartes debloquees avec onglets de filtrage.
-class TGalleryPage extends StatefulWidget {
+import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/design_system/tokens/radius.dart';
+import 'package:trialgo/core/design_system/tokens/spacing.dart';
+import 'package:trialgo/core/design_system/tokens/typography.dart';
+import 'package:trialgo/presentation/providers/graph_provider.dart';
+import 'package:trialgo/presentation/providers/profile_provider.dart';
+import 'package:trialgo/presentation/widgets/core/app_card.dart';
+import 'package:trialgo/presentation/widgets/core/app_chip.dart';
+import 'package:trialgo/presentation/widgets/core/empty_state.dart';
+import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
+import 'package:trialgo/presentation/widgets/core/section_header.dart';
+import 'package:trialgo/presentation/wireframes/t_locale.dart';
+
+
+/// Filtre sur l'etat des cartes.
+enum _CardsFilter { all, unlocked, locked }
+
+/// Filtre sur le role des cartes.
+enum _CardsRole { all, emettrice, cable, receptrice }
+
+
+class _GalleryCard {
+  final String id;
+  final String label;
+  final String imageUrl;
+  final bool unlocked;
+  final _CardsRole role;
+
+  const _GalleryCard({
+    required this.id,
+    required this.label,
+    required this.imageUrl,
+    required this.unlocked,
+    required this.role,
+  });
+}
+
+
+class TGalleryPage extends ConsumerStatefulWidget {
   const TGalleryPage({super.key});
 
   @override
-  State<TGalleryPage> createState() => _TGalleryPageState();
+  ConsumerState<TGalleryPage> createState() => _TGalleryPageState();
 }
 
-class _TGalleryPageState extends State<TGalleryPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _TGalleryPageState extends ConsumerState<TGalleryPage> {
+  _CardsFilter _filter = _CardsFilter.all;
+  _CardsRole _role = _CardsRole.all;
 
-  // Donnees de la galerie : cartes debloquees et verrouillees.
-  // Chaque categorie a ses propres cartes.
-  final List<_GalleryCard> _emettrices = [
-    _GalleryCard('Lion', MockData.emettrice1['imageUrl'] as String, true),
-    _GalleryCard('Aigle', MockData.emettrice2['imageUrl'] as String, true),
-    _GalleryCard('Requin', MockData.emettrice3['imageUrl'] as String, true),
-    _GalleryCard('Tigre', 'https://picsum.photos/seed/gal-e4/200/200', false),
-    _GalleryCard('Renard', 'https://picsum.photos/seed/gal-e5/200/200', false),
-    _GalleryCard('Panda', 'https://picsum.photos/seed/gal-e6/200/200', false),
-    _GalleryCard('Loup', 'https://picsum.photos/seed/gal-e7/200/200', false),
-    _GalleryCard('Ours', 'https://picsum.photos/seed/gal-e8/200/200', false),
-  ];
+  /// Construit la liste complete des cartes a partir du graphe.
+  List<_GalleryCard> _buildAllCards() {
+    final sync = ref.read(graphSyncServiceProvider);
+    if (!sync.isReady) return const [];
 
-  final List<_GalleryCard> _cables = [
-    _GalleryCard('Miroir', MockData.cable1['imageUrl'] as String, true),
-    _GalleryCard('Rotation', MockData.cable2['imageUrl'] as String, true),
-    _GalleryCard('Couleur', MockData.cable3['imageUrl'] as String, true),
-    _GalleryCard('Inversion', 'https://picsum.photos/seed/gal-c4/200/200', true),
-    _GalleryCard('Fragment.', 'https://picsum.photos/seed/gal-c5/200/200', false),
-    _GalleryCard('Ombre', 'https://picsum.photos/seed/gal-c6/200/200', false),
-  ];
+    final cards = sync.cards;
+    final graph = sync.gameGraph!;
+    final unlockedIds = ref.read(profileProvider).unlockedCards;
 
-  final List<_GalleryCard> _receptrices = [
-    _GalleryCard('Lion Miroir', MockData.receptrice1['imageUrl'] as String, true),
-    _GalleryCard('Aigle Rot.', MockData.receptrice2['imageUrl'] as String, true),
-    _GalleryCard('Requin Coul.', MockData.receptrice3['imageUrl'] as String, true),
-    _GalleryCard('Lion Rot.', 'https://picsum.photos/seed/gal-r4/200/200', true),
-    _GalleryCard('Aigle Coul.', 'https://picsum.photos/seed/gal-r5/200/200', false),
-    _GalleryCard('Tigre Miroir', 'https://picsum.photos/seed/gal-r6/200/200', false),
-    _GalleryCard('Renard Rot.', 'https://picsum.photos/seed/gal-r7/200/200', false),
-    _GalleryCard('Panda Miroir', 'https://picsum.photos/seed/gal-r8/200/200', false),
-    _GalleryCard('Loup Coul.', 'https://picsum.photos/seed/gal-r9/200/200', false),
-    _GalleryCard('Ours Rot.', 'https://picsum.photos/seed/gal-r10/200/200', false),
-  ];
+    // Collecter les roles par carte (une carte peut avoir plusieurs roles).
+    final emettriceIds = <String>{};
+    final cableIds = <String>{};
+    final receptriceIds = <String>{};
+    for (final node in graph.nodesByIndex.values) {
+      try {
+        emettriceIds.add(node.effectiveEmettriceId);
+      } catch (_) {}
+      cableIds.add(node.cableId);
+      receptriceIds.add(node.receptriceId);
+    }
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
+    final result = <_GalleryCard>[];
+    for (final c in cards.values) {
+      // Determine le role principal : R > E > C (priorite).
+      final _CardsRole r;
+      if (receptriceIds.contains(c.id)) {
+        r = _CardsRole.receptrice;
+      } else if (emettriceIds.contains(c.id)) {
+        r = _CardsRole.emettrice;
+      } else if (cableIds.contains(c.id)) {
+        r = _CardsRole.cable;
+      } else {
+        continue; // carte orpheline du graphe, on l'ignore
+      }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+      result.add(_GalleryCard(
+        id: c.id,
+        label: c.label,
+        imageUrl: c.imageUrl,
+        unlocked: unlockedIds.contains(c.id),
+        role: r,
+      ));
+    }
+    return result;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = TColors.of(context);
     final tr = TLocale.of(context);
-    final totalUnlocked = _emettrices.where((c) => c.unlocked).length
-        + _cables.where((c) => c.unlocked).length
-        + _receptrices.where((c) => c.unlocked).length;
-    final totalCards = _emettrices.length + _cables.length + _receptrices.length;
+    final all = _buildAllCards();
+    final unlockedCount = all.where((c) => c.unlocked).length;
+    final total = all.length;
+    final progress = total == 0 ? 0.0 : unlockedCount / total;
 
-    return Scaffold(
-      body: TTheme.patterned(
-        child: SafeArea(
-          child: Column(
-            children: [
-              // --- Header ---
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white54, size: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Text(tr('gallery.title'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20)),
-                    const Spacer(),
-                    // Compteur de collection.
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF11998E).withValues(alpha: 0.2),
-                            const Color(0xFF38EF7D).withValues(alpha: 0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF38EF7D).withValues(alpha: 0.2)),
-                      ),
-                      child: Text(
-                        '$totalUnlocked/$totalCards',
-                        style: const TextStyle(
-                          color: Color(0xFF38EF7D), fontWeight: FontWeight.w700, fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+    // Applique les filtres.
+    final filtered = all.where((c) {
+      if (_filter == _CardsFilter.unlocked && !c.unlocked) return false;
+      if (_filter == _CardsFilter.locked && c.unlocked) return false;
+      if (_role != _CardsRole.all && c.role != _role) return false;
+      return true;
+    }).toList();
+
+    return PageScaffold(
+      title: tr('gallery.title'),
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // --- Stats header ---
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                TSpacing.xxl,
+                TSpacing.md,
+                TSpacing.xxl,
+                TSpacing.lg,
               ),
-
-              const SizedBox(height: 12),
-
-              // --- Barre de progression de la collection ---
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: totalUnlocked / totalCards,
-                        backgroundColor: Colors.white.withValues(alpha: 0.06),
-                        valueColor: const AlwaysStoppedAnimation(Color(0xFF38EF7D)),
-                        minHeight: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tr('gallery.unlocked_count'),
+                          style: TTypography.bodyMd(
+                            color: colors.textSecondary,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${(totalUnlocked / totalCards * 100).round()}% ${tr('gallery.unlocked')}',
-                      style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.35)),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // --- Onglets (Emettrices / Cables / Receptrices) ---
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF6B35), Color(0xFFF7C948)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                      Text(
+                        '$unlockedCount/$total',
+                        style: TTypography.numericMd(color: TColors.primary),
+                      ),
+                    ],
                   ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white38,
-                  labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                  unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                  dividerColor: Colors.transparent,
-                  tabs: [
-                    Tab(text: 'E (${_emettrices.where((c) => c.unlocked).length})'),
-                    Tab(text: 'C (${_cables.where((c) => c.unlocked).length})'),
-                    Tab(text: 'R (${_receptrices.where((c) => c.unlocked).length})'),
-                  ],
-                ),
+                  const SizedBox(height: TSpacing.sm),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: colors.surface,
+                      valueColor: const AlwaysStoppedAnimation(TColors.primary),
+                    ),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 16),
-
-              // --- Grille de cartes ---
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildGrid(_emettrices, const Color(0xFF42A5F5)),
-                    _buildGrid(_cables, const Color(0xFFFFA726)),
-                    _buildGrid(_receptrices, const Color(0xFF66BB6A)),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // --- Filter chips : etat (scrollable horizontal) ---
+          // SingleChildScrollView horizontal + Row pour eviter tout
+          // overflow sur petits ecrans et garder les chips alignes
+          // sur une ligne claire, sans coupures ou sauts de ligne.
+          SliverToBoxAdapter(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: TSpacing.xxl,
+                vertical: TSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  AppChip(
+                    label: tr('gallery.chip_all'),
+                    selected: _filter == _CardsFilter.all,
+                    onTap: () => setState(() => _filter = _CardsFilter.all),
+                  ),
+                  const SizedBox(width: TSpacing.sm),
+                  AppChip(
+                    label: tr('gallery.chip_unlocked'),
+                    selected: _filter == _CardsFilter.unlocked,
+                    onTap: () =>
+                        setState(() => _filter = _CardsFilter.unlocked),
+                  ),
+                  const SizedBox(width: TSpacing.sm),
+                  AppChip(
+                    label: tr('gallery.chip_locked'),
+                    selected: _filter == _CardsFilter.locked,
+                    onTap: () =>
+                        setState(() => _filter = _CardsFilter.locked),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // --- Role chips (scrollable horizontal) ---
+          SliverToBoxAdapter(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: TSpacing.xxl,
+                vertical: TSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  AppChip(
+                    label: tr('gallery.chip_all_roles'),
+                    selected: _role == _CardsRole.all,
+                    onTap: () => setState(() => _role = _CardsRole.all),
+                  ),
+                  const SizedBox(width: TSpacing.sm),
+                  AppChip(
+                    label: tr('gallery.chip_emettrice'),
+                    icon: Icons.circle,
+                    selected: _role == _CardsRole.emettrice,
+                    onTap: () =>
+                        setState(() => _role = _CardsRole.emettrice),
+                  ),
+                  const SizedBox(width: TSpacing.sm),
+                  AppChip(
+                    label: tr('gallery.chip_cable'),
+                    icon: Icons.cable_rounded,
+                    selected: _role == _CardsRole.cable,
+                    onTap: () => setState(() => _role = _CardsRole.cable),
+                  ),
+                  const SizedBox(width: TSpacing.sm),
+                  AppChip(
+                    label: tr('gallery.chip_receptrice'),
+                    icon: Icons.star_rounded,
+                    selected: _role == _CardsRole.receptrice,
+                    onTap: () =>
+                        setState(() => _role = _CardsRole.receptrice),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // --- Titre de section ou empty state ---
+          if (filtered.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: Icons.search_off_rounded,
+                title: tr('gallery.empty_title'),
+                description: tr('gallery.empty_body'),
+              ),
+            )
+          else ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: TSpacing.xxl),
+                child: SectionHeader(
+                  title:
+                      '${filtered.length} ${filtered.length > 1 ? tr('gallery.count_suffix_many') : tr('gallery.count_suffix_one')}',
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                TSpacing.xxl,
+                TSpacing.sm,
+                TSpacing.xxl,
+                TSpacing.xxxl,
+              ),
+              sliver: SliverGrid(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: TSpacing.md,
+                  crossAxisSpacing: TSpacing.md,
+                  childAspectRatio: 0.78,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final card = filtered[index];
+                    return _buildCardTile(card);
+                  },
+                  childCount: filtered.length,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  /// Construit la grille de cartes pour un onglet.
-  Widget _buildGrid(List<_GalleryCard> cards, Color accentColor) {
-    return GridView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        // 3 colonnes par ligne.
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.75,
-        // Ratio largeur/hauteur : les cartes sont plus hautes que larges.
-      ),
-      itemCount: cards.length,
-      itemBuilder: (context, index) {
-        final card = cards[index];
-        return _buildCardTile(card, accentColor);
-      },
-    );
-  }
+  // =============================================================
+  // CARTE TILE
+  // =============================================================
 
-  /// Construit une tuile de carte dans la grille.
-  Widget _buildCardTile(_GalleryCard card, Color accentColor) {
-    return GestureDetector(
-      onTap: card.unlocked
-          ? () => _showCardDetail(card, accentColor)
-          : null,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: card.unlocked
-                ? accentColor.withValues(alpha: 0.3)
-                : Colors.white.withValues(alpha: 0.06),
-          ),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Image ou silhouette.
-              if (card.unlocked)
-                Image.network(
-                  card.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) => Container(
-                    color: accentColor.withValues(alpha: 0.15),
-                    child: Icon(Icons.image, color: accentColor.withValues(alpha: 0.3)),
-                  ),
-                )
-              else
-                Container(
-                  color: Colors.white.withValues(alpha: 0.03),
-                  child: Center(
-                    child: Icon(
-                      Icons.lock_rounded,
-                      color: Colors.white.withValues(alpha: 0.1),
-                      size: 28,
-                    ),
-                  ),
-                ),
-
-              // Label en bas.
-              Positioned(
-                bottom: 0, left: 0, right: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: card.unlocked ? 0.7 : 0.3),
-                      ],
-                    ),
-                  ),
-                  child: Text(
-                    card.unlocked ? card.name : '???',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: card.unlocked ? Colors.white : Colors.white24,
-                    ),
-                  ),
-                ),
+  Widget _buildCardTile(_GalleryCard card) {
+    return AppCard.glass(
+      padding: EdgeInsets.zero,
+      onTap: card.unlocked ? () => _revealFullscreen(card) : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // --- Image ---
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(TRadius.lg),
               ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Image ou silhouette selon l'etat.
+                  card.unlocked
+                      ? CachedNetworkImage(
+                          imageUrl: card.imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, _, _) =>
+                              _buildImageFallback(),
+                          placeholder: (_, _) => _buildImageFallback(),
+                        )
+                      : _buildLockedSilhouette(),
 
-              // Badge "NEW" pour les cartes recentes.
-              if (card.unlocked && card.name == 'Requin Coul.')
-                Positioned(
-                  top: 6, right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B35),
-                      borderRadius: BorderRadius.circular(6),
+                  // Cadenas superpose si locked.
+                  if (!card.unlocked)
+                    const Center(
+                      child: Icon(
+                        Icons.lock_rounded,
+                        color: Colors.white70,
+                        size: 32,
+                      ),
                     ),
-                    child: const Text('NEW', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: Colors.white)),
+
+                  // Badge de role en haut a gauche.
+                  Positioned(
+                    top: TSpacing.xs,
+                    left: TSpacing.xs,
+                    child: _buildRoleBadge(card.role),
                   ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
-        ),
+
+          // --- Nom de carte ---
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: TSpacing.sm,
+              vertical: TSpacing.sm,
+            ),
+            child: Text(
+              card.unlocked ? card.label : '???',
+              style: TTypography.labelLg(
+                color: card.unlocked
+                    ? TColors.of(context).textPrimary
+                    : TColors.of(context).textTertiary,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Affiche le detail d'une carte en popup.
-  void _showCardDetail(_GalleryCard card, Color color) {
-    showModalBottomSheet(
+  Widget _buildImageFallback() {
+    return Container(
+      color: TColors.of(context).surface,
+      alignment: Alignment.center,
+      child: const Icon(Icons.image_outlined, color: Colors.white38),
+    );
+  }
+
+  Widget _buildLockedSilhouette() {
+    return Container(
+      color: Color.fromARGB(
+        0x40,
+        TColors.of(context).borderDefault.r.round(),
+        TColors.of(context).borderDefault.g.round(),
+        TColors.of(context).borderDefault.b.round(),
+      ),
+    );
+  }
+
+  Widget _buildRoleBadge(_CardsRole role) {
+    late final String label;
+    late final Color color;
+    switch (role) {
+      case _CardsRole.emettrice:
+        label = 'E';
+        color = TColors.info;
+      case _CardsRole.cable:
+        label = 'C';
+        color = TColors.primary;
+      case _CardsRole.receptrice:
+        label = 'R';
+        color = TColors.success;
+      case _CardsRole.all:
+        label = '?';
+        color = Colors.grey;
+    }
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: TTypography.labelSm(color: Colors.white),
+      ),
+    );
+  }
+
+  // =============================================================
+  // FULLSCREEN REVEAL (dialog)
+  // =============================================================
+
+  void _revealFullscreen(_GalleryCard card) {
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF16163A),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
-          ),
-        ),
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(TSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Barre de poignee.
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Image.
             ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.network(
-                card.imageUrl,
-                width: 180, height: 180,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) => Container(
-                  width: 180, height: 180,
-                  color: color.withValues(alpha: 0.2),
-                  child: Icon(Icons.image, color: color, size: 48),
+              borderRadius: TRadius.xxlAll,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: CachedNetworkImage(
+                  imageUrl: card.imageUrl,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(card.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Debloquee',
-                style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600),
-              ),
+            const SizedBox(height: TSpacing.md),
+            Text(
+              card.label,
+              style: TTypography.headlineMd(color: Colors.white),
             ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
-}
-
-/// Modele de carte pour la galerie.
-class _GalleryCard {
-  final String name;
-  final String imageUrl;
-  final bool unlocked;
-
-  const _GalleryCard(this.name, this.imageUrl, this.unlocked);
 }

@@ -1,207 +1,357 @@
 // =============================================================
 // FICHIER : lib/presentation/wireframes/t_settings_page.dart
-// ROLE   : Parametres avec langue FR/EN + theme dark/light
+// ROLE   : Parametres de l'app (theme, audio, langue, a propos)
 // COUCHE : Presentation > Wireframes
+// =============================================================
+//
+// REFONTE :
+// ---------
+//   - PageScaffold + design system tokens
+//   - Sections ordonnees : Apparence, Audio, Langue, Info, Compte
+//   - Segmented control pour le theme (Clair / Sombre / Systeme)
+//   - Segmented control pour la langue (FR / EN)
+//   - Switches reactifs pour musique/SFX (via AudioService streams)
+//   - Actions du compte : deconnexion (bouton rouge ghost)
 // =============================================================
 
 import 'package:flutter/material.dart';
-import 'package:trialgo/presentation/wireframes/t_theme.dart';
-import 'package:trialgo/presentation/wireframes/t_locale.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/design_system/tokens/motion.dart';
+import 'package:trialgo/core/design_system/tokens/radius.dart';
+import 'package:trialgo/core/design_system/tokens/spacing.dart';
+import 'package:trialgo/core/design_system/tokens/typography.dart';
+import 'package:trialgo/presentation/providers/audio_provider.dart';
+import 'package:trialgo/presentation/providers/profile_provider.dart';
+import 'package:trialgo/presentation/widgets/core/app_card.dart';
+import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
+import 'package:trialgo/presentation/widgets/core/section_header.dart';
 import 'package:trialgo/presentation/wireframes/t_app_state.dart';
-import 'package:trialgo/presentation/wireframes/t_auth_page.dart';
-import 'package:trialgo/presentation/wireframes/t_edit_username_page.dart';
-import 'package:trialgo/presentation/wireframes/t_avatar_page.dart';
+import 'package:trialgo/presentation/wireframes/t_auth_gate.dart';
+import 'package:trialgo/presentation/wireframes/t_collective_mode_page.dart';
 import 'package:trialgo/presentation/wireframes/t_help_page.dart';
 import 'package:trialgo/presentation/wireframes/t_legal_page.dart';
+import 'package:trialgo/presentation/wireframes/t_locale.dart';
+import 'package:trialgo/presentation/wireframes/t_tutorial_page.dart';
 
-/// Parametres avec langue, theme, sous-pages.
-class TSettingsPage extends StatefulWidget {
+
+class TSettingsPage extends ConsumerStatefulWidget {
   const TSettingsPage({super.key});
 
   @override
-  State<TSettingsPage> createState() => _TSettingsPageState();
+  ConsumerState<TSettingsPage> createState() => _TSettingsPageState();
 }
 
-class _TSettingsPageState extends State<TSettingsPage> {
-  bool _soundOn = true;
-  bool _musicOn = true;
-  bool _notifOn = true;
+class _TSettingsPageState extends ConsumerState<TSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
     final tr = TLocale.of(context);
-    final currentLang = TLocale.languageOf(context);
-    return Scaffold(
-      body: TTheme.patterned(
-        child: SafeArea(
-          child: Column(
+    final colors = TColors.of(context);
+
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, _) {
+        return PageScaffold(
+          title: tr('settings.title'),
+          child: ListView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(
+              horizontal: TSpacing.xxl,
+              vertical: TSpacing.lg,
+            ),
             children: [
-              // Header fixe.
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white54, size: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Text(tr('settings.title'), style: TTheme.titleStyle(size: 20)),
-                  ],
-                ),
+              // --- APPARENCE ---
+              SectionHeader(title: tr('settings.section_appearance')),
+              AppCard.glass(
+                padding: const EdgeInsets.all(TSpacing.sm),
+                child: _buildThemeToggle(colors, tr),
               ),
+              const SizedBox(height: TSpacing.lg),
 
-              const SizedBox(height: 16),
+              // --- AUDIO ---
+              SectionHeader(title: tr('settings.section_audio')),
+              _buildAudioToggles(tr),
+              const SizedBox(height: TSpacing.lg),
 
-              // Body scrollable.
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ===========================================
-                      // LANGUE
-                      // ===========================================
-                      Text(tr('settings.language'), style: TTheme.microStyle(alpha: 0.35)),
-                      const SizedBox(height: 10),
+              // --- LANGUE ---
+              SectionHeader(title: tr('settings.section_language')),
+              AppCard.glass(
+                padding: const EdgeInsets.all(TSpacing.sm),
+                child: _buildLanguageToggle(colors),
+              ),
+              const SizedBox(height: TSpacing.lg),
 
-                      // Selecteur de langue (2 boutons cote a cote).
-                      Row(
-                        children: [
-                          _langButton(
-                            label: tr('settings.lang_fr'),
-                            flag: '🇫🇷',
-                            isActive: currentLang == AppLanguage.fr,
-                            onTap: () => appState.setLanguage(AppLanguage.fr),
-                          ),
-                          const SizedBox(width: 10),
-                          _langButton(
-                            label: tr('settings.lang_en'),
-                            flag: '🇬🇧',
-                            isActive: currentLang == AppLanguage.en,
-                            onTap: () => appState.setLanguage(AppLanguage.en),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // ===========================================
-                      // AUDIO
-                      // ===========================================
-                      Text(tr('settings.audio'), style: TTheme.microStyle(alpha: 0.35)),
-                      const SizedBox(height: 10),
-                      _switchTile(Icons.volume_up_rounded, tr('settings.sounds'), tr('settings.sounds_desc'), _soundOn, (v) => setState(() => _soundOn = v)),
-                      const SizedBox(height: 8),
-                      _switchTile(Icons.music_note_rounded, tr('settings.music'), tr('settings.music_desc'), _musicOn, (v) => setState(() => _musicOn = v)),
-
-                      const SizedBox(height: 20),
-
-                      // NOTIFICATIONS.
-                      Text(tr('settings.notif'), style: TTheme.microStyle(alpha: 0.35)),
-                      const SizedBox(height: 10),
-                      _switchTile(Icons.notifications_active_rounded, tr('settings.notif_lives'), tr('settings.notif_desc'), _notifOn, (v) => setState(() => _notifOn = v)),
-
-                      const SizedBox(height: 20),
-
-                      // COMPTE.
-                      Text(tr('settings.account'), style: TTheme.microStyle(alpha: 0.35)),
-                      const SizedBox(height: 10),
-                      _actionTile(Icons.edit_rounded, tr('settings.edit_pseudo'), 'LionMaster', () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TEditUsernamePage()));
-                      }),
-                      const SizedBox(height: 8),
-                      _actionTile(Icons.camera_alt_rounded, tr('settings.edit_avatar'), tr('settings.no_avatar'), () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TAvatarPage()));
-                      }),
-
-                      const SizedBox(height: 20),
-
-                      // A PROPOS.
-                      Text(tr('settings.about'), style: TTheme.microStyle(alpha: 0.35)),
-                      const SizedBox(height: 10),
-                      _infoTile(Icons.info_outline_rounded, tr('settings.version'), '1.0.0'),
-                      const SizedBox(height: 8),
-                      _actionTile(Icons.description_outlined, tr('settings.legal'), tr('settings.legal_desc'), () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TLegalPage()));
-                      }),
-                      const SizedBox(height: 8),
-                      _actionTile(Icons.help_outline_rounded, tr('settings.help'), tr('settings.help_desc'), () {
-                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const THelpPage()));
-                      }),
-
-                      const SizedBox(height: 32),
-
-                      // Deconnexion.
-                      SizedBox(
-                        width: double.infinity, height: 52,
-                        child: OutlinedButton.icon(
-                          onPressed: _logout,
-                          icon: const Icon(Icons.logout_rounded, color: TTheme.red, size: 18),
-                          label: Text(tr('settings.logout'), style: TTheme.subtitleStyle(color: TTheme.red, size: 14)),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: TTheme.red.withValues(alpha: 0.35)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      Center(
-                        child: TextButton(
-                          onPressed: () => _snack(tr('common.soon')),
-                          child: Text(tr('settings.delete_account'), style: TTheme.bodyStyle(size: 12, color: Colors.white.withValues(alpha: 0.2))),
-                        ),
-                      ),
-                    ],
+              // --- OUTILS (mode collectif) ---
+              // Le mode collectif est un verificateur de trios
+              // (scan 3 cartes ou saisie numero), independant des
+              // sessions de jeu. Accessible depuis ici pour la
+              // decouverte + depuis la home.
+              SectionHeader(title: tr('settings.section_tools')),
+              AppCard.glass(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TCollectiveModePage(),
                   ),
                 ),
+                child: _row(
+                  icon: Icons.groups_rounded,
+                  label: tr('settings.collective_mode'),
+                  color: TColors.success,
+                ),
               ),
+              const SizedBox(height: TSpacing.lg),
+
+              // --- INFORMATIONS ---
+              SectionHeader(title: tr('settings.section_info')),
+              AppCard.glass(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TTutorialPage()),
+                ),
+                child: _row(
+                  icon: Icons.school_outlined,
+                  label: tr('settings.how_to_play'),
+                  color: TColors.info,
+                ),
+              ),
+              const SizedBox(height: TSpacing.sm),
+              AppCard.glass(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const THelpPage()),
+                ),
+                child: _row(
+                  icon: Icons.help_outline_rounded,
+                  label: tr('settings.help'),
+                  color: TColors.primary,
+                ),
+              ),
+              const SizedBox(height: TSpacing.sm),
+              AppCard.glass(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TLegalPage()),
+                ),
+                child: _row(
+                  icon: Icons.description_outlined,
+                  label: tr('settings.legal'),
+                  color: TColors.success,
+                ),
+              ),
+              const SizedBox(height: TSpacing.lg),
+
+              // --- COMPTE ---
+              SectionHeader(title: tr('settings.section_account')),
+              AppCard.glass(
+                onTap: () => _confirmSignOut(context, tr),
+                child: _row(
+                  icon: Icons.logout_rounded,
+                  label: tr('settings.sign_out'),
+                  color: TColors.error,
+                ),
+              ),
+              const SizedBox(height: TSpacing.xxl),
+
+              // Version + marque.
+              Text(
+                'TRIALGO · v1.0.0',
+                textAlign: TextAlign.center,
+                style: TTypography.labelSm(color: colors.textTertiary),
+              ),
+              const SizedBox(height: TSpacing.xxl),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  // =============================================================
+  // THEME TOGGLE (Clair / Sombre / Systeme)
+  // =============================================================
+
+  Widget _buildThemeToggle(
+    TSurfaceColors colors,
+    String Function(String) tr,
+  ) {
+    final current = appState.themeMode;
+    return Row(
+      children: [
+        _segmentButton(
+          label: tr('settings.theme_light'),
+          icon: Icons.light_mode_outlined,
+          selected: current == ThemeMode.light,
+          onTap: () => appState.setThemeMode(ThemeMode.light),
         ),
+        _segmentButton(
+          label: tr('settings.theme_dark'),
+          icon: Icons.dark_mode_outlined,
+          selected: current == ThemeMode.dark,
+          onTap: () => appState.setThemeMode(ThemeMode.dark),
+        ),
+        _segmentButton(
+          label: tr('settings.theme_system'),
+          icon: Icons.brightness_auto_outlined,
+          selected: current == ThemeMode.system,
+          onTap: () => appState.setThemeMode(ThemeMode.system),
+        ),
+      ],
+    );
+  }
+
+  // =============================================================
+  // LANGUE (FR / EN)
+  // =============================================================
+
+  Widget _buildLanguageToggle(TSurfaceColors colors) {
+    final current = appState.language;
+    return Row(
+      children: [
+        _segmentButton(
+          label: 'Francais',
+          icon: Icons.language,
+          selected: current == AppLanguage.fr,
+          onTap: () => appState.setLanguage(AppLanguage.fr),
+        ),
+        _segmentButton(
+          label: 'English',
+          icon: Icons.language,
+          selected: current == AppLanguage.en,
+          onTap: () => appState.setLanguage(AppLanguage.en),
+        ),
+      ],
+    );
+  }
+
+  // =============================================================
+  // AUDIO (music + SFX)
+  // =============================================================
+
+  Widget _buildAudioToggles(String Function(String) tr) {
+    final audio = ref.read(audioServiceProvider);
+
+    // StreamBuilder pour rester reactif aux changements.
+    return Column(
+      children: [
+        StreamBuilder<bool>(
+          stream: audio.musicEnabledStream,
+          initialData: audio.musicEnabled,
+          builder: (context, snap) {
+            final enabled = snap.data ?? true;
+            return _buildSwitchRow(
+              icon: Icons.music_note_rounded,
+              label: tr('settings.music'),
+              color: TColors.info,
+              value: enabled,
+              onChanged: (v) {
+                HapticFeedback.lightImpact();
+                audio.setMusicEnabled(v);
+              },
+            );
+          },
+        ),
+        const SizedBox(height: TSpacing.sm),
+        StreamBuilder<bool>(
+          stream: audio.sfxEnabledStream,
+          initialData: audio.sfxEnabled,
+          builder: (context, snap) {
+            final enabled = snap.data ?? true;
+            return _buildSwitchRow(
+              icon: Icons.volume_up_rounded,
+              label: tr('settings.sfx'),
+              color: TColors.primary,
+              value: enabled,
+              onChanged: (v) {
+                HapticFeedback.lightImpact();
+                audio.setSfxEnabled(v);
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSwitchRow({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final colors = TColors.of(context);
+    return AppCard.glass(
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color.fromARGB(
+                0x26,
+                color.r.round(),
+                color.g.round(),
+                color.b.round(),
+              ),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: TSpacing.md),
+          Expanded(
+            child: Text(label,
+                style: TTypography.titleMd(color: colors.textPrimary)),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: Colors.white,
+            activeTrackColor: TColors.primary,
+          ),
+        ],
       ),
     );
   }
 
   // =============================================================
-  // WIDGETS
+  // SEGMENT BUTTON (pour theme / langue)
   // =============================================================
 
-  Widget _langButton({required String label, required String flag, required bool isActive, required VoidCallback onTap}) {
+  Widget _segmentButton({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final colors = TColors.of(context);
     return Expanded(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          duration: TDuration.quick,
+          height: 56,
+          margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: isActive ? TTheme.orange.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isActive ? TTheme.orange.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.06),
-              width: isActive ? 1.5 : 1,
-            ),
+            color: selected ? TColors.primary : Colors.transparent,
+            borderRadius: TRadius.mdAll,
           ),
+          alignment: Alignment.center,
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(flag, style: const TextStyle(fontSize: 24)),
-              const SizedBox(height: 6),
+              Icon(
+                icon,
+                size: 18,
+                color: selected ? colors.textOnBrand : colors.textSecondary,
+              ),
+              const SizedBox(height: TSpacing.xxs),
               Text(
                 label,
-                style: TTheme.bodyStyle(
-                  size: 13,
-                  weight: FontWeight.w600,
-                  color: isActive ? TTheme.orange : Colors.white54,
+                style: TTypography.labelMd(
+                  color: selected ? colors.textOnBrand : colors.textSecondary,
                 ),
               ),
             ],
@@ -211,112 +361,78 @@ class _TSettingsPageState extends State<TSettingsPage> {
     );
   }
 
-  Widget _switchTile(IconData icon, String label, String sub, bool val, ValueChanged<bool> cb) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white38, size: 20),
-          const SizedBox(width: 12),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: TTheme.bodyStyle(size: 13, weight: FontWeight.w600, color: Colors.white)),
-              Text(sub, style: TTheme.bodyStyle(size: 11, color: Colors.white.withValues(alpha: 0.3))),
-            ],
-          )),
-          Switch.adaptive(value: val, onChanged: cb, activeTrackColor: TTheme.orange),
-        ],
-      ),
-    );
-  }
+  // =============================================================
+  // ROW GENERIQUE (pour cartes de navigation)
+  // =============================================================
 
-  Widget _actionTile(IconData icon, String label, String sub, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+  Widget _row({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    final colors = TColors.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color.fromARGB(
+              0x26,
+              color.r.round(),
+              color.g.round(),
+              color.b.round(),
+            ),
+          ),
+          child: Icon(icon, color: color, size: 18),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white38, size: 20),
-            const SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TTheme.bodyStyle(size: 13, weight: FontWeight.w600, color: Colors.white)),
-                if (sub.isNotEmpty) Text(sub, style: TTheme.bodyStyle(size: 11, color: Colors.white.withValues(alpha: 0.3))),
-              ],
-            )),
-            Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.15), size: 20),
-          ],
+        const SizedBox(width: TSpacing.md),
+        Expanded(
+          child: Text(label,
+              style: TTypography.titleMd(color: colors.textPrimary)),
         ),
-      ),
+        Icon(Icons.chevron_right_rounded, color: colors.textTertiary),
+      ],
     );
   }
 
-  Widget _infoTile(IconData icon, String label, String val) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white38, size: 20),
-          const SizedBox(width: 12),
-          Text(label, style: TTheme.bodyStyle(size: 13, weight: FontWeight.w600, color: Colors.white)),
-          const Spacer(),
-          Text(val, style: TTheme.bodyStyle(size: 13, color: Colors.white.withValues(alpha: 0.35))),
-        ],
-      ),
-    );
-  }
+  // =============================================================
+  // SIGN OUT
+  // =============================================================
 
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(16),
-      duration: const Duration(seconds: 1),
-    ));
-  }
-
-  void _logout() {
-    final tr = TLocale.of(context);
-    showDialog(
+  Future<void> _confirmSignOut(
+    BuildContext context,
+    String Function(String) tr,
+  ) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF16163A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('${tr('settings.logout')} ?', style: TTheme.subtitleStyle(size: 18)),
-        content: Text(tr('settings.logout_confirm'), style: TTheme.bodyStyle(color: Colors.white54)),
+        shape: const RoundedRectangleBorder(borderRadius: TRadius.xlAll),
+        title: Text(tr('settings.sign_out_confirm_title')),
+        content: Text(tr('settings.sign_out_confirm_body')),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('settings.cancel'))),
           TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const TAuthPage()),
-                (route) => false,
-              );
-            },
-            child: Text(tr('settings.logout_action'), style: TTheme.bodyStyle(size: 14, weight: FontWeight.w600, color: TTheme.red)),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(tr('common.cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              tr('settings.sign_out'),
+              style: const TextStyle(color: TColors.error),
+            ),
           ),
         ],
       ),
     );
+    if (confirmed == true && context.mounted) {
+      await ref.read(profileProvider.notifier).signOut();
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const TAuthGate()),
+        (_) => false,
+      );
+    }
   }
 }

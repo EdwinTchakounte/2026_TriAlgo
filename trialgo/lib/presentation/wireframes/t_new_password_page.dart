@@ -1,35 +1,44 @@
 // =============================================================
 // FICHIER : lib/presentation/wireframes/t_new_password_page.dart
-// ROLE   : Ecran "nouveau mot de passe" (apres clic sur lien email)
+// ROLE   : Saisie du nouveau mot de passe apres clic sur lien email
 // COUCHE : Presentation > Wireframes
 // =============================================================
 //
-// COMMENT ON ARRIVE SUR CETTE PAGE ?
-// ----------------------------------
-// L'utilisateur a recu un email avec un lien "trialgo://reset-password..."
-// Il clique dessus, l'OS rouvre TRIALGO, le DeepLinkService capte
-// l'URI et le passe a supabase.auth.getSessionFromUrl(uri).
-// Supabase emet ensuite un evenement AuthChangeEvent.passwordRecovery.
+// REFONTE (vs version precedente) :
+// ---------------------------------
+//   - PageScaffold avec titre + back auto
+//   - AppTextField avec toggle visibility integre (plus de code maison)
+//   - Indicateur de force du mdp (PasswordStrengthMeter extrait)
+//   - Validation temps reel (mdp ≥ 6 + match)
+//   - Succes : animation check bounce + SnackBar + redirection
+//   - Copy enfant-friendly "bien fort"
 //
-// TWireframeApp ecoute cet evenement et pousse cette page via le
-// navigatorKey global. A ce moment, l'utilisateur a une session
-// "recovery" limitee : il peut updateUser(password: ...) mais pas
-// acceder aux autres operations protegees.
+// CONTRAT :
+// ---------
+// Cette page est push automatiquement par TWireframeApp quand
+// supabase.auth.onAuthStateChange emet AuthChangeEvent.passwordRecovery
+// (declenche par DeepLinkService apres le clic dans l'email).
 //
-// FLUX UTILISATEUR :
-// ------------------
-// 1. Saisit nouveau mot de passe + confirmation
-// 2. Clique "Enregistrer"
-// 3. Supabase enregistre le nouveau mdp
-// 4. On affiche une SnackBar de succes et on route vers la page d'auth
-// 5. L'utilisateur peut maintenant se connecter avec son nouveau mdp
+// A ce moment, l'utilisateur a une session "recovery" active qui
+// autorise supabase.auth.updateUser(password: ...) mais rien d'autre.
 // =============================================================
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:trialgo/core/design_system/tokens/brand.dart';
+import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/design_system/tokens/elevation.dart';
+import 'package:trialgo/core/design_system/tokens/spacing.dart';
+import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/presentation/widgets/core/app_button.dart';
+import 'package:trialgo/presentation/widgets/core/app_text_field.dart';
+import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
+import 'package:trialgo/presentation/widgets/password_strength_meter.dart';
 import 'package:trialgo/presentation/wireframes/t_auth_gate.dart';
 import 'package:trialgo/presentation/wireframes/t_locale.dart';
+
 
 /// Ecran de saisie du nouveau mot de passe apres un reset.
 class TNewPasswordPage extends StatefulWidget {
@@ -41,306 +50,231 @@ class TNewPasswordPage extends StatefulWidget {
 
 class _TNewPasswordPageState extends State<TNewPasswordPage> {
 
-  // Controleurs des 2 champs mdp, liberes dans dispose().
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _newPwdController = TextEditingController();
+  final _confirmPwdController = TextEditingController();
 
-  // Spinner d'appel reseau.
   bool _isLoading = false;
+  String? _newPwdError;
+  String? _confirmPwdError;
+  String? _globalError;
 
-  // Toggles de visibilite pour chaque champ (icone oeil).
-  bool _obscureNew = true;
-  bool _obscureConfirm = true;
+  @override
+  void initState() {
+    super.initState();
+    // Rebuild a chaque frappe pour mettre a jour la force du mdp
+    // et reevaluer le match de la confirmation.
+    _newPwdController.addListener(_onChange);
+    _confirmPwdController.addListener(_onChange);
+  }
+
+  void _onChange() {
+    // Efface les erreurs inline des que l'utilisateur retape.
+    if (_newPwdError != null || _confirmPwdError != null) {
+      setState(() {
+        _newPwdError = null;
+        _confirmPwdError = null;
+      });
+    } else {
+      // Rebuild quand meme pour le strength meter / confirmation inline.
+      setState(() {});
+    }
+  }
 
   @override
   void dispose() {
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
+    _newPwdController.dispose();
+    _confirmPwdController.dispose();
     super.dispose();
   }
 
   // =============================================================
   // METHODE : _handleUpdate
   // =============================================================
-  // Valide la saisie puis appelle Supabase pour enregistrer le mdp.
-  //
-  // Pre-condition : l'utilisateur doit avoir une session active
-  // en mode "recovery" (ce qui est le cas apres getSessionFromUrl).
-  // Sinon l'appel updateUser leverait une AuthException.
-  // =============================================================
 
-  /// Enregistre le nouveau mot de passe cote Supabase.
   Future<void> _handleUpdate() async {
-    final newPassword = _newPasswordController.text;
-    final confirmPassword = _confirmPasswordController.text;
+    final pwd = _newPwdController.text;
+    final confirm = _confirmPwdController.text;
+    final tr = TLocale.of(context);
 
-    // Validation : longueur minimale cote client (alignee sur celle
-    // de la creation de compte dans t_auth_page.dart : 6 caracteres).
-    if (newPassword.length < 6) {
-      _showError('Mot de passe : minimum 6 caracteres');
+    // --- Validation ---
+    if (pwd.length < 6) {
+      setState(() => _newPwdError = tr('newpwd.error_min'));
+      return;
+    }
+    if (pwd != confirm) {
+      setState(() => _confirmPwdError = tr('newpwd.error_mismatch'));
       return;
     }
 
-    // Validation : les deux saisies doivent etre identiques.
-    // Garde-fou classique pour eviter une faute de frappe qui
-    // enfermerait l'utilisateur avec un mdp qu'il ne connait pas.
-    if (newPassword != confirmPassword) {
-      _showError(TLocale.of(context)('newpwd.mismatch'));
-      return;
-    }
-
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _globalError = null;
+    });
 
     try {
-      // Appel Supabase : met a jour le mdp de l'utilisateur courant.
-      // UserAttributes encapsule les champs modifiables (email,
-      // password, data). Ici on ne change que password.
-      await supabase.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
+      await supabase.auth.updateUser(UserAttributes(password: pwd));
 
-      // --- Succes ---
-      // On affiche un SnackBar de confirmation puis on redirige
-      // vers l'AuthGate qui routera automatiquement vers la home
-      // si la session est toujours valide, ou la page d'auth sinon.
       if (!mounted) return;
+      // Celebration legere : SnackBar success + retour immediat a Auth.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(TLocale.of(context)('newpwd.success')),
-          backgroundColor: Colors.green.shade700,
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: TSpacing.sm),
+              Expanded(child: Text(tr('newpwd.success_snack'))),
+            ],
+          ),
+          backgroundColor: TColors.success,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      // pushAndRemoveUntil : vide la pile et pose AuthGate en racine.
-      // L'utilisateur ne peut plus "back" vers la page de reset.
+      // Navigation : push AuthGate en racine (l'utilisateur peut
+      // devoir se reconnecter avec son nouveau mdp).
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const TAuthGate()),
         (_) => false,
       );
     } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e) {
-      _showError('Erreur reseau');
-    } finally {
+      if (mounted) setState(() => _globalError = e.message);
+    } catch (_) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _globalError = TLocale.of(context)('forgot.error_network'));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  /// SnackBar rouge pour signaler une erreur de saisie ou reseau.
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = TColors.of(context);
     final tr = TLocale.of(context);
 
-    // WillPopScope : on bloque le back OS pendant l'appel reseau
-    // pour eviter une navigation au milieu d'un updateUser.
+    // Bloque le back OS pendant l'appel reseau pour eviter un
+    // pop au milieu d'un updateUser qui laisserait l'UI dans un
+    // etat incoherent.
     return PopScope(
       canPop: !_isLoading,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A1A),
-        body: Container(
-          // Meme gradient que les autres pages d'auth.
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0A0A1A),
-                Color(0xFF1A1035),
-                Color(0xFF0D1B2A),
-              ],
-            ),
+      child: PageScaffold(
+        title: tr('newpwd.title'),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(
+            horizontal: TSpacing.xxl,
+            vertical: TSpacing.lg,
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: Center(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: TSpacing.xl),
+
+              // --- Icone cercle orange gradient ---
+              Center(
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: TBrand.primary,
+                    boxShadow: TElevation.glowPrimary,
+                  ),
+                  child: const Icon(
+                    Icons.lock_reset_rounded,
+                    color: Colors.white,
+                    size: 44,
+                  ),
+                ),
+              ),
+              const SizedBox(height: TSpacing.xl),
+
+              // --- Titre + copy enfant-friendly ---
+              Text(
+                tr('newpwd.hero_title'),
+                textAlign: TextAlign.center,
+                style: TTypography.headlineLg(color: colors.textPrimary),
+              ),
+              const SizedBox(height: TSpacing.xxl),
+
+              // --- Champ nouveau mdp ---
+              AppTextField(
+                controller: _newPwdController,
+                label: tr('newpwd.field_new'),
+                hint: tr('newpwd.field_hint_new'),
+                prefixIcon: Icons.lock_outline,
+                obscure: true,
+                textInputAction: TextInputAction.next,
+                errorText: _newPwdError,
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: TSpacing.sm),
+
+              // --- Strength meter (composant partage avec signup) ---
+              PasswordStrengthMeter(password: _newPwdController.text),
+              const SizedBox(height: TSpacing.lg),
+
+              // --- Champ confirmation ---
+              AppTextField(
+                controller: _confirmPwdController,
+                label: tr('newpwd.field_confirm'),
+                hint: tr('newpwd.field_hint_confirm'),
+                prefixIcon: Icons.lock_outline,
+                obscure: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _handleUpdate(),
+                errorText: _confirmPwdError,
+                enabled: !_isLoading,
+              ),
+              const SizedBox(height: TSpacing.xl),
+
+              // --- Erreur globale (reseau / Supabase) ---
+              if (_globalError != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(TSpacing.md),
+                  decoration: BoxDecoration(
+                    color: Color.fromARGB(
+                      0x26,
+                      TColors.error.r.round(),
+                      TColors.error.g.round(),
+                      TColors.error.b.round(),
+                    ),
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    border: Border.all(
+                      color: Color.fromARGB(
+                        0x4D,
+                        TColors.error.r.round(),
+                        TColors.error.g.round(),
+                        TColors.error.b.round(),
+                      ),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      // --- Icone clef ---
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFFF6B35),
-                              Color(0xFFF7C948),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF6B35)
-                                  .withValues(alpha: 0.3),
-                              blurRadius: 20,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.lock_reset,
-                            color: Colors.white, size: 40),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // --- Titre + description ---
-                      Text(
-                        tr('newpwd.title'),
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        tr('newpwd.desc'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.6),
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // --- Champ "nouveau mot de passe" ---
-                      _buildPasswordField(
-                        controller: _newPasswordController,
-                        hint: tr('newpwd.new'),
-                        obscure: _obscureNew,
-                        onToggle: () =>
-                            setState(() => _obscureNew = !_obscureNew),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // --- Champ "confirmer mot de passe" ---
-                      _buildPasswordField(
-                        controller: _confirmPasswordController,
-                        hint: tr('newpwd.confirm'),
-                        obscure: _obscureConfirm,
-                        onToggle: () => setState(
-                            () => _obscureConfirm = !_obscureConfirm),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // --- Bouton "Enregistrer" ---
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFFFF6B35),
-                                Color(0xFFF7C948),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _handleUpdate,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    tr('newpwd.submit'),
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
-                          ),
-                        ),
+                      const Icon(Icons.error_outline,
+                          color: TColors.error, size: 20),
+                      const SizedBox(width: TSpacing.sm),
+                      Expanded(
+                        child: Text(_globalError!,
+                            style: TTypography.bodySm(color: TColors.error)),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: TSpacing.md),
+              ],
+
+              // --- Bouton enregistrer ---
+              AppButton.primary(
+                label: tr('newpwd.cta_save'),
+                icon: Icons.check_rounded,
+                isLoading: _isLoading,
+                fullWidth: true,
+                size: AppButtonSize.lg,
+                onPressed: _handleUpdate,
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // =============================================================
-  // WIDGET : _buildPasswordField
-  // =============================================================
-  // Factorise le style des 2 champs mdp : glassmorphism + icone cle
-  // + bouton oeil pour toggler la visibilite.
-  //
-  // [obscure] pilote l'obfuscation (true = masque avec des puces).
-  // [onToggle] est appele quand on clique l'icone oeil.
-  // =============================================================
-
-  /// Champ de saisie de mdp avec bouton "afficher/masquer".
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String hint,
-    required bool obscure,
-    required VoidCallback onToggle,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-          border: InputBorder.none,
-          icon: Icon(
-            Icons.lock_outline,
-            color: Colors.white.withValues(alpha: 0.5),
-          ),
-          suffixIcon: IconButton(
-            icon: Icon(
-              obscure ? Icons.visibility_off : Icons.visibility,
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
-            onPressed: onToggle,
+              const SizedBox(height: TSpacing.xl),
+            ],
           ),
         ),
       ),

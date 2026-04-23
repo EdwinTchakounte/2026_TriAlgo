@@ -31,6 +31,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:trialgo/core/constants/game_constants.dart';
+import 'package:trialgo/core/design_system/tokens/brand.dart';
 import 'package:trialgo/data/services/audio_service.dart';
 import 'package:trialgo/domain/entities/graph_card_entity.dart';
 import 'package:trialgo/presentation/providers/audio_provider.dart';
@@ -90,7 +91,12 @@ class _TGamePageState extends ConsumerState<TGamePage>
   /// pour que le joueur voie combien de temps il passe en jeu.
   int _sessionElapsedSeconds = 0;
   Timer? _elapsedTimer;
-  int _lives = 3;
+
+  /// Vies restantes pendant la partie. Initialise dans initState()
+  /// depuis profile.lives (source unique, persistee en BDD). Chaque
+  /// perte est aussi persistee immediatement via loseLife(), donc la
+  /// home page reflete l'etat en temps reel. Plus de hardcode a 3.
+  late int _lives;
   int _correctAnswers = 0;
   int _wrongAnswers = 0;
   int _streak = 0;
@@ -227,6 +233,28 @@ class _TGamePageState extends ConsumerState<TGamePage>
     // Initialiser le nombre de questions depuis la config du niveau.
     // Exemple : niveau 1-3 = 8 questions, niveau 4-6 = 10, etc.
     _totalQuestions = GameConstants.getLevelConfig(widget.level).questions;
+
+    // Lire les vies depuis le profil (source unique). La page d'accueil
+    // affiche ce meme compteur -> elles sont forcement synchrones.
+    // Si le joueur n'a plus de vies, on redirige vers la home avec un
+    // message (voir addPostFrameCallback plus bas pour l'affichage du
+    // dialog). _lives reste = 0 ici pour rendre la partie inutilisable.
+    _lives = ref.read(profileProvider).lives;
+
+    // Safeguard : si aucune vie dispo, fermer la page et informer.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_lives <= 0) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(TLocale.of(context)('game.no_lives_snack')),
+            backgroundColor: const Color(0xFFEF5350),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
 
     // Initialiser les 20 particules avec des positions aleatoires.
     _initParticles();
@@ -673,7 +701,17 @@ class _TGamePageState extends ConsumerState<TGamePage>
       } else {
         _wrongAnswers++;
         _streak = 0;
-        if (_wrongAnswers % 2 == 0 && _lives > 0) _lives--;
+        // Perte de vie toutes les 2 mauvaises reponses. La deduction
+        // locale + persistance DB se fait ensemble pour que la home
+        // page (qui ecoute profileProvider) reflete la perte en direct.
+        if (_wrongAnswers % 2 == 0 && _lives > 0) {
+          _lives--;
+          // Fire-and-forget : la persistance n'est pas critique au
+          // rythme de l'UI (si le reseau est lent, _lives local est
+          // deja decremente). En cas d'echec reseau, la prochaine
+          // reload() synchronisera sur la valeur serveur.
+          ref.read(profileProvider.notifier).loseLife();
+        }
 
         // Feedback visuel : particules rouges + animation shake.
         _particleTargetColor = const Color(0xFFEF5350);
@@ -698,9 +736,11 @@ class _TGamePageState extends ConsumerState<TGamePage>
         //   2. UPDATE dans user_games (cumul : total_score, level, vies)
         // Les deux operations sont encapsulees dans recordGameSession.
         //
-        // Le calcul du nombre de vies utilisees est base sur _wrongAnswers
-        // et le seuil livesPerWrong du niveau (1 vie toutes les 2 erreurs).
-        final livesUsed = (_wrongAnswers ~/ 2);
+        // livesUsed = 0 ici car chaque perte a deja ete persistee en
+        // direct via loseLife() pendant la partie (cf. _handleAnswer).
+        // On garde le parametre a 0 pour preserver la signature stable
+        // de recordGameSession mais la deduction ne doit PAS etre
+        // refaite au risque de double-decrement.
         ref.read(profileProvider.notifier).recordGameSession(
           level: widget.level,
           scoreGained: _score,
@@ -713,7 +753,7 @@ class _TGamePageState extends ConsumerState<TGamePage>
           // approximation de la duree active cote client.
           durationSeconds: _sessionElapsedSeconds,
           passed: passed,
-          livesUsed: livesUsed,
+          livesUsed: 0,
           levelUp: passed,
         );
 
@@ -753,28 +793,24 @@ class _TGamePageState extends ConsumerState<TGamePage>
             ? const Color(0xFFFFA726)
             : const Color(0xFFEF5350);
 
+    // Gradient de fond theme-aware : dark (immersif, defaut) ou
+    // light (pastel doux). Le reste du design du gameplay est
+    // inchange (particules, cartes, etc.).
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgGradient = isDark ? TBrand.bgDark : TBrand.bgLight;
+
     return Scaffold(
       body: Stack(
         children: [
           // =======================================================
           // COUCHE 1 : FOND DEGRADE MULTI-COUCHES
           // =======================================================
-          // Trois couleurs profondes (#0A0A1A -> #1A1035 -> #0D1B2A)
-          // creent un fond sombre et immersif style table de jeu.
-          // Le degrade vertical donne de la profondeur.
+          // Gradient theme-aware : sombre en mode dark, pastel
+          // lavande en mode light. Les deux fonds gardent la
+          // sensation "table de jeu".
           // =======================================================
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0A0A1A), // Noir spatial profond en haut.
-                  Color(0xFF1A1035), // Violet sombre au milieu.
-                  Color(0xFF0D1B2A), // Bleu nuit en bas.
-                ],
-              ),
-            ),
+            decoration: BoxDecoration(gradient: bgGradient),
           ),
 
           // =======================================================
@@ -1555,6 +1591,104 @@ class _TGamePageState extends ConsumerState<TGamePage>
               ],
             ),
           ),
+
+          // =======================================================
+          // COUCHE OVERLAY : PAUSE
+          // =======================================================
+          // Affiche un scrim plein-ecran + carte centrale "PAUSE"
+          // quand _isPaused == true. Bloque les interactions avec
+          // le contenu sous-jacent (tap sur les cartes du jeu).
+          //
+          // Un simple tap n'importe ou sur le scrim relance la partie
+          // via _togglePause, reutilisant la logique deja existante
+          // (timer reprend, musique reprend).
+          //
+          // Utilise AnimatedOpacity pour un fondu d'entree/sortie
+          // plutot qu'une apparition brutale. Le IgnorePointer est
+          // combine : quand invisible (opacity = 0), le widget ne
+          // doit plus absorber les taps pour que le jeu reste jouable.
+          // =======================================================
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !_isPaused,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: _isPaused ? 1.0 : 0.0,
+                child: GestureDetector(
+                  // Un tap sur le scrim relance la partie.
+                  // Le bouton pause lui-meme reste accessible (il est
+                  // au-dessus de l'overlay dans le Stack), mais ce tap
+                  // large sur toute la surface offre un 2e moyen de
+                  // reprendre (pattern standard dans les jeux mobiles).
+                  onTap: () {
+                    if (_isPaused) _togglePause();
+                  },
+                  child: Container(
+                    // Scrim noir semi-opaque : assombrit le jeu sous-jacent
+                    // sans le cacher completement (garde le contexte visuel).
+                    color: Colors.black.withValues(alpha: 0.75),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // --- Icone play centrale ---
+                          // Signale au joueur que tap = reprendre.
+                          Container(
+                            width: 90,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [
+                                  Color(0xFFFF6B35),
+                                  Color(0xFFF7C948),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFF6B35)
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 24,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              size: 56,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // --- Titre "PAUSE" ---
+                          Text(
+                            'PAUSE',
+                            style: GoogleFonts.rajdhani(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 8,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // --- Hint "Tap pour reprendre" ---
+                          Text(
+                            'Tap pour reprendre',
+                            style: GoogleFonts.exo2(
+                              fontSize: 13,
+                              color: Colors.white.withValues(alpha: 0.6),
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1588,7 +1722,10 @@ class _TGamePageState extends ConsumerState<TGamePage>
       isWrong: isWrong,
       feedbackScale: _feedbackScale,
       onView: () => _showCardFullscreen(card),
-      onTap: _isAnswered ? null : () => _handleAnswer(cardId),
+      // On bloque aussi les taps en pause (pas seulement apres avoir
+      // repondu) : sinon le joueur pourrait "reflechir" en pause puis
+      // repondre au moment de resume, court-circuitant le bonus temps.
+      onTap: (_isAnswered || _isPaused) ? null : () => _handleAnswer(cardId),
     );
   }
 

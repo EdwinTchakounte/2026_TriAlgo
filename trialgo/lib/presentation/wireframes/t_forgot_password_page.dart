@@ -1,26 +1,40 @@
 // =============================================================
 // FICHIER : lib/presentation/wireframes/t_forgot_password_page.dart
-// ROLE   : Ecran "mot de passe oublie" (saisie email)
+// ROLE   : Ecran "mot de passe oublie" refondu
 // COUCHE : Presentation > Wireframes
 // =============================================================
 //
-// FLUX UTILISATEUR :
+// REFONTE (vs version precedente) :
+// ---------------------------------
+//   - PageScaffold avec titre + back auto (remplace layout manuel)
+//   - Mascotte duo flottante (chaleur vs ecran nu precedent)
+//   - Copy conversationnelle "Pas de souci !" (vs "Entrez votre email")
+//   - AppTextField + AppButton (design system, plus d'inline CSS)
+//   - Ecran confirmation CELEBRATOIRE (cercle success + mascot trio)
+//   - Validation email temps reel
+//
+// CONTRAT SUPABASE :
 // ------------------
-// 1. Depuis la page d'auth, l'utilisateur clique "Mot de passe oublie ?"
-// 2. Il arrive ici, saisit son email
-// 3. Il clique "Envoyer le lien"
-// 4. Supabase envoie un email avec un lien "trialgo://reset-password..."
-// 5. On affiche une confirmation "Email envoye, consultez votre boite"
-// 6. L'utilisateur ferme l'app, clique sur le lien dans l'email
-// 7. L'app se rouvre, le DeepLinkService capture l'URI, Supabase
-//    emet un evenement "passwordRecovery", et on navigue vers
-//    TNewPasswordPage automatiquement (cf. TWireframeApp).
+// Appelle supabase.auth.resetPasswordForEmail avec redirectTo =
+// 'trialgo://reset-password' qui declenche le deep-link documente
+// dans data/services/deep_link_service.dart.
 // =============================================================
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/design_system/tokens/elevation.dart';
+import 'package:trialgo/core/design_system/tokens/motion.dart';
+import 'package:trialgo/core/design_system/tokens/spacing.dart';
+import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/presentation/widgets/core/app_button.dart';
+import 'package:trialgo/presentation/widgets/core/app_text_field.dart';
+import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
 import 'package:trialgo/presentation/wireframes/t_locale.dart';
+import 'package:trialgo/presentation/wireframes/t_mock_data.dart';
+
 
 /// Ecran de demande de reinitialisation de mot de passe.
 class TForgotPasswordPage extends StatefulWidget {
@@ -30,342 +44,284 @@ class TForgotPasswordPage extends StatefulWidget {
   State<TForgotPasswordPage> createState() => _TForgotPasswordPageState();
 }
 
-class _TForgotPasswordPageState extends State<TForgotPasswordPage> {
+class _TForgotPasswordPageState extends State<TForgotPasswordPage>
+    with SingleTickerProviderStateMixin {
 
-  // Controleur du champ email, libere dans dispose().
   final _emailController = TextEditingController();
 
-  // True pendant l'appel reseau a Supabase (affiche le spinner).
   bool _isLoading = false;
-
-  // True apres un envoi reussi : on bascule sur l'ecran de confirmation.
   bool _emailSent = false;
+  String? _emailError;
+  String? _globalError;
+
+  /// Flottement mascotte (memes 4s sinus que l'Auth, coherent).
+  late final AnimationController _mascotFloat;
+
+  @override
+  void initState() {
+    super.initState();
+    _mascotFloat = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000),
+    )..repeat(reverse: true);
+
+    // Efface l'erreur de champ des que l'utilisateur retape.
+    _emailController.addListener(() {
+      if (_emailError != null) {
+        setState(() => _emailError = null);
+      }
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
+    _mascotFloat.dispose();
     super.dispose();
   }
 
   // =============================================================
   // METHODE : _handleReset
   // =============================================================
-  // Appelle Supabase pour envoyer l'email de reset.
-  //
-  // Le parametre redirectTo est CRITIQUE : c'est l'URI que Supabase
-  // inclura dans le lien de l'email, et qui doit correspondre
-  // au scheme configure dans AndroidManifest.xml / Info.plist.
-  //
-  // ATTENTION : ce redirectTo doit aussi etre ajoute dans
-  //   Dashboard Supabase > Auth > URL Configuration > Redirect URLs
-  // sinon Supabase refuse l'operation avec "redirect_to not allowed".
-  // =============================================================
 
-  /// Envoie l'email de reinitialisation.
   Future<void> _handleReset() async {
     final email = _emailController.text.trim();
+    final tr = TLocale.of(context);
 
-    // Validation basique : l'email doit contenir au moins un "@".
-    // Supabase fera une validation complete cote serveur.
-    if (email.isEmpty || !email.contains('@')) {
-      _showError('Email invalide');
+    // Validation temps reel simple (format email minimal).
+    if (email.isEmpty) {
+      setState(() => _emailError = tr('forgot.email_hint'));
+      return;
+    }
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      setState(() => _emailError = tr('forgot.invalid_email'));
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _globalError = null;
+    });
 
     try {
-      // Appel Supabase : declenche l'envoi d'un email avec un lien
-      // "trialgo://reset-password#access_token=..." vers le deep-link.
+      // Appel Supabase. redirectTo doit etre enregistre dans le
+      // Dashboard Supabase -> Auth -> URL Configuration -> Redirect URLs.
       await supabase.auth.resetPasswordForEmail(
         email,
         redirectTo: 'trialgo://reset-password',
       );
-
-      // Bascule vers l'ecran de confirmation.
-      if (mounted) {
-        setState(() => _emailSent = true);
-      }
+      if (mounted) setState(() => _emailSent = true);
     } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e) {
-      _showError('Erreur reseau');
-    } finally {
+      if (mounted) setState(() => _globalError = e.message);
+    } catch (_) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _globalError = tr('forgot.error_network'));
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  /// SnackBar rouge en bas d'ecran pour signaler une erreur.
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Helper de traduction partage avec toute l'app.
     final tr = TLocale.of(context);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A1A),
-      body: Container(
-        // Meme gradient que la page d'auth pour coherence visuelle.
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0A0A1A),
-              Color(0xFF1A1035),
-              Color(0xFF0D1B2A),
-            ],
-          ),
+    return PageScaffold(
+      title: tr('forgot.title_refonte'),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: TSpacing.xxl,
+          vertical: TSpacing.lg,
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              children: [
-                // --- Barre du haut : bouton retour ---
-                // IconButton avec fleche <- pour pop la route courante.
-                // Sauf si _isLoading (verrouille pendant l'envoi).
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                    onPressed: _isLoading
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                  ),
-                ),
-
-                // Le reste bascule entre "formulaire" et "confirmation".
-                Expanded(
-                  child: Center(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      // AnimatedSwitcher : fade entre les 2 etats pour un
-                      // rendu doux lors du passage formulaire -> confirmation.
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _emailSent
-                            ? _buildConfirmation(tr)
-                            : _buildForm(tr),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        // AnimatedSwitcher : fade entre formulaire et confirmation.
+        child: AnimatedSwitcher(
+          duration: TDuration.normal,
+          child: _emailSent ? _buildConfirmation() : _buildForm(),
         ),
       ),
     );
   }
 
   // =============================================================
-  // WIDGET : _buildForm
-  // =============================================================
-  // Bloc saisie de l'email + bouton d'envoi.
-  // Presente tant que _emailSent == false.
+  // WIDGET : ETAT FORMULAIRE
   // =============================================================
 
-  /// Formulaire de saisie de l'email.
-  Widget _buildForm(String Function(String) tr) {
+  Widget _buildForm() {
+    final colors = TColors.of(context);
+    final tr = TLocale.of(context);
+
     return Column(
-      key: const ValueKey('form'), // Cle pour AnimatedSwitcher.
+      key: const ValueKey('form'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // --- Titre ---
-        Text(
-          tr('forgot.title'),
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: 2,
-          ),
-        ),
-        const SizedBox(height: 12),
+        // --- Logo TRIALGO (coherence avec auth page) ---
+        _buildMascot(MockData.logo, height: 100),
+        const SizedBox(height: TSpacing.xl),
 
-        // --- Description ---
+        // --- Copy conversationnelle ---
         Text(
-          tr('forgot.desc'),
+          tr('forgot.hero_title'),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withValues(alpha: 0.6),
-            height: 1.4,
-          ),
+          style: TTypography.headlineLg(color: colors.textPrimary),
         ),
-        const SizedBox(height: 28),
-
-        // --- Champ email (glassmorphism) ---
-        // Container avec transparence + border pour le style "glass".
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-          ),
-          child: TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: tr('auth.email'),
-              hintStyle: TextStyle(
-                color: Colors.white.withValues(alpha: 0.3),
-              ),
-              border: InputBorder.none,
-              // InputBorder.none : on gere le style via le Container parent.
-              icon: Icon(
-                Icons.email_outlined,
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-            ),
-          ),
+        const SizedBox(height: TSpacing.xs),
+        Text(
+          tr('forgot.hero_body'),
+          textAlign: TextAlign.center,
+          style: TTypography.bodyMd(color: colors.textSecondary),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: TSpacing.xl),
 
-        // --- Bouton "Envoyer le lien" ---
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: DecoratedBox(
+        // --- Champ email ---
+        AppTextField(
+          controller: _emailController,
+          label: tr('auth.email'),
+          hint: 'tu@exemple.com',
+          prefixIcon: Icons.mail_outline,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleReset(),
+          errorText: _emailError,
+          enabled: !_isLoading,
+        ),
+        const SizedBox(height: TSpacing.lg),
+
+        // --- Erreur globale (reseau / Supabase) ---
+        if (_globalError != null) ...[
+          Container(
+            padding: const EdgeInsets.all(TSpacing.md),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF6B35), Color(0xFFF7C948)],
+              color: Color.fromARGB(
+                0x26,
+                TColors.error.r.round(),
+                TColors.error.g.round(),
+                TColors.error.b.round(),
               ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleReset,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+              border: Border.all(
+                color: Color.fromARGB(
+                  0x4D,
+                  TColors.error.r.round(),
+                  TColors.error.g.round(),
+                  TColors.error.b.round(),
                 ),
               ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text(
-                      tr('forgot.send'),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 1,
-                      ),
-                    ),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline,
+                    color: TColors.error, size: 20),
+                const SizedBox(width: TSpacing.sm),
+                Expanded(
+                  child: Text(_globalError!,
+                      style: TTypography.bodySm(color: TColors.error)),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: TSpacing.md),
+        ],
+
+        // --- Bouton envoi ---
+        AppButton.primary(
+          label: tr('forgot.cta_send'),
+          trailingIcon: Icons.arrow_forward_rounded,
+          isLoading: _isLoading,
+          fullWidth: true,
+          size: AppButtonSize.lg,
+          onPressed: _handleReset,
         ),
       ],
     );
   }
 
   // =============================================================
-  // WIDGET : _buildConfirmation
-  // =============================================================
-  // Etat de succes : email envoye, message rassurant + bouton retour.
+  // WIDGET : ETAT CONFIRMATION
   // =============================================================
 
-  /// Ecran de confirmation apres envoi reussi.
-  Widget _buildConfirmation(String Function(String) tr) {
+  Widget _buildConfirmation() {
+    final colors = TColors.of(context);
+    final tr = TLocale.of(context);
+
     return Column(
-      key: const ValueKey('sent'), // Cle pour AnimatedSwitcher.
+      key: const ValueKey('sent'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // --- Icone cercle vert (succes) ---
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF66BB6A), Color(0xFF43A047)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.green.withValues(alpha: 0.3),
-                blurRadius: 20,
+        // --- Cercle vert success avec icone mail ---
+        Center(
+          child: Container(
+            width: 104,
+            height: 104,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [TColors.success, Color(0xFF81D884)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+              boxShadow: TElevation.glowSuccess,
+            ),
+            child: const Icon(
+              Icons.mark_email_read_outlined,
+              color: Colors.white,
+              size: 48,
+            ),
           ),
-          child: const Icon(Icons.mark_email_read_outlined,
-              color: Colors.white, size: 40),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: TSpacing.xxl),
 
-        // --- Titre de confirmation ---
+        // --- Titre celebration ---
         Text(
           tr('forgot.sent_title'),
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: 1.5,
-          ),
+          textAlign: TextAlign.center,
+          style: TTypography.headlineLg(color: colors.textPrimary),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: TSpacing.sm),
 
         // --- Description rassurante ---
         Text(
-          tr('forgot.sent_desc'),
+          tr('forgot.sent_body'),
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withValues(alpha: 0.6),
-            height: 1.4,
-          ),
+          style: TTypography.bodyMd(color: colors.textSecondary),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: TSpacing.xxl),
 
-        // --- Bouton "Retour a la connexion" ---
-        // OutlinedButton plus discret que le bouton primaire :
-        // l'action principale etait l'envoi, desormais terminee.
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            child: Text(
-              tr('forgot.back_to_login'),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
+        // --- Mascotte trio (sensation d'etre accompagne) ---
+        _buildMascot(MockData.mascotMain, height: 100),
+        const SizedBox(height: TSpacing.xxl),
+
+        // --- Bouton retour ---
+        AppButton.secondary(
+          label: tr('forgot.cta_back_login'),
+          icon: Icons.arrow_back_rounded,
+          fullWidth: true,
+          size: AppButtonSize.lg,
+          onPressed: () => Navigator.of(context).pop(),
         ),
       ],
+    );
+  }
+
+  // =============================================================
+  // WIDGET : mascotte avec float subtil
+  // =============================================================
+
+  Widget _buildMascot(String asset, {required double height}) {
+    return AnimatedBuilder(
+      animation: _mascotFloat,
+      builder: (context, child) {
+        final offset = Tween<double>(begin: -4, end: 4)
+            .chain(CurveTween(curve: TCurve.easeInOut))
+            .evaluate(_mascotFloat);
+        return Transform.translate(
+          offset: Offset(0, offset),
+          child: child,
+        );
+      },
+      child: Center(
+        child: Image.asset(asset, height: height, fit: BoxFit.contain),
+      ),
     );
   }
 }

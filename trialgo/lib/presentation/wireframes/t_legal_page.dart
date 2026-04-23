@@ -1,133 +1,193 @@
 // =============================================================
 // FICHIER : lib/presentation/wireframes/t_legal_page.dart
-// ROLE   : Mentions legales et conditions d'utilisation
+// ROLE   : Mentions legales + conditions + credits
 // COUCHE : Presentation > Wireframes
+// =============================================================
+//
+// REFONTE :
+// ---------
+//   - PageScaffold + design system
+//   - Tabs : Mentions / Conditions / Credits
+//   - Typographie lisible (bodyLg pour paragraphes, headlineSm pour titres)
+//   - Design minimaliste pour une page "obligatoire"
 // =============================================================
 
 import 'package:flutter/material.dart';
-import 'package:trialgo/presentation/wireframes/t_locale.dart';
-import 'package:trialgo/presentation/wireframes/t_mock_data.dart';
-import 'package:trialgo/presentation/wireframes/t_theme.dart';
 
-/// Page des mentions legales et conditions d'utilisation.
+import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/design_system/tokens/spacing.dart';
+import 'package:trialgo/core/design_system/tokens/typography.dart';
+import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
+import 'package:trialgo/presentation/wireframes/t_locale.dart';
+
+
 class TLegalPage extends StatelessWidget {
   const TLegalPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final tr = TLocale.of(context);
-    return Scaffold(
-      body: TTheme.patterned(
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header.
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 20, 0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white54, size: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Text(tr('legal.title'), style: TTheme.titleStyle(size: 20)),
-                  ],
-                ),
+    return DefaultTabController(
+      length: 3,
+      child: PageScaffold(
+        title: tr('legal.title_refonte'),
+        child: Column(
+          children: [
+            // Tabs.
+            _buildTabs(context),
+            // Contenu.
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _tabContent(context, _LegalContent.mentions),
+                  _tabContent(context, _LegalContent.conditions),
+                  _tabContent(context, _LegalContent.credits),
+                ],
               ),
-
-              const SizedBox(height: 16),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _section('Conditions d\'utilisation'),
-                      _body(
-                        'TRIALGO est un jeu educatif base sur les transformations visuelles. '
-                        'En utilisant cette application, vous acceptez les presentes conditions.\n\n'
-                        'Le jeu est destine a un usage personnel et non commercial. '
-                        'Chaque code d\'activation est lie a un seul appareil.',
-                      ),
-
-                      const SizedBox(height: 24),
-                      _section('Propriete intellectuelle'),
-                      _body(
-                        'Toutes les images, illustrations et concepts du jeu TRIALGO '
-                        'sont proteges par le droit d\'auteur.\n\n'
-                        'Les mascottes, les cartes (emettrices, cables, receptrices) '
-                        'et le design de l\'application sont la propriete exclusive '
-                        'de l\'equipe TRIALGO.',
-                      ),
-
-                      const SizedBox(height: 24),
-                      _section('Donnees personnelles'),
-                      _body(
-                        'Nous collectons uniquement les donnees necessaires au fonctionnement '
-                        'du jeu : email, pseudo, scores, progression.\n\n'
-                        'Vos donnees sont stockees de maniere securisee sur Supabase '
-                        'et ne sont jamais partagees avec des tiers.\n\n'
-                        'Vous pouvez demander la suppression de votre compte '
-                        'et de vos donnees a tout moment.',
-                      ),
-
-                      const SizedBox(height: 24),
-                      _section('Contact'),
-                      _body(
-                        'Pour toute question relative aux conditions d\'utilisation '
-                        'ou a vos donnees personnelles :\n\n'
-                        'Email : contact@trialgo.com\n'
-                        'Site web : www.trialgo.com',
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Logo signature.
-                      Center(
-                        child: Column(
-                          children: [
-                            Image.asset(MockData.logo, width: 60, height: 60, fit: BoxFit.contain),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Version 1.0.0  ·  Mars 2026',
-                              style: TTheme.bodyStyle(size: 12, color: Colors.white.withValues(alpha: 0.25)),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _section(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(title, style: TTheme.subtitleStyle(size: 17)),
+  Widget _buildTabs(BuildContext context) {
+    final colors = TColors.of(context);
+    final tr = TLocale.of(context);
+    return Container(
+      color: Colors.transparent,
+      child: TabBar(
+        indicatorColor: TColors.primary,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelColor: colors.textPrimary,
+        unselectedLabelColor: colors.textTertiary,
+        labelStyle: TTypography.titleSm(),
+        tabs: [
+          Tab(text: tr('legal.tab_mentions')),
+          Tab(text: tr('legal.tab_conditions')),
+          Tab(text: tr('legal.tab_credits')),
+        ],
+      ),
     );
   }
 
-  Widget _body(String text) {
-    return Text(
-      text,
-      style: TTheme.bodyStyle(size: 13, color: Colors.white.withValues(alpha: 0.5)),
+  Widget _tabContent(BuildContext context, _LegalContent content) {
+    final colors = TColors.of(context);
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(
+        horizontal: TSpacing.xxl,
+        vertical: TSpacing.xl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: content.sections.map((s) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: TSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.title,
+                  style: TTypography.headlineSm(color: colors.textPrimary),
+                ),
+                const SizedBox(height: TSpacing.sm),
+                Text(
+                  s.body,
+                  style: TTypography.bodyLg(color: colors.textSecondary),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
+}
+
+
+// =============================================================
+// CONTENU STATIQUE (3 onglets)
+// =============================================================
+//
+// Texte placeholder pour v1. A remplacer par le texte legal reel
+// fourni par l'editeur (CGU, politique de confidentialite signees
+// par le responsable juridique).
+//
+// Note : les sections sont courtes volontairement — on ne veut pas
+// enterrer l'enfant sous du juridique. Langage simple, phrases courtes.
+// =============================================================
+
+class _Section {
+  final String title;
+  final String body;
+  const _Section(this.title, this.body);
+}
+
+class _LegalContent {
+  final List<_Section> sections;
+  const _LegalContent(this.sections);
+
+  static const mentions = _LegalContent([
+    _Section(
+      "Editeur",
+      "TRIALGO est edite par la societe TRIALGO. "
+          "Contact : contact@trialgo.com",
+    ),
+    _Section(
+      "Hebergement",
+      "Cette application utilise les services de Supabase pour "
+          "l'hebergement des donnees et Google Play Store / Apple App "
+          "Store pour la distribution.",
+    ),
+    _Section(
+      "Proprietaire du contenu",
+      "Les illustrations, musiques et code source de cette "
+          "application sont la propriete exclusive de TRIALGO.",
+    ),
+  ]);
+
+  static const conditions = _LegalContent([
+    _Section(
+      "Utilisation",
+      "Cette application est destinee aux enfants a partir de 6 ans, "
+          "sous la supervision d'un adulte. En l'utilisant, tu acceptes "
+          "les presentes conditions.",
+    ),
+    _Section(
+      "Donnees personnelles",
+      "Nous collectons uniquement les donnees necessaires au jeu : "
+          "email, pseudo, progression. Aucune donnee n'est partagee "
+          "avec des tiers a des fins commerciales.",
+    ),
+    _Section(
+      "Suppression du compte",
+      "Tu peux supprimer ton compte a tout moment depuis les "
+          "parametres. Toutes tes donnees seront effacees dans les 30 "
+          "jours suivants.",
+    ),
+    _Section(
+      "Contact",
+      "Pour toute question relative a tes donnees ou au jeu, "
+          "contacte-nous a privacy@trialgo.com.",
+    ),
+  ]);
+
+  static const credits = _LegalContent([
+    _Section(
+      "Equipe",
+      "TRIALGO est une creation collective : design, developpement, "
+          "game design et illustrations.",
+    ),
+    _Section(
+      "Polices",
+      "Rajdhani et Exo 2 sont distribuees sous licence Open Font "
+          "License via Google Fonts.",
+    ),
+    _Section(
+      "Remerciements",
+      "Un grand merci aux enfants qui ont teste TRIALGO en avant-"
+          "premiere et nous ont aides a faire des choix de design !",
+    ),
+  ]);
 }

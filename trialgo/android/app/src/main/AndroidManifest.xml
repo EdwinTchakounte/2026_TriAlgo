@@ -1,4 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- =============================================================
+         PERMISSION CAMERA
+         =============================================================
+         Requise par mobile_scanner pour lire les QR codes des cartes
+         physiques (mode collectif). L'utilisateur voit un prompt
+         systeme la premiere fois que la camera est demandee.
+         ============================================================= -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
     <application
         android:label="trialgo"
         android:name="${applicationName}"
