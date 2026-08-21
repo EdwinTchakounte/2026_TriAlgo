@@ -374,6 +374,37 @@ Toutes les operations sont bornees par un delai : lire un jeton est une commodit
 raison de figer l'application. `HttpAuthRepository` a par ailleurs recu un `catch` general —
 sans lui, toute exception hors `DioException` laissait l'etat sur `loading` pour toujours.
 
+### Piege d'exploitation : `docker compose restart` ne relit pas le `.env`
+
+`restart` redemarre le processus dans le conteneur existant, avec la configuration deja
+resolue. Modifier `.env` puis `restart` ne change **rien** : il faut recreer le conteneur.
+
+```bash
+docker compose up -d api      # relit env_file
+docker compose restart api    # NE le relit PAS
+```
+
+Le symptome est deroutant : le fichier contient la bonne valeur, l'API se comporte comme si
+elle n'existait pas. Verifier avec
+`docker compose exec api python -c "from app.config import settings; print(settings.X)"`.
+
+### Defauts trouves en pilotant l'app joueur
+
+**Le nom du deck et le nombre de cartes etaient ecrits en dur** dans `t_game_mode_page.dart` :
+"Deck Savane" et "50 cartes", reliquats de maquette restes visibles en production. Un joueur
+ayant active un autre jeu lisait le mauvais nom. Ils viennent desormais de la liste des jeux
+actives du joueur et du catalogue reellement telecharge.
+
+**Le bouton retour de cette meme page menait a un ecran blanc definitif.**
+`TGraphLoadingPage` y navigue par `pushReplacement` : la page devient la SEULE route de la
+pile, et `pop()` la vidait. L'application se retrouvait entierement blanche, sans aucun moyen
+d'en sortir autrement qu'en la relancant. Le bouton n'est affiche que si `Navigator.canPop()`
+— quand cette page est le point d'entree, une fleche retour n'a de toute facon aucun sens.
+
+**`TokenStorage` de l'app joueur** a recu le meme traitement que celui du studio : chemin web
+distinct, et surtout un delai maximal sur toutes les operations, y compris sur mobile. Lire un
+jeton est une commodite, jamais une raison de figer un jeu.
+
 ### Ce qui a ete valide sur stack reelle
 
 Auth (premier inscrit admin, jetons imbriques au register et a plat au login, refresh) ·
@@ -388,6 +419,14 @@ Et **le studio web pilote dans un navigateur reel** contre cette stack : connexi
 session apres rechargement, liste des jeux, ecran des codes (generation par lot de 5 codes
 verifies en base), ecran des comptes (garde-fou « dernier admin actif » remonte tel quel par le
 serveur), wizard, et affichage des images de cartes servies par MinIO.
+
+Et **l'app joueur pilotee dans un navigateur reel**, parcours complet : connexion, activation
+d'un code cree depuis le studio, chargement du graphe, onboarding, choix du mode, carte de
+quete, **une partie entiere jouee** (questions generees en local depuis le graphe, images
+servies par MinIO, `played-nodes` persistes en cours de partie, `POST /me/sessions` a la fin,
+vies decrementees par le serveur), ecran de resultat, retour a l'accueil avec l'historique, et
+**mode collectif verifie contre `/verify-collective`** (« Trio D1 valide ! Lion · Miroir ·
+Reflet », libelles resolus par le serveur).
 
 Non exerce : **l'import de cartes par lot**. Le declencher ouvre le selecteur de fichiers natif,
 qui bloque l'automatisation du navigateur. La chaine d'upload sous-jacente est prouvee par

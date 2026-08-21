@@ -31,7 +31,11 @@ import 'package:google_fonts/google_fonts.dart';
 // Permet d'utiliser Rajdhani (titres gaming) et Exo2 (body)
 // directement depuis Google Fonts sans les telecharger manuellement.
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:trialgo/core/design_system/tokens/brand.dart';
+import 'package:trialgo/presentation/providers/graph_provider.dart';
+import 'package:trialgo/presentation/providers/profile_provider.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
 // TColors expose textPrimary/Secondary/Tertiary et borderSubtle/Default
 // qui s'adaptent au theme dark/light automatiquement. On les utilise ici
@@ -388,9 +392,28 @@ class _TGameModePageState extends State<TGameModePage>
   // =============================================================
   // Le header affiche :
   //   - Un bouton retour en verre givre (frosted glass)
-  //   - Le nom du deck actif ("Deck Savane") avec un point colore
-  //   - Le nombre de cartes ("50 cartes")
+  //   - Le nom du jeu REELLEMENT actif, avec un point colore
+  //   - Le nombre de cartes REELLEMENT chargees
   //   - Un badge "ACTIF" pulsant doucement
+  //
+  // CE QUI ETAIT AFFICHE AVANT
+  // --------------------------
+  // Les deux libelles etaient ecrits en dur : "Deck Savane" et
+  // "50 cartes". Un reliquat de maquette, reste visible en
+  // production : un joueur ayant active "TRIALGO Ocean" lisait
+  // "Deck Savane", et le compte de cartes ne correspondait a rien.
+  //
+  // COMMENT ON LES OBTIENT MAINTENANT
+  // ---------------------------------
+  // Le nom vient de la liste des jeux actives du joueur, croisee
+  // avec selected_game_id de son profil. Le nombre de cartes vient
+  // du catalogue effectivement telecharge par GraphSyncService --
+  // c'est-a-dire ce que le joueur a vraiment sous la main, et non
+  // une valeur theorique.
+  //
+  // Cette page est un StatefulWidget ordinaire : on ne convertit
+  // pas toute la classe en ConsumerStatefulWidget pour deux
+  // libelles, on enveloppe seulement ce bloc dans un Consumer.
   // =============================================================
   Widget _buildHeader() {
     // Helper theme-aware : en dark le fg de base est blanc, en light
@@ -404,66 +427,109 @@ class _TGameModePageState extends State<TGameModePage>
       child: Row(
         children: [
           // --- BOUTON RETOUR (frosted glass) ---
-          GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: fg.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: fg.withValues(alpha: 0.12)),
-              ),
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: colors.textSecondary,
-                size: 20,
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          // --- INFO DECK ---
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: TTheme.orange,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: TTheme.orange.withValues(alpha: 0.4),
-                          blurRadius: 6,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Deck Savane',
-                    style: TTheme.subtitleStyle(size: 16)
-                        .copyWith(color: fg),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  '50 cartes',
-                  style: TTheme.bodyStyle(
-                    size: 11,
-                    color: colors.textTertiary,
-                  ),
+          //
+          // AFFICHE SEULEMENT S'IL Y A QUELQUE CHOSE DERRIERE
+          // -------------------------------------------------
+          // Cette page est atteinte de deux facons :
+          //
+          //   1. depuis l'accueil, par "JOUER" -> empilee, donc on
+          //      peut revenir en arriere ;
+          //   2. depuis TGraphLoadingPage, par pushReplacement ->
+          //      elle devient la SEULE route de la pile.
+          //
+          // Dans le second cas, appeler pop() vidait la pile de
+          // navigation : l'application se retrouvait sur un ecran
+          // entierement blanc, sans aucun moyen d'en sortir autrement
+          // qu'en la relancant. Constate en pilotant l'application.
+          //
+          // canPop() distingue les deux situations. Quand il n'y a
+          // rien derriere, on n'affiche simplement pas le bouton :
+          // cette page est alors le point d'entree, et une fleche
+          // "retour" n'y a aucun sens.
+          if (Navigator.of(context).canPop()) ...[
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: fg.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: fg.withValues(alpha: 0.12)),
+                ),
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: colors.textSecondary,
+                  size: 20,
                 ),
               ),
-            ],
+            ),
+            const SizedBox(width: 14),
+          ],
+
+          // --- INFO DECK (nom et nombre de cartes reels) ---
+          Consumer(
+            builder: (context, ref, _) {
+              final profil = ref.watch(profileProvider);
+              final graphe = ref.watch(graphSyncServiceProvider);
+
+              // Nom du jeu selectionne. On retombe sur un libelle
+              // neutre plutot que sur un nom invente si la liste
+              // n'est pas encore chargee.
+              final idSelectionne = profil.selectedGameId;
+              final nomDuJeu = profil.games
+                      .where((jeu) => jeu.id == idSelectionne)
+                      .map((jeu) => jeu.name)
+                      .firstOrNull ??
+                  'Votre jeu';
+
+              // Cartes reellement telechargees pour ce jeu.
+              final nombreDeCartes = graphe.cards.length;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: TTheme.orange,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: TTheme.orange.withValues(alpha: 0.4),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        nomDuJeu,
+                        style: TTheme.subtitleStyle(size: 16)
+                            .copyWith(color: fg),
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text(
+                      // Accord au singulier pour une seule carte.
+                      nombreDeCartes <= 1
+                          ? '$nombreDeCartes carte'
+                          : '$nombreDeCartes cartes',
+                      style: TTheme.bodyStyle(
+                        size: 11,
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
 
           const Spacer(),
