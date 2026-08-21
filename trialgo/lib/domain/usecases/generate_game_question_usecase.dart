@@ -99,8 +99,40 @@ class GenerateGameQuestionUseCase {
   /// Reset entre les sessions de jeu via [reset].
   final Set<String> _usedTrackingKeys = {};
 
+  // =============================================================
+  // CHAMP : _onNodePlayed
+  // =============================================================
+  // Callback appele a chaque fois qu'un noeud logique est consomme.
+  //
+  // POURQUOI UN CALLBACK PLUTOT QU'UNE DEPENDANCE ?
+  // -----------------------------------------------
+  // Ce usecase vit dans la couche Domain. Il n'a pas le droit de
+  // connaitre Dio, une datasource HTTP ou ApiConfig : ce serait
+  // une dependance Domain -> Data, exactement l'inversion que
+  // l'architecture du projet cherche a eviter.
+  //
+  // Un simple `void Function(String)` laisse la couche Presentation
+  // (graph_provider) brancher ce qu'elle veut : en production le
+  // PlayedNodesTracker qui appelle POST /api/me/played-nodes, dans
+  // un test un espion qui accumule les cles dans une liste.
+  //
+  // Le callback est volontairement SYNCHRONE et sans valeur de
+  // retour : la generation d'une question ne doit jamais attendre
+  // le reseau. Le tracker se debrouille pour poster en tache de
+  // fond et absorber ses propres erreurs.
+  // =============================================================
+
+  /// Appele avec la trackingKey a chaque noeud logique consomme.
+  final void Function(String trackingKey)? _onNodePlayed;
+
   /// Cree le usecase avec le service de sync.
-  GenerateGameQuestionUseCase(this._syncService);
+  ///
+  /// [onNodePlayed] est optionnel : sans lui, le tracking reste
+  /// purement en memoire (comportement historique, utile en test).
+  GenerateGameQuestionUseCase(
+    this._syncService, {
+    void Function(String trackingKey)? onNodePlayed,
+  }) : _onNodePlayed = onNodePlayed;
 
   // =============================================================
   // GETTER : usedKeys
@@ -108,6 +140,26 @@ class GenerateGameQuestionUseCase {
 
   /// Les cles de tracking des noeuds deja joues (lecture seule).
   Set<String> get usedKeys => Set.unmodifiable(_usedTrackingKeys);
+
+  // =============================================================
+  // METHODE : seedPlayedKeys
+  // =============================================================
+  // Pre-remplit le tracking avec les cles deja jouees par ce joueur
+  // lors de ses sessions PRECEDENTES, relues depuis le serveur.
+  //
+  // Sans cet amorcage, le Set repartait vide a chaque lancement de
+  // l'application : le joueur retombait indefiniment sur les memes
+  // trios. Le serveur gardait bien l'historique (table
+  // user_played_nodes), personne ne le relisait.
+  //
+  // Appele une fois, juste apres syncAndBuild, par la page de
+  // chargement du graphe.
+  // =============================================================
+
+  /// Amorce le tracking avec des cles deja jouees (venues du serveur).
+  void seedPlayedKeys(Iterable<String> keys) {
+    _usedTrackingKeys.addAll(keys);
+  }
 
   // =============================================================
   // METHODE : call
@@ -151,13 +203,36 @@ class GenerateGameQuestionUseCase {
       tableIndex: tableIndex,
     );
 
+    // Une table vide n'a rien a proposer : c'est le seul cas ou on
+    // renvoie null (le jeu n'a pas assez de noeuds pour ce niveau).
+    if (currentTable.isEmpty) return null;
+
     // Filtrer ceux non encore joues.
-    final available = currentTable
+    final jamaisJoues = currentTable
         .where((node) => !_usedTrackingKeys.contains(node.trackingKey))
         .toList();
 
-    // Plus aucun noeud disponible -> session epuisee.
-    if (available.isEmpty) return null;
+    // =============================================================
+    // EPUISEMENT DE LA TABLE : on rejoue au lieu de bloquer
+    // =============================================================
+    // Avant, `available.isEmpty` renvoyait null, ce que t_game_page
+    // traduit par _endSessionWithResults() : la partie se terminait
+    // seche, au milieu d'un niveau.
+    //
+    // Tant que le tracking vivait uniquement en memoire, le cas
+    // etait rare et se reparait tout seul au redemarrage de l'app.
+    // Maintenant que les cles jouees sont persistees et relues au
+    // demarrage, l'epuisement devient DEFINITIF : un joueur ayant
+    // vu tous les trios d'une table ne pourrait plus jamais rejouer
+    // ce niveau. Inacceptable.
+    //
+    // On degrade donc proprement : l'anti-doublon devient une
+    // PREFERENCE ("ne repete rien tant qu'il reste du neuf") et non
+    // plus une condition d'arret. Table epuisee -> on repioche dans
+    // la table complete.
+    // =============================================================
+    final available =
+        jamaisJoues.isNotEmpty ? jamaisJoues : currentTable;
 
     // Tirer un noeud logique au hasard.
     final logicalNode = available[_random.nextInt(available.length)];
@@ -201,8 +276,16 @@ class GenerateGameQuestionUseCase {
     // Melanger pour que la bonne reponse ne soit pas toujours en 1ere.
     final choices = [maskedCard, ...distractors]..shuffle(_random);
 
-    // Marquer ce noeud logique comme joue.
-    _usedTrackingKeys.add(logicalNode.trackingKey);
+    // Marquer ce noeud logique comme joue, en memoire ET cote serveur.
+    //
+    // On ne notifie le serveur que sur une VRAIE premiere fois : si
+    // la cle etait deja dans le Set (cas du rejeu apres epuisement),
+    // .add renvoie false et on evite un POST inutile. L'endpoint est
+    // idempotent, mais autant ne pas le solliciter pour rien.
+    final premiereFois = _usedTrackingKeys.add(logicalNode.trackingKey);
+    if (premiereFois) {
+      _onNodePlayed?.call(logicalNode.trackingKey);
+    }
 
     return GameQuestion(
       visibleCards: visibleCards,

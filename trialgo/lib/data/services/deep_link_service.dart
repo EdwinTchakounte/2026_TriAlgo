@@ -122,6 +122,60 @@ class DeepLinkService {
   // la navigation vers la page "nouveau mot de passe".
   // =============================================================
 
+  // =============================================================
+  // METHODE : _hoteAccepte
+  // =============================================================
+  // Decide si un lien https:// a le droit d'ouvrir l'application.
+  //
+  // POURQUOI PAS UN SIMPLE contains('trialgo') ?
+  // --------------------------------------------
+  // C'est ce que faisait la version precedente, et c'etait un bug
+  // silencieux : le backend fabrique le lien de reinitialisation a
+  // partir de APP_FRONTEND_URL, qui vaut 'https://dashboard.mixalgo.com'
+  // en production. Le mot 'trialgo' n'apparait nulle part dans ce
+  // domaine, donc le lien recu etait purement et simplement ignore.
+  // Pas d'erreur, pas de log : le joueur cliquait et rien ne se
+  // passait.
+  //
+  // COMMENT ON DECIDE MAINTENANT
+  // ----------------------------
+  // On compare au domaine enregistrable ApiConfig.linkDomain
+  // ('mixalgo.com'), ce qui couvre le domaine nu et tous ses
+  // sous-domaines. Un seul endroit a changer le jour ou le domaine
+  // change, et la reponse ne depend pas du mode de build.
+  //
+  // 'trialgo' reste accepte pour les liens Supabase historiques et
+  // un eventuel app.trialgo.io encore en circulation.
+  //
+  // ATTENTION AU PIEGE DU endsWith
+  // ------------------------------
+  // Tester `hote.endsWith(domaine)` seul serait une faille : un
+  // attaquant enregistrant 'notmixalgo.com' recevrait les liens de
+  // reinitialisation, donc les jetons. On exige donc soit l'egalite
+  // stricte, soit un point separateur devant le domaine.
+  // =============================================================
+
+  /// True si [host] a le droit d'ouvrir l'app via un lien https.
+  ///
+  /// Exposee aux tests : c'est une fonction pure, et c'est
+  /// precisement elle qui rejetait les liens de production.
+  @visibleForTesting
+  static bool hoteAccepte(String host) => _hoteAccepte(host);
+
+  /// True si [host] a le droit d'ouvrir l'app via un lien https.
+  static bool _hoteAccepte(String host) {
+    final hote = host.toLowerCase();
+
+    // Compatibilite historique (liens Supabase / app.trialgo.io).
+    if (hote == 'trialgo.io' || hote.endsWith('.trialgo.io')) return true;
+
+    // Domaine de deploiement courant.
+    final domaine = ApiConfig.linkDomain.toLowerCase();
+    if (domaine.isEmpty) return false;
+
+    return hote == domaine || hote.endsWith('.$domaine');
+  }
+
   /// Traite un URI deep-link recu.
   ///
   /// Deux formats selon le backend :
@@ -135,7 +189,7 @@ class DeepLinkService {
   Future<void> _handleUri(Uri uri) async {
     // On accepte trialgo:// (custom scheme) et https:// (App Links / Universal Links).
     final isTrialgoScheme = uri.scheme == 'trialgo';
-    final isHttpsApp = uri.scheme == 'https' && uri.host.contains('trialgo');
+    final isHttpsApp = uri.scheme == 'https' && _hoteAccepte(uri.host);
     if (!isTrialgoScheme && !isHttpsApp) return;
 
     // ---- Branche FastAPI : extrait le token query param ----

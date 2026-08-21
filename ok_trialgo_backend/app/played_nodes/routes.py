@@ -19,7 +19,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.deps import get_current_user
@@ -52,29 +52,69 @@ async def mark_played(
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_user)],
 ) -> PlayedNodeOut:
-    row = UserPlayedNode(
-        user_id=user.id,
-        game_id=body.game_id,
-        tracking_key=body.tracking_key,
+    # -----------------------------------------------------------
+    # POURQUOI ON N'ATTRAPE PLUS L'IntegrityError
+    # -----------------------------------------------------------
+    # La version precedente inserait puis rattrapait le conflit :
+    #
+    #     db.add(row)
+    #     try:            await db.commit()
+    #     except IntegrityError:
+    #         await db.rollback()
+    #         existing = await db.scalar(select(...user.id...))
+    #
+    # Elle renvoyait 500 a chaque rejeu, alors que la contrainte
+    # UNIQUE etait bien la et l'endpoint documente comme idempotent.
+    #
+    # La raison n'etait pas le conflit lui-meme, correctement
+    # rattrape, mais le rollback : dans SQLAlchemy, rollback()
+    # EXPIRE tous les objets de la session, y compris le `user`
+    # injecte par la dependance. La ligne suivante lisait `user.id`,
+    # ce qui declenchait un rechargement paresseux -- donc une
+    # entree/sortie -- depuis un acces d'attribut synchrone. D'ou le
+    # MissingGreenlet, transforme en 500 par FastAPI.
+    #
+    # On confie donc la resolution du conflit a PostgreSQL, avec le
+    # ON CONFLICT DO NOTHING que la documentation de cet endpoint
+    # promettait deja. Plus de commit en echec, donc plus de
+    # rollback, donc plus d'objet expire : le mode de defaillance
+    # disparait au lieu d'etre rattrape.
+    #
+    # On lit user.id AVANT toute ecriture, par principe : c'est ce
+    # qui rend la fonction insensible a un futur rollback.
+    # -----------------------------------------------------------
+    user_id = user.id
+
+    insertion = (
+        pg_insert(UserPlayedNode)
+        .values(
+            user_id=user_id,
+            game_id=body.game_id,
+            tracking_key=body.tracking_key,
+        )
+        .on_conflict_do_nothing(constraint="uq_user_played_nodes_key")
+        .returning(UserPlayedNode)
     )
-    db.add(row)
-    try:
-        await db.commit()
-        await db.refresh(row)
-    except IntegrityError:
-        # Deja marque : on retourne la ligne existante (idempotent).
-        await db.rollback()
-        existing = await db.scalar(
+    row = await db.scalar(insertion)
+    await db.commit()
+
+    if row is None:
+        # Conflit : la cle etait deja marquee. DO NOTHING ne renvoie
+        # rien dans ce cas, on relit donc la ligne existante pour
+        # pouvoir retourner son played_at d'origine.
+        row = await db.scalar(
             select(UserPlayedNode).where(
-                UserPlayedNode.user_id == user.id,
+                UserPlayedNode.user_id == user_id,
                 UserPlayedNode.game_id == body.game_id,
                 UserPlayedNode.tracking_key == body.tracking_key,
             )
         )
-        if not existing:
-            # Cas tres improbable (race), fallback erreur.
-            raise HTTPException(500, "Etat incoherent") from None
-        row = existing
+        if row is None:
+            # Inatteignable en pratique : il y a eu conflit, donc la
+            # ligne existe. Sauf suppression concurrente entre les
+            # deux requetes.
+            raise HTTPException(409, "Ligne supprimee pendant l'insertion")
+
     return PlayedNodeOut.model_validate(row)
 
 

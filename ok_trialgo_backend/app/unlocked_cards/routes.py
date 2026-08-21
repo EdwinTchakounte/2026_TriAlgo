@@ -16,7 +16,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.deps import get_current_user
@@ -57,31 +57,55 @@ async def unlock_card(
     if not card or card.game_id != body.game_id:
         raise HTTPException(404, "Carte introuvable pour ce jeu")
 
-    # INSERT idempotent : si deja unlocked, on absorbe l'IntegrityError.
-    row = UserUnlockedCard(
-        user_id=user.id,
-        card_id=body.card_id,
-        game_id=body.game_id,
+    # -----------------------------------------------------------
+    # INSERT IDEMPOTENT, DELEGUE A POSTGRESQL
+    # -----------------------------------------------------------
+    # La version precedente inserait puis rattrapait l'IntegrityError
+    # et faisait un rollback. Elle renvoyait 500 des le second appel
+    # sur la meme carte -- c'est-a-dire des qu'un joueur regagnait une
+    # carte deja debloquee, ce qui est le cas courant en rejouant un
+    # niveau.
+    #
+    # Le conflit etait bien rattrape ; c'est le rollback qui posait
+    # probleme. Il EXPIRE tous les objets de la session, dont le
+    # `user` de la dependance, et la lecture suivante de `user.id`
+    # declenchait alors un rechargement paresseux depuis un acces
+    # synchrone : MissingGreenlet, donc 500.
+    #
+    # ON CONFLICT DO NOTHING supprime le mode de defaillance au lieu
+    # de le rattraper : plus de commit en echec, plus de rollback,
+    # plus d'objet expire. On lit aussi user.id avant toute ecriture.
+    #
+    # Meme correction dans app/played_nodes/routes.py, qui souffrait
+    # exactement du meme motif.
+    # -----------------------------------------------------------
+    user_id = user.id
+
+    insertion = (
+        pg_insert(UserUnlockedCard)
+        .values(
+            user_id=user_id,
+            card_id=body.card_id,
+            game_id=body.game_id,
+        )
+        .on_conflict_do_nothing(constraint="pk_user_unlocked_cards")
+        .returning(UserUnlockedCard)
     )
-    db.add(row)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        # Recharger la ligne existante pour renvoyer son unlocked_at.
-        existing = await db.scalar(
+    row = await db.scalar(insertion)
+    await db.commit()
+
+    if row is None:
+        # Carte deja debloquee : on relit la ligne pour renvoyer la
+        # date de deblocage d'origine, et non celle de ce rejeu.
+        row = await db.scalar(
             select(UserUnlockedCard).where(
-                UserUnlockedCard.user_id == user.id,
+                UserUnlockedCard.user_id == user_id,
                 UserUnlockedCard.card_id == body.card_id,
                 UserUnlockedCard.game_id == body.game_id,
             )
         )
-        if existing:
-            row = existing
-        # Sinon on tombera sur le refresh ci-dessous (peu probable).
-
-    if row.unlocked_at is None:
-        await db.refresh(row)
+        if row is None:
+            raise HTTPException(409, "Ligne supprimee pendant l'insertion")
 
     url = await get_storage().public_url(card.object_key)
     return UnlockedCardOut(

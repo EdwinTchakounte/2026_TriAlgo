@@ -261,7 +261,90 @@ en garder une sauvegarde chiffrée hors du poste de développement.
 
 ---
 
-## 7. Points ouverts
+## 7. Alignement des flux (fait)
+
+Les endpoints suivants existaient sans aucun appelant. Ils sont maintenant branchés :
+
+| Endpoint | Consommateur | Détail |
+|---|---|---|
+| `POST/GET /api/me/played-nodes` | app joueur | `PlayedNodesTracker` (data/services). Amorçage dans `TGraphLoadingPage` via `seedPlayedKeys`, notification via le callback `onNodePlayed` du usecase |
+| `POST /api/games/{gid}/verify-collective` | app joueur | `CollectiveVerifier` (data/services). Serveur d'abord, repli local en cas de panne |
+| `GET/POST/PATCH/DELETE /api/admin/codes` | studio admin | `CodesPage` + génération par lot |
+| `GET/POST/PATCH /api/admin/users` | studio admin | `UsersPage` |
+
+**Le tracking anti-doublon est devenu une préférence, plus une condition d'arrêt.**
+Avant, une table épuisée faisait renvoyer `null` à `GenerateGameQuestionUseCase`, ce que
+`t_game_page` traduit par une fin de partie sèche. Les clés étant désormais persistées et
+relues au démarrage, l'épuisement serait devenu définitif — le niveau ne serait plus jamais
+jouable. Une table épuisée repioche donc dans la table complète. `null` n'est renvoyé que
+pour une table réellement vide.
+
+**Les deux couches restent séparées.** `GenerateGameQuestionUseCase` et
+`VerifyTrioCardsUseCase` sont dans `domain/` : ils ne connaissent ni Dio ni `ApiConfig`. Le
+branchement passe par un callback injecté depuis `graph_provider`. C'est aussi ce qui rend
+ces usecases testables sans faux client HTTP.
+
+**Deep-link : `ApiConfig.linkDomain`.** Le host accepté pour un lien `https` est une
+constante (`mixalgo.com`, surchargeable par `--dart-define=APP_LINK_DOMAIN`), pas une
+dérivation de `baseUrl` — `baseUrl` vaut `10.0.2.2` en debug, d'où aucun domaine
+exploitable. L'ancien test `host.contains('trialgo')` rejetait silencieusement tous les
+liens de production.
+
+**Manifeste Android.** Un `--` dans un commentaire XML est interdit par la spécification et
+rendait `android/app/src/main/AndroidManifest.xml` impossible à parser : le build release
+échouait sur `processReleaseMainManifest`. Corrigé, et la présence de `INTERNET` dans le
+manifeste fusionné de release est vérifiée.
+
+---
+
+### Bugs trouves en integration et corriges
+
+Le passage sur stack reelle a mis au jour trois defauts qu'aucune relecture n'avait vus.
+
+**`POST /api/me/played-nodes` et `POST /api/me/unlocked-cards` repondaient 500 au rejeu**,
+alors que les deux sont documentes comme idempotents. La cause n'etait pas le conflit UNIQUE,
+correctement rattrape, mais le `await db.rollback()` du bloc `except` : il **expire tous les
+objets de la session**, y compris le `user` injecte par la dependance. La ligne suivante lisait
+`user.id`, declenchant un rechargement paresseux depuis un acces d'attribut synchrone, d'ou un
+`MissingGreenlet` transforme en 500. Les deux routes utilisent desormais
+`INSERT ... ON CONFLICT DO NOTHING` (PostgreSQL), ce que leur documentation promettait deja :
+plus de commit en echec, donc plus de rollback, donc plus d'objet expire. Le mode de
+defaillance disparait au lieu d'etre rattrape. Motif a surveiller ailleurs : **ne jamais lire
+un attribut ORM apres un rollback** — capturer les valeurs avant.
+
+**Le bucket MinIO exposait son inventaire a tout le monde.** `mc anonymous set download`, malgre
+son nom, installe `s3:ListBucket` en plus de `s3:GetObject`. Un simple
+`curl https://api.mixalgo.com/files/trialgo-cards/` renvoyait le XML de toutes les cles, de tous
+les jeux — soit le catalogue complet des cartes, aspirable sans authentification. Remplace par
+`docker/init-bucket.sh`, qui pose une politique explicite limitee a `s3:GetObject`. Les URL
+connues fonctionnent toujours, l'inventaire repond 403. Les cles etant des UUID v4, elles ne se
+devinent pas.
+
+**Le manifeste Android etait invalide.** Un `--` dans un commentaire XML, interdit par la
+specification : `flutter build apk --release` echouait sur `processReleaseMainManifest`.
+
+### Durcissements
+
+- Caddy ne transmet plus que `GET` et `HEAD` sur `/files/*` ; les autres methodes recoivent 405
+  sans atteindre MinIO. La politique du bucket les refuse deja, mais elle se change par
+  inadvertance.
+- `startup_checks.py` detecte une barre oblique finale sur `S3_PUBLIC_ENDPOINT_URL` :
+  `public_url()` concatene sans normaliser, et un double separateur donne des images en 404
+  pendant que tout le reste fonctionne.
+
+### Ce qui a ete valide sur stack reelle
+
+Auth (premier inscrit admin, jetons imbriques au register et a plat au login, refresh) ·
+CRUD jeux · upload d'images (magic bytes, 413, 401, 403, EXIF retire, resize 1024, cache
+immutable) · graphe (racine, chainage, XOR emettrice/parent) · analyzer · codes d'activation
+(creation, doublon 409, activation joueur, reset SAV) · comptes (promotion, garde-fous dernier
+admin) · played-nodes · verify-collective (emettrice heritee du parent) · sessions (vies
+decrementees par le serveur) · etoiles · classement · endpoints publics ·
+**routage Caddy complet, topologie de production**.
+
+---
+
+## 8. Points ouverts
 
 - Le paquet `supabase_flutter` reste une dépendance de `pubspec.yaml` : le mode `supabase`
   demeure disponible en repli. Il n'est simplement plus activé au démarrage. À retirer le jour
@@ -275,6 +358,18 @@ en garder une sauvegarde chiffrée hors du poste de développement.
   appelant** — `TAdminPage` écrivait en direct, pas via le repository. Elles restent
   uniquement parce qu'elles font partie du contrat `GraphRepository`. Les rebrancher exige
   de passer par les endpoints `/api/games/{id}/nodes`, qui valident les invariants du graphe.
+- **Le lien de réinitialisation de mot de passe ne mène nulle part.** `mail/sender.py` le
+  construit depuis `APP_FRONTEND_URL`, que `.env.production.example` fixe à
+  `https://dashboard.mixalgo.com` — le studio admin, qui n'a aucune route `/reset-password`.
+  Côté app joueur le host est désormais accepté, mais il faut encore **une page de rebond
+  côté serveur** : `GET /reset-password` renvoyant un HTML qui bascule vers
+  `trialgo://reset-password?token=...`, et `GET /confirm-email` qui consomme le jeton
+  directement. Aucune page `/confirm-email` n'existe nulle part aujourd'hui.
+- **La confirmation d'adresse n'est pas exigée** : `login` ne teste pas `email_confirmed_at`.
+  À rendre explicite via un `REQUIRE_EMAIL_CONFIRMATION` plutôt que de le laisser implicite.
+- **`POST /api/games/{gid}/nodes/analyze` est doublé** par `FusionAnalyzer` (Dart), utilisé
+  par `fusion_analyzer_sheet`. Deux implémentations de la même règle métier, qui peuvent
+  diverger.
 - En mode `fastapi`, les filtres `distance_level`, `cable_category` et `is_active` sur les cartes
   sont **ignorés** : ces colonnes n'existent pas côté backend. `CardModel.fromJson` retombe sur
   `distanceLevel = 1`. La distance se déduit désormais du graphe de nœuds, pas de la carte.
@@ -289,7 +384,7 @@ en garder une sauvegarde chiffrée hors du poste de développement.
 
 ---
 
-## 8. Git
+## 9. Git
 
 Branche principale : `main`. Ne jamais committer les `*.apk` de la racine ni les gros
 binaires (`.pdf`, `.jpeg` de travail) — ajouter un `.gitignore` avant tout commit large.

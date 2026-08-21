@@ -118,6 +118,18 @@ class HttpCardRepository implements CardRepository {
         'Pour ce backend, image obligatoire via uploadImage() prealable',
       ));
     }
+
+    // Garde-fou de coherence : les bytes ont ete bufferises POUR un
+    // jeu donne. Si create() est appele avec un autre gameId, c'est
+    // un bug d'appelant -- l'image partirait dans le mauvais jeu, et
+    // personne ne s'en apercevrait avant de voir une carte etrangere
+    // apparaitre dans une partie. On refuse plutot que d'obeir.
+    if (pending.gameId != gameId) {
+      return Err(DataFailure(
+        'Incoherence interne : image bufferisee pour le jeu '
+        '${pending.gameId}, creation demandee pour $gameId',
+      ));
+    }
     try {
       final form = FormData.fromMap({
         'label': label,

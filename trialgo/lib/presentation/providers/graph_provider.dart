@@ -31,7 +31,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:trialgo/data/repositories/graph_repository_impl.dart';
+import 'package:trialgo/data/services/collective_verifier.dart';
 import 'package:trialgo/data/services/graph_sync_service.dart';
+import 'package:trialgo/data/services/played_nodes_tracker.dart';
 import 'package:trialgo/domain/repositories/graph_repository.dart';
 import 'package:trialgo/domain/usecases/build_graph_usecase.dart';
 import 'package:trialgo/domain/usecases/generate_game_question_usecase.dart';
@@ -95,14 +97,37 @@ final graphSyncServiceProvider = Provider<GraphSyncService>((ref) {
 // =============================================================
 
 // =============================================================
+// PROVIDER : playedNodesTrackerProvider
+// =============================================================
+// Fournit la passerelle vers /api/me/played-nodes.
+// =============================================================
+
+/// Fournit l'instance unique de [PlayedNodesTracker].
+///
+/// Singleton lui aussi : il ne porte pas d'etat, mais rien ne
+/// justifie d'en recreer un a chaque question.
+final playedNodesTrackerProvider = Provider<PlayedNodesTracker>((ref) {
+  return PlayedNodesTracker();
+});
+
+// =============================================================
 // PROVIDER : generateQuestionProvider
 // =============================================================
 // Fournit le usecase de generation de questions.
 //
-// IMPORTANT : ce usecase a un ETAT INTERNE mutable
-// (les cles de tracking _usedTrackingKeys). Il doit donc etre
-// un singleton, sinon le tracking serait perdu entre les questions.
-// Riverpod garantit cela avec "Provider".
+// C'est ICI que le tracking memoire est raccorde au serveur : on
+// passe au usecase un callback qui delegue au PlayedNodesTracker.
+//
+// Le gameId n'est pas fige a la construction : il est relu sur le
+// GraphSyncService au moment ou le callback se declenche. C'est
+// necessaire parce que le joueur peut changer de jeu sans que ce
+// provider soit reconstruit -- le service, lui, est toujours a jour
+// puisque syncAndBuild met currentGameId a la valeur du jeu charge.
+//
+// IMPORTANT : ce usecase a un ETAT INTERNE mutable (les cles de
+// tracking _usedTrackingKeys). Il doit donc etre un singleton,
+// sinon le tracking serait perdu entre les questions. Riverpod
+// garantit cela avec "Provider".
 // =============================================================
 
 /// Fournit l'instance unique de [GenerateGameQuestionUseCase].
@@ -110,7 +135,20 @@ final graphSyncServiceProvider = Provider<GraphSyncService>((ref) {
 /// Le tracking des noeuds joues est conserve dans cette instance,
 /// donc elle doit etre partagee pendant toute la session.
 final generateQuestionProvider = Provider<GenerateGameQuestionUseCase>((ref) {
-  return GenerateGameQuestionUseCase(ref.read(graphSyncServiceProvider));
+  final sync = ref.read(graphSyncServiceProvider);
+  final tracker = ref.read(playedNodesTrackerProvider);
+
+  return GenerateGameQuestionUseCase(
+    sync,
+    onNodePlayed: (trackingKey) {
+      // Pas de jeu charge -> rien a rattacher, on laisse tomber.
+      final gameId = sync.currentGameId;
+      if (gameId == null) return;
+
+      // Non bloquant : le tracker poste en tache de fond.
+      tracker.marquerJoue(gameId: gameId, trackingKey: trackingKey);
+    },
+  );
 });
 
 // =============================================================
@@ -121,7 +159,29 @@ final generateQuestionProvider = Provider<GenerateGameQuestionUseCase>((ref) {
 // singleton-ise pour eviter la creation d'instance a chaque scan.
 // =============================================================
 
+/// Fournit l'instance unique de [CollectiveVerifier].
+final collectiveVerifierProvider = Provider<CollectiveVerifier>((ref) {
+  return CollectiveVerifier();
+});
+
 /// Fournit l'instance unique de [VerifyTrioCardsUseCase].
+///
+/// Le resolveur distant est branche ici : le usecase interroge
+/// d'abord /api/games/{gid}/verify-collective, et ne retombe sur le
+/// graphe local que si le serveur est injoignable ou hors sujet.
+///
+/// Comme pour generateQuestionProvider, le gameId est relu sur le
+/// GraphSyncService au moment de l'appel et non fige a la
+/// construction, pour suivre un changement de jeu.
 final verifyTrioCardsProvider = Provider<VerifyTrioCardsUseCase>((ref) {
-  return VerifyTrioCardsUseCase(ref.read(graphSyncServiceProvider));
+  final sync = ref.read(graphSyncServiceProvider);
+  final verifier = ref.read(collectiveVerifierProvider);
+
+  return VerifyTrioCardsUseCase(
+    sync,
+    verifierDistant: (nodeIndex) => verifier.verifier(
+      gameId: sync.currentGameId,
+      nodeIndex: nodeIndex,
+    ),
+  );
 });

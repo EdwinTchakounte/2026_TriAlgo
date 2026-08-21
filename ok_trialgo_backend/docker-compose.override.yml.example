@@ -1,0 +1,44 @@
+# =============================================================
+# docker-compose.override.yml  -  decalage des ports en local
+# =============================================================
+# Fichier de DEVELOPPEMENT, charge automatiquement par
+# `docker compose up` en plus de docker-compose.yml.
+#
+# POURQUOI IL EXISTE
+# ------------------
+# Les ports par defaut du projet (8000, 9000, 9001, 5432) sont
+# souvent deja pris par d'autres stacks Docker sur un poste de
+# developpement. Verifier avec `ss -ltn` avant de lancer.
+#
+# COMMENT S'EN SERVIR
+# -------------------
+#     cp docker-compose.override.yml.example docker-compose.override.yml
+#
+# puis ajuster les ports libres. Le fichier resultant est ignore
+# par git : il n'appartient qu'a votre poste. Penser a reporter le
+# port de MinIO dans S3_PUBLIC_ENDPOINT_URL de votre .env, sinon
+# les image_url renvoyees pointeront vers un port ferme.
+#
+# LE PIEGE DU MOT-CLE !override
+# -----------------------------
+# Compose FUSIONNE les listes `ports` entre fichiers au lieu de
+# les remplacer. Sans `!override`, ce fichier AJOUTERAIT
+# "18000:8000" a "8000:8000" au lieu de le remplacer, et le
+# demarrage echouerait sur "address already in use" -- en
+# designant le port qu'on croyait justement avoir evite.
+# =============================================================
+
+services:
+
+  postgres:
+    ports: !override
+      - "15432:5432"
+
+  minio:
+    ports: !override
+      - "19000:9000"   # API S3
+      - "19001:9001"   # Console web
+
+  api:
+    ports: !override
+      - "18000:8000"

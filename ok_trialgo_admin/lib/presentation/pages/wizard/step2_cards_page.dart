@@ -29,6 +29,7 @@ import 'package:mime/mime.dart';
 import '../../../core/responsive/breakpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/libelle_depuis_fichier.dart';
 import '../../../core/utils/result.dart';
 import '../../../domain/entities/card_type.dart';
 import '../../../domain/entities/game_card.dart';
@@ -40,6 +41,43 @@ import '../../widgets/card_thumbnail.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/guidance_banner.dart';
 import '../../widgets/wizard_nav.dart';
+
+// =============================================================
+// PARAMETRES DE PRISE D'IMAGE
+// =============================================================
+// CE QUI N'ALLAIT PAS AVANT
+// -------------------------
+// Le picker etait regle sur maxWidth 1024 / quality 80, c'est-a-dire
+// exactement la taille finale visee par le serveur
+// (IMAGE_MAX_DIMENSION = 1024, IMAGE_JPEG_QUALITY = 85).
+//
+// Consequence : l'image etait compressee DEUX fois, et surtout le
+// redimensionnement decisif -- celui qui determine la nettete de la
+// carte a l'ecran -- etait fait par le redimensionneur du telephone.
+// Le passage LANCZOS du serveur ne trouvait plus rien a reduire et
+// ne servait a rien. Sur un jeu ou les images SONT le contenu, on
+// perdait de la qualite pour rien.
+//
+// CE QU'ON FAIT MAINTENANT
+// ------------------------
+// On envoie une source deux fois plus grande, a peine compressee.
+// Le serveur reste seul juge de la reduction finale, en LANCZOS, en
+// un seul passage.
+//
+// POURQUOI PAS L'ORIGINAL BRUT
+// ----------------------------
+// MAX_UPLOAD_BYTES vaut 5 Mo cote serveur. Une photo de telephone
+// recente depasse regulierement ce seuil et repartirait en 413.
+// 2048 px a qualite 92 tient autour de 1 a 2 Mo : large marge, et
+// bien au-dela de ce dont le rendu final a besoin.
+// =============================================================
+
+/// Cote maximal de l'image envoyee au serveur (le double du rendu).
+const int _kDimensionSource = 2048;
+
+/// Qualite JPEG a la prise. Volontairement haute : la compression
+/// qui compte est celle du serveur, pas celle-ci.
+const int _kQualiteSource = 92;
 
 class Step2CardsPage extends ConsumerStatefulWidget {
   const Step2CardsPage({super.key});
@@ -66,6 +104,35 @@ class _Step2CardsPageState extends ConsumerState<Step2CardsPage> {
       builder: (_) => const _CreateCardSheet(),
     );
     if (created == true && mounted) {
+      await ref.read(cardsProvider.notifier).refresh();
+    }
+  }
+
+  // -----------------------------------------------------------
+  // Import par lot : selection multiple puis upload sequentiel.
+  //
+  // On ouvre le selecteur AVANT la feuille : si l'administrateur
+  // annule la selection, aucune feuille vide ne s'affiche.
+  // -----------------------------------------------------------
+  Future<void> _openImportLotSheet() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage(
+      imageQuality: _kQualiteSource,
+      maxWidth: _kDimensionSource.toDouble(),
+      maxHeight: _kDimensionSource.toDouble(),
+    );
+    if (images.isEmpty || !mounted) return;
+
+    final importees = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ImportLotSheet(fichiers: images),
+    );
+    if (importees == true && mounted) {
       await ref.read(cardsProvider.notifier).refresh();
     }
   }
@@ -128,6 +195,20 @@ class _Step2CardsPageState extends ConsumerState<Step2CardsPage> {
                     onChanged: (v) => setState(() => _filter = v),
                   )),
                   const SizedBox(width: 10),
+                  // Import par lot : le chemin normal pour constituer
+                  // un jeu. Un jeu complet demande une cinquantaine de
+                  // cartes ; les ajouter une par une n'est pas tenable.
+                  IconButton.filledTonal(
+                    onPressed: _openImportLotSheet,
+                    icon: const Icon(Icons.library_add_outlined),
+                    tooltip: 'Importer plusieurs images',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.surface2,
+                      foregroundColor: AppColors.brand,
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   IconButton.filled(
                     onPressed: _openCreateSheet,
                     icon: const Icon(Icons.add),
@@ -305,15 +386,20 @@ class _CreateCardSheetState extends ConsumerState<_CreateCardSheet> {
   }
 
   // -----------------------------------------------------------
-  // Picker : ouvre la galerie. imageQuality 80 / maxWidth 1024
-  // pour limiter la taille du fichier upload (bucket = 5 MB max).
+  // Picker : ouvre la galerie ou l'appareil photo.
+  //
+  // Voir _kDimensionSource / _kQualiteSource pour le raisonnement
+  // sur les valeurs : on n'envoie PAS une image deja reduite a la
+  // taille finale, sinon c'est le redimensionneur du telephone qui
+  // decide de la qualite au lieu de celui du serveur.
   // -----------------------------------------------------------
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(
       source: source,
-      imageQuality: 80,
-      maxWidth: 1024,
+      imageQuality: _kQualiteSource,
+      maxWidth: _kDimensionSource.toDouble(),
+      maxHeight: _kDimensionSource.toDouble(),
     );
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
@@ -701,6 +787,455 @@ class _EditCardSheetState extends ConsumerState<_EditCardSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================
+// FEUILLE D'IMPORT PAR LOT
+// =============================================================
+// POURQUOI CET ECRAN EXISTE
+// -------------------------
+// Un jeu TRIALGO complet compte une cinquantaine de cartes (les
+// 50 noeuds natifs de D1 en consomment trois chacun, avec
+// reutilisation). Les saisir une par une, chacune dans sa propre
+// feuille modale, represente une cinquantaine d'allers-retours.
+// C'est le genre de friction qui decourage de creer un jeu.
+//
+// CE QU'ON DEMANDE A L'ADMINISTRATEUR
+// -----------------------------------
+// Le minimum : un role pour tout le lot, et un libelle par image.
+// Le libelle est pre-rempli avec le nom du fichier, sans son
+// extension -- une photo nommee "lion.jpg" donne "Lion". Dans la
+// pratique, une serie d'images bien nommee ne demande alors aucune
+// saisie du tout.
+//
+// UN ROLE UNIQUE POUR TOUT LE LOT, ET POURQUOI C'EST LE BON CHOIX
+// ---------------------------------------------------------------
+// On pourrait laisser choisir le role image par image. Mais les
+// cartes arrivent presque toujours par famille : on prepare
+// d'abord ses emettrices, puis ses cables, puis ses receptrices.
+// Un selecteur unique correspond a ce geste reel, et trois imports
+// successifs restent bien plus rapides qu'une saisie unitaire.
+//
+// UPLOAD SEQUENTIEL, PAS PARALLELE
+// --------------------------------
+// Le serveur traite chaque image avec Pillow (decodage, conversion
+// RGB, redimensionnement LANCZOS, re-encodage). Lancer cinquante
+// requetes de front ferait surtout monter la memoire de l'API sans
+// rien accelerer. On enchaine donc, en montrant la progression.
+//
+// ET SI UNE IMAGE ECHOUE
+// ----------------------
+// Contrairement a la generation de codes, on NE s'arrete PAS a la
+// premiere erreur : chaque image est independante, et une seule
+// illisible ne doit pas condamner les quarante-neuf autres. On
+// collecte les echecs et on les recapitule a la fin.
+// =============================================================
+
+/// Une image en attente d'import, avec son libelle editable.
+class _ImageAImporter {
+  _ImageAImporter({required this.fichier, required this.libelle});
+
+  /// Le fichier choisi par l'administrateur.
+  final XFile fichier;
+
+  /// Champ de saisie du libelle, pre-rempli depuis le nom de fichier.
+  final TextEditingController libelle;
+
+  /// Les octets, lus une seule fois puis conserves.
+  Uint8List? octets;
+}
+
+class _ImportLotSheet extends ConsumerStatefulWidget {
+  const _ImportLotSheet({required this.fichiers});
+
+  final List<XFile> fichiers;
+
+  @override
+  ConsumerState<_ImportLotSheet> createState() => _ImportLotSheetState();
+}
+
+class _ImportLotSheetState extends ConsumerState<_ImportLotSheet> {
+  late final List<_ImageAImporter> _images;
+
+  /// Role applique a toutes les cartes du lot.
+  CardType _type = CardType.emettrice;
+
+  /// Vrai pendant l'import : verrouille le formulaire.
+  bool _enCours = false;
+
+  /// Nombre d'images deja traitees, pour la barre de progression.
+  int _traitees = 0;
+
+  /// Libelles des images qui ont echoue, avec la raison.
+  final List<String> _echecs = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _images = [
+      for (final f in widget.fichiers)
+        _ImageAImporter(
+          fichier: f,
+          libelle: TextEditingController(
+            text: libelleDepuisNomDeFichier(f.name),
+          ),
+        ),
+    ];
+  }
+
+  @override
+  void dispose() {
+    for (final image in _images) {
+      image.libelle.dispose();
+    }
+    super.dispose();
+  }
+
+  // -----------------------------------------------------------
+  // IMPORT
+  // -----------------------------------------------------------
+
+  Future<void> _importer() async {
+    final game = ref.read(selectedGameProvider);
+    if (game == null) return;
+
+    // Un libelle vide serait refuse par le serveur (Form min_length=1).
+    // On le detecte ici pour donner un message utile plutot qu'un 422.
+    final vides = _images.where((i) => i.libelle.text.trim().isEmpty).length;
+    if (vides > 0) {
+      _annoncer('$vides image(s) sans libelle. Completez-les d\'abord.');
+      return;
+    }
+
+    setState(() {
+      _enCours = true;
+      _traitees = 0;
+      _echecs.clear();
+    });
+
+    final repo = ref.read(cardRepositoryProvider);
+    var reussies = 0;
+
+    for (final image in _images) {
+      final libelle = image.libelle.text.trim();
+
+      try {
+        // Lecture paresseuse : on ne charge les octets qu'au moment
+        // de l'envoi. Garder cinquante images en memoire des
+        // l'ouverture de la feuille ferait gonfler l'application
+        // pour rien, surtout sur un telephone.
+        image.octets ??= await image.fichier.readAsBytes();
+
+        final up = await repo.uploadImage(
+          gameId: game.id,
+          fileName: image.fichier.name,
+          bytes: image.octets!,
+          contentType:
+              lookupMimeType(image.fichier.name) ?? 'image/jpeg',
+        );
+
+        if (up case Err(failure: final f)) {
+          _echecs.add('$libelle : ${f.message}');
+        } else {
+          final res = await repo.create(
+            gameId: game.id,
+            label: libelle,
+            imagePath: (up as Ok<String>).value,
+            type: _type,
+          );
+          switch (res) {
+            case Ok():
+              reussies++;
+            case Err(failure: final f):
+              _echecs.add('$libelle : ${f.message}');
+          }
+        }
+      } catch (e) {
+        // Fichier illisible, permission refusee, memoire : on note
+        // et on passe a la suivante.
+        _echecs.add('$libelle : $e');
+      }
+
+      if (!mounted) return;
+      setState(() => _traitees++);
+    }
+
+    if (!mounted) return;
+
+    // Tout est passe : on ferme et la grille se rafraichit.
+    if (_echecs.isEmpty) {
+      Navigator.of(context).pop(true);
+      _annoncer('$reussies carte(s) importee(s).', succes: true);
+      return;
+    }
+
+    // Des echecs : on reste sur la feuille pour les montrer, mais on
+    // signale les reussites (la grille sera rafraichie a la
+    // fermeture manuelle).
+    setState(() => _enCours = false);
+    _annoncer(
+      '$reussies importee(s), ${_echecs.length} en echec.',
+    );
+  }
+
+  void _annoncer(String message, {bool succes = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: succes ? AppColors.success : AppColors.danger,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Importer ${_images.length} image(s)',
+                      style: AppTextStyles.sectionTitle(),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Les libelles sont deduits des noms de fichiers. '
+                      'Corrigez ceux qui en ont besoin.',
+                      style: AppTextStyles.caption(),
+                    ),
+                    const SizedBox(height: 14),
+                    _SelecteurDeRole(
+                      valeur: _type,
+                      actif: !_enCours,
+                      onChanged: (t) => setState(() => _type = t),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 20),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  itemCount: _images.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _LigneDImage(
+                    image: _images[i],
+                    actif: !_enCours,
+                  ),
+                ),
+              ),
+              if (_echecs.isNotEmpty) _BlocDEchecs(echecs: _echecs),
+              _PiedDImport(
+                enCours: _enCours,
+                traitees: _traitees,
+                total: _images.length,
+                onImporter: _importer,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// =============================================================
+// SELECTEUR DE ROLE (applique a tout le lot)
+// =============================================================
+
+class _SelecteurDeRole extends StatelessWidget {
+  const _SelecteurDeRole({
+    required this.valeur,
+    required this.actif,
+    required this.onChanged,
+  });
+
+  final CardType valeur;
+  final bool actif;
+  final ValueChanged<CardType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SegmentedButton<CardType>(
+      segments: [
+        for (final t in CardType.values)
+          ButtonSegment(value: t, label: Text(t.label)),
+      ],
+      selected: {valeur},
+      onSelectionChanged:
+          actif ? (s) => onChanged(s.first) : null,
+      showSelectedIcon: false,
+    );
+  }
+}
+
+// =============================================================
+// LIGNE D'IMAGE : apercu + libelle editable
+// =============================================================
+
+class _LigneDImage extends StatelessWidget {
+  const _LigneDImage({required this.image, required this.actif});
+
+  final _ImageAImporter image;
+  final bool actif;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            // FutureBuilder : l'apercu se charge sans bloquer la
+            // construction de la liste. Sur cinquante images, lire
+            // tous les octets d'un coup ferait sauter l'ouverture
+            // de la feuille.
+            child: FutureBuilder<Uint8List>(
+              future: image.fichier.readAsBytes(),
+              builder: (_, snap) {
+                if (!snap.hasData) {
+                  return Container(color: AppColors.surface2);
+                }
+                return Image.memory(snap.data!, fit: BoxFit.cover);
+              },
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextField(
+            controller: image.libelle,
+            enabled: actif,
+            decoration: const InputDecoration(
+              labelText: 'Libelle',
+              isDense: true,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================
+// RECAPITULATIF DES ECHECS
+// =============================================================
+
+class _BlocDEchecs extends StatelessWidget {
+  const _BlocDEchecs({required this.echecs});
+
+  final List<String> echecs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${echecs.length} image(s) non importee(s)',
+            style: AppTextStyles.caption()
+                .copyWith(color: AppColors.danger),
+          ),
+          const SizedBox(height: 6),
+          // On borne l'affichage : au-dela de cinq, la liste
+          // deborderait et la cause est de toute facon la meme.
+          for (final e in echecs.take(5))
+            Text('- $e', style: AppTextStyles.caption()),
+          if (echecs.length > 5)
+            Text('- et ${echecs.length - 5} autre(s)...',
+                style: AppTextStyles.caption()),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================
+// PIED : progression + bouton
+// =============================================================
+
+class _PiedDImport extends StatelessWidget {
+  const _PiedDImport({
+    required this.enCours,
+    required this.traitees,
+    required this.total,
+    required this.onImporter,
+  });
+
+  final bool enCours;
+  final int traitees;
+  final int total;
+  final VoidCallback onImporter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: Column(
+        children: [
+          if (enCours) ...[
+            LinearProgressIndicator(
+              value: total == 0 ? null : traitees / total,
+              backgroundColor: AppColors.surface2,
+              color: AppColors.brand,
+            ),
+            const SizedBox(height: 8),
+            Text('$traitees / $total', style: AppTextStyles.caption()),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: enCours ? null : onImporter,
+              icon: const Icon(Icons.cloud_upload_outlined),
+              label: Text(enCours
+                  ? 'Import en cours...'
+                  : 'Importer $total carte(s)'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.brand,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

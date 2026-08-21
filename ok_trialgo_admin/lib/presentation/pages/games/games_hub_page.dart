@@ -30,6 +30,8 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../domain/entities/game.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/games_provider.dart';
+import '../admin/codes_page.dart';
+import '../admin/users_page.dart';
 import '../../providers/music_provider.dart';
 import '../../providers/wizard_provider.dart';
 import '../../widgets/app_logo.dart';
@@ -96,6 +98,11 @@ class GamesHubPage extends ConsumerWidget {
           // - on watch().valueOrNull ; si encore null on affiche un
           //   icone neutre pour eviter un flicker
           _MusicToggleButton(),
+          // Administration : codes d'activation et comptes.
+          // Regroupes dans un menu plutot qu'en icones separees :
+          // ce sont des ecrans rarement utilises, la barre doit
+          // rester lisible sur un telephone.
+          const _AdminMenuButton(),
           IconButton(
             tooltip: 'Se deconnecter',
             icon: const Icon(Icons.logout),
@@ -395,6 +402,56 @@ class _ErrorView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// =============================================================
+// _AdminMenuButton : acces aux ecrans d'administration
+// =============================================================
+// Les codes d'activation et les comptes utilisateurs ne relevent
+// pas du cycle "creer un jeu" que porte le reste de cet ecran :
+// on les sort du flux principal plutot que de les melanger aux
+// cartes de jeux.
+// =============================================================
+
+enum _DestinationAdmin { codes, comptes }
+
+class _AdminMenuButton extends StatelessWidget {
+  const _AdminMenuButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_DestinationAdmin>(
+      tooltip: 'Administration',
+      icon: const Icon(Icons.tune),
+      onSelected: (destination) {
+        final page = switch (destination) {
+          _DestinationAdmin.codes => const CodesPage(),
+          _DestinationAdmin.comptes => const UsersPage(),
+        };
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => page),
+        );
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(
+          value: _DestinationAdmin.codes,
+          child: ListTile(
+            leading: Icon(Icons.confirmation_number_outlined),
+            title: Text('Codes d\'activation'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem(
+          value: _DestinationAdmin.comptes,
+          child: ListTile(
+            leading: Icon(Icons.people_outline),
+            title: Text('Comptes utilisateurs'),
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
     );
   }
 }

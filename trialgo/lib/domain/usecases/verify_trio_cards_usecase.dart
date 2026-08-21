@@ -4,12 +4,34 @@
 // COUCHE : Domain > UseCases
 // =============================================================
 //
-// POURQUOI CLIENT-SIDE ?
-// ----------------------
+// DEUX SOURCES DE VERITE, ET LAQUELLE PRIME
+// -----------------------------------------
 // Le graphe et le pool de noeuds logiques sont deja charges en
-// memoire apres syncAndBuild (cf. GraphSyncService). Faire un RPC
-// Supabase serait plus lent, dependrait du reseau et redondant avec
-// les donnees deja disponibles cote client.
+// memoire apres syncAndBuild (cf. GraphSyncService), donc une
+// verification purement locale est instantanee et marche hors
+// ligne. C'etait le seul mode disponible jusqu'ici.
+//
+// Mais en mode collectif l'animateur annonce un numero a voix haute
+// et le graphe local peut dater : si un administrateur a ajoute des
+// noeuds depuis la derniere synchronisation du joueur, l'app repond
+// "trio inexistant" pour un trio parfaitement valide. Le serveur,
+// lui, est toujours a jour.
+//
+// D'ou la repartition retenue pour verifyByNodeIndex :
+//   1. On interroge POST /api/games/{gid}/verify-collective, qui
+//      fait autorite sur l'EXISTENCE du noeud et ses libelles.
+//   2. Toute panne (hors ligne, 5xx, timeout) retombe sur la
+//      verification locale : le mode collectif reste jouable dans
+//      une salle sans reseau, ce qui est son cas d'usage typique.
+//
+// La REGLE DU JEU, elle, reste cote client dans les deux cas : le
+// serveur ne connait pas la limite "mode collectif = D1 a D3", il
+// se contente de renvoyer la profondeur. C'est l'appelant qui
+// tranche (cf. le resolveur distant dans la couche Data).
+//
+// verifyByCardIds (scan de 3 QR codes) n'a AUCUN equivalent cote
+// serveur : l'endpoint ne sait repondre que par node_index. Cette
+// methode reste donc purement locale, et c'est assume.
 //
 // QUE CHERCHE-T-ON VRAIMENT ?
 // ---------------------------
@@ -50,7 +72,36 @@ class VerifyTrioCardsUseCase {
   /// Injecte au constructeur pour faciliter les tests (mock possible).
   final GraphSyncService _syncService;
 
-  VerifyTrioCardsUseCase(this._syncService);
+  // =============================================================
+  // CHAMP : _verifierDistant
+  // =============================================================
+  // Resolveur optionnel vers /api/games/{gid}/verify-collective.
+  //
+  // Meme raison que dans GenerateGameQuestionUseCase : ce fichier
+  // est dans la couche Domain et n'a pas le droit de connaitre Dio
+  // ni ApiConfig. On recoit donc une simple fonction, branchee par
+  // la couche Presentation (graph_provider).
+  //
+  // Contrat attendu :
+  //   - retourne un VerifyTrioResult quand le serveur a tranche
+  //     (que le trio existe ou non) ;
+  //   - retourne null quand il n'a PAS pu trancher (mode Supabase,
+  //     aucun jeu charge) -- on bascule alors en local ;
+  //   - peut lever : l'exception est rattrapee ici et traitee
+  //     comme une panne reseau, donc bascule en local aussi.
+  // =============================================================
+
+  /// Verification serveur du node_index, ou null si indisponible.
+  final Future<VerifyTrioResult?> Function(int nodeIndex)? _verifierDistant;
+
+  /// Cree le usecase.
+  ///
+  /// Sans [verifierDistant], le comportement est strictement celui
+  /// d'avant : tout se decide en local.
+  VerifyTrioCardsUseCase(
+    this._syncService, {
+    Future<VerifyTrioResult?> Function(int nodeIndex)? verifierDistant,
+  }) : _verifierDistant = verifierDistant;
 
   // =============================================================
   // METHODE : verifyByCardIds
@@ -163,11 +214,40 @@ class VerifyTrioCardsUseCase {
   // =============================================================
 
   /// Verifie qu'un noeud existe en le cherchant par son numero.
-  VerifyTrioResult verifyByNodeIndex(int nodeIndex) {
+  ///
+  /// Interroge le serveur en premier (source de verite la plus
+  /// fraiche), puis retombe sur le graphe local en cas de panne.
+  Future<VerifyTrioResult> verifyByNodeIndex(int nodeIndex) async {
     if (nodeIndex < 1) {
       return VerifyTrioResult.invalid('Numero de trio invalide');
     }
 
+    // ---- Tentative serveur ----
+    // Un null signifie "je n'ai pas pu trancher" (mode Supabase,
+    // aucun jeu charge) ; une exception signifie "panne reseau".
+    // Les deux menent au meme repli : la verification locale.
+    final distant = _verifierDistant;
+    if (distant != null) {
+      try {
+        final resultat = await distant(nodeIndex);
+        if (resultat != null) return resultat;
+      } catch (_) {
+        // Hors ligne / serveur muet : on continue en local.
+      }
+    }
+
+    return _verifierEnLocal(nodeIndex);
+  }
+
+  // =============================================================
+  // METHODE PRIVEE : _verifierEnLocal
+  // =============================================================
+  // La verification d'origine, contre le graphe deja en memoire.
+  // Reste le seul chemin en mode Supabase et hors ligne.
+  // =============================================================
+
+  /// Verifie [nodeIndex] contre le graphe local uniquement.
+  VerifyTrioResult _verifierEnLocal(int nodeIndex) {
     final graph = _syncService.gameGraph;
     if (graph == null) {
       return VerifyTrioResult.invalid('Graphe non charge');

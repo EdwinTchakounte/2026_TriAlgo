@@ -154,6 +154,28 @@ class _TGraphLoadingPageState extends ConsumerState<TGraphLoadingPage>
       final sync = ref.read(graphSyncServiceProvider);
       await sync.syncAndBuild(gameId);
 
+      // ---------------------------------------------------------
+      // AMORCAGE DU TRACKING ANTI-DOUBLON
+      // ---------------------------------------------------------
+      // On relit les trios que ce joueur a deja vus lors de ses
+      // sessions precedentes et on les injecte dans le usecase de
+      // generation de questions.
+      //
+      // Sans cette relecture, le Set de trackingKeys repartait vide
+      // a chaque lancement de l'application : le joueur retombait
+      // en boucle sur les memes trios alors que le serveur gardait
+      // pourtant tout l'historique dans user_played_nodes.
+      //
+      // chargerClesJouees n'echoue jamais : hors ligne ou en mode
+      // Supabase elle renvoie un ensemble vide, et on retombe alors
+      // sur le tracking purement memoire d'avant. C'est pourquoi
+      // cet appel n'est pas dans un try/catch a lui : il ne peut
+      // pas faire echouer le chargement du graphe.
+      // ---------------------------------------------------------
+      final clesDejaJouees =
+          await ref.read(playedNodesTrackerProvider).chargerClesJouees(gameId);
+      ref.read(generateQuestionProvider).seedPlayedKeys(clesDejaJouees);
+
       // On attend au minimum la duree de la cinematique pour laisser
       // le spectacle se jouer meme si la sync a dure 50ms.
       await minDisplay;

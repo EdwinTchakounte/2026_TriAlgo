@@ -24,10 +24,9 @@
 # de ses routes.
 # -------------------------------------------------------------
 api.mixalgo.com {
-
 	# ---- Fichiers cartes servis depuis MinIO ----
-	# handle_path RETIRE le prefixe /files avant de transmettre la
-	# requete. C'est la difference essentielle avec `handle` :
+	# `uri strip_prefix /files` retire le prefixe avant de
+	# transmettre la requete au stockage :
 	#
 	#   requete recue    : /files/trialgo-cards/<game>/<uuid>.jpg
 	#   transmise a MinIO: /trialgo-cards/<game>/<uuid>.jpg
@@ -36,8 +35,27 @@ api.mixalgo.com {
 	# pourquoi S3_PUBLIC_ENDPOINT_URL doit valoir exactement
 	# "https://api.mixalgo.com/files" : le backend y ajoute lui-meme
 	# "/<bucket>/<cle>" pour former chaque image_url.
-	handle_path /files/* {
+	# Seules la lecture et la pre-verification sont transmises.
+	# Sans ce filtre, Caddy relaierait aussi PUT, POST et DELETE :
+	# toute l'API S3 de MinIO se retrouverait exposee publiquement
+	# alors que le public n'a besoin que de lire des images. La
+	# politique du bucket refuse deja ces ecritures, mais defendre
+	# a deux endroits coute une ligne, et la politique d'un bucket
+	# se change par inadvertance.
+	@fichiers {
+		path /files/*
+		method GET HEAD
+	}
+	handle @fichiers {
+		uri strip_prefix /files
 		reverse_proxy minio:9000
+	}
+
+	# Meme prefixe, methode non autorisee : on repond nous-memes.
+	# Sans ce bloc, la requete tomberait dans le handle suivant et
+	# partirait vers l'API FastAPI, qui repondrait un 404 trompeur.
+	handle /files/* {
+		respond "Methode non autorisee" 405
 	}
 
 	# ---- Tout le reste : l'API ----

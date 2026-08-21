@@ -26,8 +26,13 @@ import '../../data/repositories/http_auth_repository.dart';
 import '../../data/repositories/http_card_repository.dart';
 import '../../data/repositories/http_game_repository.dart';
 import '../../data/repositories/http_node_repository.dart';
+import '../../data/repositories/http_admin_users_repository.dart';
+import '../../data/repositories/http_codes_repository.dart';
 import '../../data/repositories/node_repository_impl.dart';
+import '../../data/repositories/unsupported_admin_repositories.dart';
+import '../../domain/repositories/admin_users_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/codes_repository.dart';
 import '../../domain/repositories/card_repository.dart';
 import '../../domain/repositories/game_repository.dart';
 import '../../domain/repositories/node_repository.dart';
@@ -90,4 +95,26 @@ final nodeRepositoryProvider = Provider<NodeRepository>((ref) {
     case ApiMode.fastapi:
       return HttpNodeRepository();
   }
+});
+
+// -----------------------------------------------------------
+// Repositories d'administration : codes et comptes.
+//
+// Contrairement aux quatre precedents, ceux-ci n'ont PAS de
+// variante fake ni supabase : les endpoints correspondants sont
+// nes avec le backend FastAPI. Hors de ce mode on injecte une
+// implementation inerte qui renvoie un Err explicite plutot que
+// de planter ou de mentir (cf. unsupported_admin_repositories).
+// -----------------------------------------------------------
+
+final codesRepositoryProvider = Provider<CodesRepository>((ref) {
+  return ApiConfig.mode == ApiMode.fastapi
+      ? HttpCodesRepository()
+      : const UnsupportedCodesRepository();
+});
+
+final adminUsersRepositoryProvider = Provider<AdminUsersRepository>((ref) {
+  return ApiConfig.mode == ApiMode.fastapi
+      ? HttpAdminUsersRepository()
+      : const UnsupportedAdminUsersRepository();
 });

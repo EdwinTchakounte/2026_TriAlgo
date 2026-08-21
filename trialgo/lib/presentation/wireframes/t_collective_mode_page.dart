@@ -112,6 +112,13 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
   /// et on attend que l'utilisateur clique "Tour suivant".
   VerifyTrioResult? _pendingResult;
 
+  /// Vrai pendant l'aller-retour serveur d'une verification.
+  ///
+  /// La verification par numero interroge desormais le backend :
+  /// elle n'est plus instantanee. Ce drapeau sert a la fois de
+  /// verrou anti double-appui et d'etat visuel pour le bouton.
+  bool _verificationEnCours = false;
+
   /// Controller pour la saisie manuelle du numero de noeud.
   final _manualNodeController = TextEditingController();
 
@@ -151,16 +158,34 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
   }
 
   /// Verifie par saisie manuelle du numero de noeud.
-  void _verifyByNumber() {
+  ///
+  /// Devenu asynchrone : la verification passe desormais par le
+  /// serveur (source de verite la plus fraiche) avant de retomber
+  /// sur le graphe local en cas de panne reseau.
+  Future<void> _verifyByNumber() async {
     final raw = _manualNodeController.text.trim();
     final idx = int.tryParse(raw);
     if (idx == null) {
       _applyResult(VerifyTrioResult.invalid('Numero invalide'));
       return;
     }
-    final result =
-        ref.read(verifyTrioCardsProvider).verifyByNodeIndex(idx);
-    _applyResult(result);
+
+    // Verrou anti double-appui : l'aller-retour reseau dure le temps
+    // qu'il dure, et rien n'empeche l'utilisateur de retaper sur le
+    // bouton entre-temps.
+    if (_verificationEnCours) return;
+    setState(() => _verificationEnCours = true);
+
+    try {
+      final result =
+          await ref.read(verifyTrioCardsProvider).verifyByNodeIndex(idx);
+      if (!mounted) return;
+      _applyResult(result);
+    } finally {
+      // Le widget a pu etre demonte pendant l'attente : on ne
+      // touche a setState que s'il est encore la.
+      if (mounted) setState(() => _verificationEnCours = false);
+    }
   }
 
   /// Applique un resultat de verification au tour courant.
@@ -491,8 +516,11 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
               ),
             ),
             const SizedBox(width: TSpacing.sm),
+            // isLoading affiche le spinner ET desactive le bouton
+            // (cf. _isEnabled dans AppButton) pendant l'appel reseau.
             AppButton.secondary(
               label: 'OK',
+              isLoading: _verificationEnCours,
               onPressed: _verifyByNumber,
             ),
           ],

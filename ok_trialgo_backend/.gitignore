@@ -35,3 +35,7 @@ docker/dashboard/*
 
 # ---- Stockage local des cartes (STORAGE_BACKEND=local) ---------
 data/
+
+# Override de ports, propre a chaque poste de developpement.
+# Le gabarit versionne est docker-compose.override.yml.example
+docker-compose.override.yml

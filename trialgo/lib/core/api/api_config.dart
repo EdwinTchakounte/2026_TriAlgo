@@ -85,6 +85,40 @@ class ApiConfig {
     defaultValue: kReleaseMode ? _urlProduction : _urlDeveloppement,
   );
 
+  // =============================================================
+  // CONSTANTE : linkDomain
+  // =============================================================
+  // Domaine enregistrable des liens envoyes par courriel
+  // (reinitialisation de mot de passe, confirmation d'adresse).
+  //
+  // POURQUOI UNE CONSTANTE SEPAREE DE baseUrl ?
+  // -------------------------------------------
+  // On pourrait croire qu'il suffit de deduire le domaine de
+  // baseUrl. C'est faux pour deux raisons :
+  //
+  //   1. baseUrl depend de kReleaseMode. En debug il vaut
+  //      'http://10.0.2.2:8000' -- une adresse IP, dont on ne peut
+  //      tirer aucun domaine. Un build de debug branche sur le
+  //      backend de production rejetterait alors tous les liens.
+  //
+  //   2. Le lien du courriel ne pointe PAS sur l'API mais sur
+  //      APP_FRONTEND_URL, une variable distincte cote serveur.
+  //      Les deux peuvent legitimement differer.
+  //
+  // Le domaine des liens est un fait de deploiement stable : il ne
+  // change que le jour ou l'on change de nom de domaine. Il merite
+  // sa propre constante, valable dans tous les modes de build.
+  //
+  // Tous les sous-domaines sont couverts : mixalgo.com,
+  // api.mixalgo.com, dashboard.mixalgo.com, app.mixalgo.com.
+  // =============================================================
+
+  /// Domaine enregistrable autorise a ouvrir l'app via un lien https.
+  static const String linkDomain = String.fromEnvironment(
+    'APP_LINK_DOMAIN',
+    defaultValue: 'mixalgo.com',
+  );
+
   /// Helper pour savoir si on doit utiliser le backend FastAPI.
   static bool get isFastApi => mode == ApiMode.fastapi;
 

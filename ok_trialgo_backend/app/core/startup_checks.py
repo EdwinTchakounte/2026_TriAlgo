@@ -90,6 +90,25 @@ def collecter_problemes_de_configuration() -> list[str]:
             f"cartes. Attendu en production : une URL publique en https."
         )
 
+    # ---- 2bis. Barre oblique finale sur l'URL publique du stockage ----
+    # public_url() construit chaque URL par simple concatenation :
+    #
+    #     f"{S3_PUBLIC_ENDPOINT_URL}/{S3_BUCKET}/{object_key}"
+    #
+    # Une barre finale dans la variable produit donc un double
+    # separateur ("https://.../files//trialgo-cards/..."). Certains
+    # frontaux normalisent, d'autres non, et MinIO interprete le
+    # segment vide comme un nom de bucket : les images repondent 404
+    # alors que tout le reste fonctionne. Erreur de saisie facile,
+    # symptome deroutant, donc detection explicite.
+    if settings.S3_PUBLIC_ENDPOINT_URL.endswith("/"):
+        problemes.append(
+            f"S3_PUBLIC_ENDPOINT_URL vaut '{settings.S3_PUBLIC_ENDPOINT_URL}' "
+            f"et se termine par une barre oblique. Chaque image_url "
+            f"contiendra un double separateur et les cartes ne se "
+            f"chargeront pas. Retirer la barre finale."
+        )
+
     # ---- 3. URL publique de l'API (utilisee en STORAGE_BACKEND=local) ----
     if settings.STORAGE_BACKEND == "local" and _est_local(settings.PUBLIC_BASE_URL):
         problemes.append(
