@@ -1,0 +1,26 @@
+# =============================================================
+# .gitignore  -  racine du depot TRIALGO
+# =============================================================
+# Les sous-projets ont chacun leur propre .gitignore
+# (trialgo/, ok_trialgo_admin/, ok_trialgo_backend/).
+# Ce fichier ne traite que ce qui vit a la racine.
+# =============================================================
+
+# ---- Binaires d'application ------------------------------------
+# Un APK pese ~57 Mo et est entierement reconstructible depuis les
+# sources. Git conserve chaque version dans l'historique pour
+# toujours : trois APK, c'est 171 Mo qu'on ne pourra plus enlever
+# sans reecrire l'historique. Les livrables se distribuent par une
+# release, pas par le depot.
+*.apk
+*.aab
+*.ipa
+
+# ---- Signature Android : secrets --------------------------------
+*.jks
+*.keystore
+key.properties
+
+# ---- Systeme ----------------------------------------------------
+.DS_Store
+Thumbs.db
