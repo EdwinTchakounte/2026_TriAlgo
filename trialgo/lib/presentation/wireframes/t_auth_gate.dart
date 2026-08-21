@@ -21,7 +21,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
+import 'package:trialgo/core/session/session_utilisateur.dart';
+import 'package:trialgo/core/api/dio_client.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_providers.dart';
 import 'package:trialgo/presentation/providers/audio_provider.dart';
 import 'package:trialgo/presentation/providers/profile_provider.dart';
 import 'package:trialgo/presentation/wireframes/t_auth_page.dart';
@@ -64,18 +68,23 @@ class _TAuthGateState extends ConsumerState<TAuthGate> {
     // Calculer la route initiale.
     _initialRoute = _computeInitialRoute();
 
-    // Ecouter les changements d'auth (logout, expiration, etc.).
-    _authSub = supabase.auth.onAuthStateChange.listen((data) {
-      if (!mounted) return;
-
-      if (data.event == AuthChangeEvent.signedOut) {
-        // Session terminee -> retour a la page d'auth.
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const TAuthPage()),
-          (route) => false,
-        );
-      }
-    });
+    // Ecouter les changements d'auth Supabase. En mode FastAPI on
+    // n'a pas de stream equivalent : la deconnexion se fait par
+    // clearing des tokens cote client + l'interceptor Dio refresh
+    // bascule sur signOut local si le refresh echoue. On laisse
+    // quand meme ce listener actif : il sera no-op en mode FastAPI
+    // (aucun event ne sera emis).
+    if (ApiConfig.isSupabase) {
+      _authSub = supabase.auth.onAuthStateChange.listen((data) {
+        if (!mounted) return;
+        if (data.event == AuthChangeEvent.signedOut) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const TAuthPage()),
+            (route) => false,
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -91,21 +100,74 @@ class _TAuthGateState extends ConsumerState<TAuthGate> {
   // =============================================================
 
   Future<Widget> _computeInitialRoute() async {
-    final session = supabase.auth.currentSession;
+    // ---------------------------------------------------------
+    // BRANCHEMENT BACKEND : on regarde d'abord ApiConfig.mode
+    // pour savoir quel systeme de session inspecter.
+    // ---------------------------------------------------------
+    if (ApiConfig.isFastApi) {
+      return _computeInitialRouteFastApi();
+    }
+    return _computeInitialRouteSupabase();
+  }
 
-    // Pas de session -> auth.
+  // -----------------------------------------------------------
+  // Routing initial en mode FastAPI (JWT en flutter_secure_storage)
+  // -----------------------------------------------------------
+  Future<Widget> _computeInitialRouteFastApi() async {
+    // Pas de token persiste -> auth.
+    if (!await DioClient.storage.hasSession()) {
+      return const TAuthPage();
+    }
+
+    try {
+      // Verifier que le token est encore valide en appelant /me.
+      // L'interceptor Dio refresh-uera automatiquement si 401.
+      final authDs = ref.read(httpAuthDatasourceProvider);
+      final me = await authDs.me();
+      if (me == null) {
+        // Jeton absent, expire ou revoque : on repart de l'ecran
+        // d'authentification, et on vide l'identite en cache pour ne
+        // pas laisser trainer celle de la session precedente.
+        SessionUtilisateur.effacer();
+        return const TAuthPage();
+      }
+
+      // Session restauree : on repeuple le cache d'identite. C'est le
+      // pendant, au demarrage, de ce que fait TAuthPage a la connexion.
+      // Sans cela, apres un simple relancement de l'app, l'entree admin
+      // disparaitrait et la cle d'onboarding retomberait sur 'anon'.
+      SessionUtilisateur.memoriserDepuisJson(me);
+
+      // Charger le profil joueur (username, avatar, selected_game).
+      final profileDs = ref.read(httpProfileDatasourceProvider);
+      final profile = await profileDs.getMyProfile();
+      final selectedGameId = profile['selected_game_id'] as String?;
+      if (selectedGameId == null) {
+        // Pas encore active de jeu -> page activation code.
+        return const TActivationPage();
+      }
+      // Sinon : graphe + home.
+      return const TGraphLoadingPage();
+    } catch (_) {
+      // Toute erreur reseau / token invalide -> retour auth.
+      return const TAuthPage();
+    }
+  }
+
+  // -----------------------------------------------------------
+  // Routing initial en mode SUPABASE (historique)
+  // -----------------------------------------------------------
+  Future<Widget> _computeInitialRouteSupabase() async {
+    final session = supabase.auth.currentSession;
     if (session == null) {
       return const TAuthPage();
     }
 
-    // Session valide -> charger le profil pour savoir si un jeu est
-    // deja active.
     try {
       final profileService = ref.read(profileServiceProvider);
       final profile = await profileService.loadProfile();
 
       if (profile == null) {
-        // Profil manquant (premiere fois apres signUp) → activation.
         await profileService.createProfile(
           username: supabase.auth.currentUser?.email?.split('@').first,
         );
@@ -114,15 +176,11 @@ class _TAuthGateState extends ConsumerState<TAuthGate> {
 
       final selectedGameId = profile['selected_game_id'] as String?;
       if (selectedGameId == null) {
-        // Pas encore de jeu active → activation.
         return const TActivationPage();
       }
 
-      // Tout est OK : charger le graphe et aller au jeu.
-      // Le GraphLoadingPage recharge le profil et sync le graphe.
       return const TGraphLoadingPage();
     } catch (e) {
-      // En cas d'erreur, retour a l'auth par securite.
       return const TAuthPage();
     }
   }

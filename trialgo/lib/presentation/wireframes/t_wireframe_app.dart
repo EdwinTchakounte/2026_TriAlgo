@@ -16,6 +16,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/design_system/theme/app_theme.dart';
 import 'package:trialgo/core/navigation/app_navigator.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
@@ -45,15 +46,17 @@ class _TWireframeAppState extends State<TWireframeApp> {
   void initState() {
     super.initState();
 
-    // --- Ecoute des evenements auth ---
-    // onAuthStateChange emet un AuthState a chaque changement :
-    // signedIn, signedOut, tokenRefreshed, passwordRecovery, etc.
-    // On ne s'interesse qu'a passwordRecovery ici (retour du deep-link).
-    _authSubscription = supabase.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        _navigateToNewPassword();
-      }
-    });
+    // --- Ecoute des evenements auth Supabase (mode supabase seulement) ---
+    // En mode FastAPI, le passwordRecovery est gere par le DeepLinkService
+    // qui extrait le ?token=... de l'URL deep-link et l'injecte directement
+    // dans TNewPasswordPage(recoveryToken: ...). Pas besoin d'un stream auth.
+    if (ApiConfig.isSupabase) {
+      _authSubscription = supabase.auth.onAuthStateChange.listen((data) {
+        if (data.event == AuthChangeEvent.passwordRecovery) {
+          _navigateToNewPassword();
+        }
+      });
+    }
   }
 
   @override

@@ -28,7 +28,10 @@
 
 // Import du client Supabase pour faire les requetes.
 // C'est un import de Core (autorise dans Data).
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_public_games_datasource.dart';
+import 'package:trialgo/data/services/profile_service.dart';
 
 // Import de l'entite et du type CardType pour les signatures de methodes.
 import 'package:trialgo/domain/entities/card_entity.dart';
@@ -50,6 +53,49 @@ import 'package:trialgo/data/models/card_model.dart';
 /// Si une methode manque, le compilateur affiche une erreur.
 class CardRepositoryImpl implements CardRepository {
 
+  // -----------------------------------------------------------
+  // BRANCHEMENT BACKEND
+  // -----------------------------------------------------------
+  // Le backend FastAPI expose un modele Card plus minimal que
+  // Supabase historique : il a card_type, label, image_url, game_id
+  // mais PAS distance_level, cable_category, is_active.
+  //
+  // Strategie en mode FastAPI :
+  //   1. Recuperer toutes les cartes du jeu actif via
+  //      GET /api/games/{gid}/cards (auth user).
+  //   2. Filtrer en memoire sur card_type uniquement.
+  //   3. Les filtres distance_level/cable_category/is_active sont
+  //      IGNORES (faute de metadata cote backend). Quand ces
+  //      colonnes seront ajoutees au backend (migration future),
+  //      on les filtrera proprement.
+  //
+  // Note : le ProfileService garde le selectedGameId en cache, on
+  // s'en sert pour resoudre la lecture cartes sans demander a chaque
+  // appelant de fournir le game_id.
+  // -----------------------------------------------------------
+
+  final HttpPublicGamesDatasource _httpGames = HttpPublicGamesDatasource();
+  // Cache local le ProfileService pour acceder a selectedGameId.
+  // On l'instancie ici (singleton implicite via Riverpod ailleurs).
+  final ProfileService _profileService = ProfileService();
+
+  /// Recupere toutes les cartes du jeu actif (mode FastAPI).
+  ///
+  /// Charge le profile si necessaire pour resoudre selectedGameId.
+  /// Renvoie [] si aucun jeu n'est selectionne (anti-crash UI).
+  Future<List<CardEntity>> _fetchAllFastApi() async {
+    var gameId = _profileService.selectedGameId;
+    if (gameId == null) {
+      // Profile peut-etre pas encore charge : on tente un load.
+      await _profileService.loadProfile();
+      gameId = _profileService.selectedGameId;
+    }
+    if (gameId == null) return const <CardEntity>[];
+    final rows = await _httpGames.listGameCardsAuth(gameId);
+    return rows.map((j) => CardModel.fromJson(j)).toList();
+  }
+
+
   // =============================================================
   // METHODE : getCardById
   // =============================================================
@@ -66,10 +112,23 @@ class CardRepositoryImpl implements CardRepository {
 
   /// Recupere une carte par son [id] (UUID).
   ///
-  /// Fait un SELECT sur la table `cards` avec filtre sur l'ID.
-  /// `.single()` garantit exactement 1 resultat (erreur si 0 ou 2+).
+  /// FastAPI : recharge le catalogue + lookup en memoire (pas
+  /// d'endpoint GET /api/cards/{id} dedie cote backend pour
+  /// l'instant).
+  /// Supabase : SELECT direct .single() sur la table cards.
   @override
   Future<CardEntity> getCardById(String id) async {
+    if (ApiConfig.isFastApi) {
+      final all = await _fetchAllFastApi();
+      final found = all.where((c) => c.id == id).cast<CardEntity?>().firstWhere(
+            (c) => c != null,
+            orElse: () => null,
+          );
+      if (found == null) {
+        throw StateError('Carte introuvable (id=$id)');
+      }
+      return found;
+    }
     // "supabase" : le getter global defini dans supabase_client.dart
     // ".from('cards')" : cible la table PostgreSQL nommee "cards"
     //   -> Equivalent de : FROM cards
@@ -117,6 +176,10 @@ class CardRepositoryImpl implements CardRepository {
   /// Recupere toutes les cartes actives du type [type].
   @override
   Future<List<CardEntity>> getCardsByType(CardType type) async {
+    if (ApiConfig.isFastApi) {
+      final all = await _fetchAllFastApi();
+      return all.where((c) => c.cardType == type).toList();
+    }
     // La requete Supabase se construit par CHAINAGE de methodes.
     // Chaque methode retourne un builder, ce qui permet d'enchainer.
     //
@@ -165,6 +228,12 @@ class CardRepositoryImpl implements CardRepository {
   /// Recupere toutes les cartes actives d'une distance [distance].
   @override
   Future<List<CardEntity>> getCardsByDistance(int distance) async {
+    if (ApiConfig.isFastApi) {
+      // Backend FastAPI n'a pas distance_level pour l'instant : on
+      // renvoie toutes les cartes du jeu (filtrage degrade). Le
+      // generateur de questions pourra reaffiner cote client.
+      return _fetchAllFastApi();
+    }
     final data = await supabase
         .from('cards')
         .select()
@@ -195,6 +264,11 @@ class CardRepositoryImpl implements CardRepository {
     CardType type,
     int distance,
   ) async {
+    if (ApiConfig.isFastApi) {
+      // Filtrage degrade : seul card_type est applique (pas distance).
+      final all = await _fetchAllFastApi();
+      return all.where((c) => c.cardType == type).toList();
+    }
     final data = await supabase
         .from('cards')
         .select()
@@ -248,6 +322,17 @@ class CardRepositoryImpl implements CardRepository {
     required CardEntity correctCard,
     int count = 9,
   }) async {
+    if (ApiConfig.isFastApi) {
+      // Strategie degraded : meme card_type, on exclut la bonne
+      // reponse, on melange et on prend [count]. Pas de filtrage
+      // cable_category ni distance_level (metadata absente backend).
+      final all = await _fetchAllFastApi();
+      final pool = all
+          .where((c) => c.cardType == correctCard.cardType && c.id != correctCard.id)
+          .toList()
+        ..shuffle();
+      return pool.take(count).toList();
+    }
     // --- CAS SPECIAL : la bonne reponse est un Cable ---
     // Les cables ont une categorie (geometrique, couleur, etc.).
     // On priorise les distracteurs de la MEME categorie pour

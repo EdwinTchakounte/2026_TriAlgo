@@ -1,5 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- =============================================================
+         PERMISSION INTERNET
+         =============================================================
+         OBLIGATOIRE. Sans elle, AUCUN appel reseau ne part de l'app :
+         ni l'API FastAPI (auth, sessions, codes, leaderboard...), ni
+         le telechargement des images de cartes depuis MinIO/S3, ni
+         Google Fonts.
+
+         Pourquoi elle doit etre ICI et pas ailleurs :
+         Flutter ajoute automatiquement <uses-permission INTERNET/>
+         dans les manifests des variantes "debug" et "profile"
+         (android/app/src/debug/ et src/profile/) pour que le hot
+         reload fonctionne. Ces deux fichiers ne sont PAS fusionnes
+         dans un build "release". Resultat si on ne la declare pas
+         ici, dans src/main/ : l'app marche parfaitement en debug et
+         se retrouve totalement coupee du reseau une fois l'APK
+         release installe -- panne silencieuse et difficile a
+         diagnostiquer.
+         ============================================================= -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- =============================================================
          PERMISSION CAMERA
          =============================================================
          Requise par mobile_scanner pour lire les QR codes des cartes

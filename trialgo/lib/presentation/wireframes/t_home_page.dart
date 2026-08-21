@@ -42,6 +42,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/constants/admin_constants.dart';
 import 'package:trialgo/core/design_system/tokens/brand.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
@@ -324,7 +325,12 @@ class _THomePageState extends ConsumerState<THomePage>
             ),
 
             // Admin badge (si applicable).
-            if (isAdmin) ...[
+            //
+            // Masque en mode fastapi : TAdminPage ecrit directement
+            // dans les tables Supabase, ce que ce backend n'expose
+            // pas. La creation de contenu passe desormais par
+            // l'application studio ok_trialgo_admin.
+            if (isAdmin && !ApiConfig.isFastApi) ...[
               IconButton(
                 onPressed: () => _navigateTo(const TAdminPage()),
                 icon: Icon(Icons.admin_panel_settings_outlined,

@@ -10,17 +10,30 @@
 // CE QUE FAIT CE FICHIER :
 // ------------------------
 // 1. Initialise les bindings Flutter
-// 2. Initialise Supabase (necessaire pour la sync du graphe)
-// 3. Initialise le DeepLinkService (reset mot de passe par deep-link)
-// 4. Lance l'app dans un ProviderScope (necessaire pour Riverpod)
+// 2. Initialise Supabase UNIQUEMENT si ApiConfig.mode l'exige
+// 3. Restaure les preferences utilisateur (langue, theme)
+// 4. Initialise le DeepLinkService (reset mot de passe par deep-link)
+// 5. Lance l'app dans un ProviderScope (necessaire pour Riverpod)
 //
 // HISTORIQUE :
 // ------------
-// Avant l'integration du graphe, ce fichier ne faisait que lancer
-// le wireframe sans Supabase ni Riverpod. Maintenant que l'app
-// utilise les providers Riverpod (graphSyncServiceProvider, etc.)
-// et Supabase (sync des cards et nodes), ces deux dependances
-// sont indispensables.
+// Avant l'integration du graphe, ce fichier ne faisait que lancer le
+// wireframe sans Supabase ni Riverpod.
+//
+// Il a ensuite initialise Supabase inconditionnellement, du temps ou
+// c'etait le seul backend. Ce n'est plus le cas : en mode fastapi,
+// l'app parle a ok_trialgo_backend et n'a plus aucun besoin de
+// Supabase. L'initialiser quand meme aurait trois inconvenients :
+//
+//   - une latence de demarrage pour rien (restauration de la session
+//     persistee et ouverture du canal auth) ;
+//   - une dependance a un service tiers pour une app qui ne l'utilise
+//     plus : projet Supabase suspendu ou supprime = demarrage a
+//     risque ;
+//   - une ambiguite pour le developpeur, qui voit deux backends
+//     initialises et ne sait plus lequel sert.
+//
+// D'ou initSupabaseSiNecessaire(), qui n'agit qu'en mode supabase.
 // =============================================================
 
 import 'package:flutter/material.dart';
@@ -50,11 +63,15 @@ void main() async {
   // avant runApp().
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialise le client Supabase avec l'URL et la cle anon.
-  // Ces valeurs sont definies dans core/network/supabase_client.dart.
-  // Apres cet appel, on peut utiliser le getter global "supabase"
-  // pour faire des requetes (cards, nodes, auth, etc.).
-  await initSupabase();
+  // Initialise le client Supabase, mais SEULEMENT si le mode courant
+  // en a besoin (ApiConfig.mode == ApiMode.supabase).
+  //
+  // En mode fastapi cet appel se termine immediatement sans rien
+  // faire : aucune connexion reseau, aucune session restauree. Le
+  // getter global "supabase" devient alors inutilisable, et leve une
+  // StateError explicite si du code l'atteint malgre tout -- ce qui
+  // signalerait un chemin encore non migre vers les datasources HTTP.
+  await initSupabaseSiNecessaire();
 
   // Restaure les preferences utilisateur (langue + mode de theme)
   // depuis SharedPreferences. Sans ce chargement, l'app demarre
@@ -92,8 +109,10 @@ void main() async {
 // du processus Dart (sinon le Stream<Uri> pourrait etre garbage
 // collecte si l'instance sortait du scope).
 //
-// Le service n'expose rien publiquement : son seul effet est de
-// passer les URIs recues a Supabase, qui emet ensuite un evenement
-// onAuthStateChange ecoute dans TWireframeApp.
+// Le service n'expose rien publiquement. Son effet depend du mode :
+//   - fastapi  : il extrait le ?token=... de l'URI et pousse
+//                directement TNewPasswordPage sur le navigateur ;
+//   - supabase : il passe l'URI a Supabase, qui emet ensuite un
+//                evenement onAuthStateChange ecoute dans TWireframeApp.
 // ---------------------------------------------------------------
 final DeepLinkService _deepLinkService = DeepLinkService();

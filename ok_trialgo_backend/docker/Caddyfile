@@ -1,0 +1,80 @@
+# =============================================================
+# Caddyfile  -  reverse proxy de production TRIALGO
+# =============================================================
+# Caddy obtient et renouvelle les certificats TLS automatiquement
+# (Let's Encrypt) des lors que les enregistrements DNS pointent
+# vers cette machine et que les ports 80 et 443 sont ouverts.
+#
+# PREREQUIS DNS chez le registrar de mixalgo.com :
+#   api.mixalgo.com        A    <ip-du-serveur>
+#   dashboard.mixalgo.com  A    <ip-du-serveur>
+# =============================================================
+
+# -------------------------------------------------------------
+# api.mixalgo.com  -  API + fichiers cartes
+# -------------------------------------------------------------
+# Un seul sous-domaine porte les deux flux, ce qui evite un
+# enregistrement DNS et un certificat supplementaires :
+#
+#   /files/*  -> MinIO   (images des cartes, lecture anonyme)
+#   tout le reste -> API FastAPI
+#
+# Aucun risque de collision : l'API n'expose que /api/*, /healthz,
+# /docs et /openapi.json. Le prefixe /files n'appartient a aucune
+# de ses routes.
+# -------------------------------------------------------------
+api.mixalgo.com {
+
+	# ---- Fichiers cartes servis depuis MinIO ----
+	# handle_path RETIRE le prefixe /files avant de transmettre la
+	# requete. C'est la difference essentielle avec `handle` :
+	#
+	#   requete recue    : /files/trialgo-cards/<game>/<uuid>.jpg
+	#   transmise a MinIO: /trialgo-cards/<game>/<uuid>.jpg
+	#
+	# MinIO attend en effet /<bucket>/<cle> a la racine. C'est
+	# pourquoi S3_PUBLIC_ENDPOINT_URL doit valoir exactement
+	# "https://api.mixalgo.com/files" : le backend y ajoute lui-meme
+	# "/<bucket>/<cle>" pour former chaque image_url.
+	handle_path /files/* {
+		reverse_proxy minio:9000
+	}
+
+	# ---- Tout le reste : l'API ----
+	handle {
+		reverse_proxy api:8000
+	}
+
+	# Compression des reponses JSON. Les images sont deja en JPEG
+	# compresse : Caddy ne les recompresse pas inutilement.
+	encode gzip zstd
+
+	# En-tetes de securite appliques a toutes les reponses.
+	header {
+		# Force le HTTPS pendant un an, sous-domaines compris.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Interdit au navigateur de deviner un type MIME.
+		X-Content-Type-Options "nosniff"
+		# Ne pas divulguer le serveur utilise.
+		-Server
+	}
+}
+
+# -------------------------------------------------------------
+# dashboard.mixalgo.com  -  studio admin (build Flutter web)
+# -------------------------------------------------------------
+dashboard.mixalgo.com {
+	root * /srv/dashboard
+	# try_files renvoie index.html pour toute route inconnue :
+	# indispensable pour une application web a routage cote client,
+	# sinon un rechargement sur une route profonde donne un 404.
+	try_files {path} /index.html
+	file_server
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+}

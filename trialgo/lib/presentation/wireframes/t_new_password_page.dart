@@ -26,12 +26,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/design_system/tokens/brand.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
 import 'package:trialgo/core/design_system/tokens/elevation.dart';
 import 'package:trialgo/core/design_system/tokens/spacing.dart';
 import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_auth_datasource.dart';
 import 'package:trialgo/presentation/widgets/core/app_button.dart';
 import 'package:trialgo/presentation/widgets/core/app_text_field.dart';
 import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
@@ -41,8 +43,19 @@ import 'package:trialgo/presentation/wireframes/t_locale.dart';
 
 
 /// Ecran de saisie du nouveau mot de passe apres un reset.
+///
+/// Mode FastAPI : le token clair est passe via [recoveryToken] par
+/// le DeepLinkService (extrait de l'URL ?token=...) ou par defaut
+/// laisse a null si l'user a clique "Mot de passe oublie" depuis la
+/// page d'auth -- dans ce cas il devra le coller manuellement.
+///
+/// Mode Supabase : [recoveryToken] est ignore ; on utilise la session
+/// "passwordRecovery" active emise par Supabase via deep-link.
 class TNewPasswordPage extends StatefulWidget {
-  const TNewPasswordPage({super.key});
+  const TNewPasswordPage({super.key, this.recoveryToken});
+
+  /// Token clair de recuperation (mode FastAPI uniquement).
+  final String? recoveryToken;
 
   @override
   State<TNewPasswordPage> createState() => _TNewPasswordPageState();
@@ -52,15 +65,24 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
 
   final _newPwdController = TextEditingController();
   final _confirmPwdController = TextEditingController();
+  // En mode FastAPI sans recoveryToken passe par constructeur, on
+  // expose un champ "Code de recuperation" pour que l'user puisse
+  // coller le token recu par mail.
+  final _tokenController = TextEditingController();
 
   bool _isLoading = false;
   String? _newPwdError;
   String? _confirmPwdError;
+  String? _tokenError;
   String? _globalError;
 
   @override
   void initState() {
     super.initState();
+    // Pre-remplir le token si fourni au constructeur (deep-link).
+    if (widget.recoveryToken != null) {
+      _tokenController.text = widget.recoveryToken!;
+    }
     // Rebuild a chaque frappe pour mettre a jour la force du mdp
     // et reevaluer le match de la confirmation.
     _newPwdController.addListener(_onChange);
@@ -84,6 +106,7 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
   void dispose() {
     _newPwdController.dispose();
     _confirmPwdController.dispose();
+    _tokenController.dispose();
     super.dispose();
   }
 
@@ -105,6 +128,11 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
       setState(() => _confirmPwdError = tr('newpwd.error_mismatch'));
       return;
     }
+    // En FastAPI on a besoin du token clair (deep-link ou colle).
+    if (ApiConfig.isFastApi && _tokenController.text.trim().length < 20) {
+      setState(() => _tokenError = 'Token de recuperation manquant ou invalide');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -112,7 +140,21 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
     });
 
     try {
-      await supabase.auth.updateUser(UserAttributes(password: pwd));
+      // ---------------------------------------------------------
+      // BRANCHEMENT BACKEND.
+      //   FastAPI : POST /api/auth/reset-password {token, new_password}
+      //             Le backend consomme le token (single-use, 1h TTL)
+      //             puis envoie un mail "password_changed" en notif.
+      //   Supabase : updateUser avec la session passwordRecovery active.
+      // ---------------------------------------------------------
+      if (ApiConfig.isFastApi) {
+        await HttpAuthDatasource().resetPassword(
+          token: _tokenController.text.trim(),
+          newPassword: pwd,
+        );
+      } else {
+        await supabase.auth.updateUser(UserAttributes(password: pwd));
+      }
 
       if (!mounted) return;
       // Celebration legere : SnackBar success + retour immediat a Auth.
@@ -196,6 +238,23 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
                 style: TTypography.headlineLg(color: colors.textPrimary),
               ),
               const SizedBox(height: TSpacing.xxl),
+
+              // --- Champ Code de recuperation (FastAPI uniquement) ---
+              // Si le widget est ouvert via deep-link, le token est
+              // pre-rempli (widget.recoveryToken). Sinon le user le
+              // colle depuis son email.
+              if (ApiConfig.isFastApi) ...[
+                AppTextField(
+                  controller: _tokenController,
+                  label: 'Code de recuperation',
+                  hint: 'Colle le code recu par email',
+                  prefixIcon: Icons.vpn_key_outlined,
+                  textInputAction: TextInputAction.next,
+                  errorText: _tokenError,
+                  enabled: !_isLoading,
+                ),
+                const SizedBox(height: TSpacing.lg),
+              ],
 
               // --- Champ nouveau mdp ---
               AppTextField(

@@ -1,0 +1,126 @@
+# =============================================================
+# docker-compose.prod.yml  -  stack de PRODUCTION TRIALGO
+# =============================================================
+# Differences avec docker-compose.yml (qui reste le fichier de dev) :
+#
+#   - Caddy en frontal : TLS automatique, un seul point d'entree
+#     public. Lui seul publie des ports sur l'exterieur.
+#   - Postgres et MinIO ne publient PLUS aucun port sur l'hote.
+#     Ils ne sont joignables que depuis le reseau Docker interne.
+#     C'est le changement de securite le plus important : en dev,
+#     ces services sont exposes en clair sur 5432 et 9000.
+#   - Pas de montage du code source : l'image embarque l'app, donc
+#     pas de --reload (uvicorn tourne avec plusieurs workers).
+#
+# Lancement :
+#   cp .env.production.example .env    # puis renseigner les secrets
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+#
+# Prerequis : ports 80 et 443 ouverts, et les enregistrements DNS
+# api.mixalgo.com / dashboard.mixalgo.com pointant vers ce serveur.
+# Sans cela, Caddy ne peut pas obtenir ses certificats.
+# =============================================================
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Aucun bloc "ports" : la base reste inaccessible depuis
+    # l'exterieur. Pour une session psql d'urgence, passer par
+    # `docker compose exec postgres psql ...`.
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    # Pas de ports publies non plus. Les images sont servies au
+    # public par Caddy, via le chemin /files de api.mixalgo.com.
+    # La console d'admin MinIO (9001) reste donc privee : y acceder
+    # par un tunnel SSH  ->  ssh -L 9001:localhost:9001 <serveur>
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsSL", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  create_bucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    # Cree le bucket au premier demarrage et le rend lisible sans
+    # authentification (les cartes sont publiques une fois en jeu).
+    # Les ecritures restent reservees a qui detient les cles S3,
+    # c'est-a-dire uniquement l'API.
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY} ${S3_SECRET_KEY};
+      mc mb -p local/${S3_BUCKET};
+      mc anonymous set download local/${S3_BUCKET};
+      echo 'Bucket pret.';
+      "
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file:
+      - .env
+    # Aucun port publie : Caddy joint l'API par le reseau interne.
+    # La commande par defaut du Dockerfile s'applique (2 workers,
+    # sans --reload).
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - minio
+    # Seul service expose publiquement.
+    ports:
+      - "80:80"     # redirection vers 443 + challenge ACME
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Build web du studio admin, servi sur dashboard.mixalgo.com.
+      # Produire avec :
+      #   cd ok_trialgo_admin && flutter build web --release \
+      #     --dart-define=API_BASE_URL=https://api.mixalgo.com
+      # puis deposer build/web ici.
+      - ./docker/dashboard:/srv/dashboard:ro
+      # Certificats et cles : a conserver entre deux redemarrages,
+      # sinon Caddy en redemande a chaque fois et se fait limiter
+      # par Let's Encrypt.
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pg_data:
+  minio_data:
+  caddy_data:
+  caddy_config:

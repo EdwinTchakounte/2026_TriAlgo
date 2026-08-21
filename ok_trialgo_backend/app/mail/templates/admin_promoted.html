@@ -1,0 +1,13 @@
+{% extends "_base.html" %}
+{% block content %}
+<h2 style="margin:0 0 12px;color:#fff">Vous etes maintenant administrateur</h2>
+<p>Bonjour,</p>
+<p>Votre compte a ete promu administrateur sur TRIALGO. Vous pouvez maintenant acceder a l'app d'admin pour gerer les jeux, cartes et fusions.</p>
+<p style="text-align:center;margin:28px 0">
+    <a href="{{ admin_url }}"
+       style="background:#7fdcff;color:#0e1116;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">
+        Acceder a l'admin
+    </a>
+</p>
+<p style="font-size:13px;color:#9aa5b1">Si vous pensez qu'il s'agit d'une erreur, contactez l'equipe.</p>
+{% endblock %}

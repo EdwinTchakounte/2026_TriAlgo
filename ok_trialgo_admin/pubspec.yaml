@@ -1,0 +1,152 @@
+name: trialgo_admin
+description: "Studio admin TRIALGO : creation guidee de jeux, cartes et trios"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # =========================================================
+  # SUPABASE — backend (auth + tables + storage + RLS)
+  # =========================================================
+  # Le SDK officiel Supabase Flutter rassemble :
+  #   - GoTrue (auth) : signIn / signUp / session persistante
+  #   - PostgREST    : interroger les tables (games, cards, nodes)
+  #   - Storage      : uploader/lire les images des cartes
+  #   - Realtime     : (inclus, non utilise dans cette app)
+  #
+  # Cette app vise le MEME projet Supabase que le jeu et l'ancien
+  # dashboard. Les RLS (migration 005) garantissent que seuls les
+  # comptes is_admin=TRUE peuvent ecrire dans games/cards/nodes.
+  supabase_flutter: ^2.8.4
+
+  # =========================================================
+  # ETAT — Riverpod
+  # =========================================================
+  # Riverpod (NotifierProvider, AsyncNotifierProvider) sert ici
+  # de couche de presentation. Il sert aussi de "container" pour
+  # l'injection de dependances : les repositories sont exposes
+  # via des Provider lus depuis les pages.
+  flutter_riverpod: ^2.6.1
+
+  # =========================================================
+  # IMAGES distantes (mise en cache disque)
+  # =========================================================
+  # Quand on affiche la grille des cartes, on telecharge les URLs
+  # publiques du bucket Supabase. cached_network_image evite de
+  # re-telecharger a chaque scroll.
+  cached_network_image: ^3.4.1
+
+  # =========================================================
+  # POLICES Google
+  # =========================================================
+  # On reutilise "Rajdhani" pour rester coherent visuellement avec
+  # le jeu principal et l'ancien dashboard.
+  google_fonts: ^6.2.1
+
+  # =========================================================
+  # SELECTION D'IMAGES — galerie / camera
+  # =========================================================
+  # image_picker renvoie un XFile (chemin local). On lit les bytes
+  # puis on les pousse dans le bucket Supabase Storage.
+  image_picker: ^1.1.2
+
+  # =========================================================
+  # VISUALISATION DE GRAPHE / ARBRE
+  # =========================================================
+  # graphview gere le calcul de positions (BuchheimWalker = layout
+  # d'arbre equilibre). C'est ce qui sert pour la preview de l'arbre
+  # complet a l'etape 4 du wizard.
+  graphview: ^1.2.0
+
+  # =========================================================
+  # ICONES iOS-style
+  # =========================================================
+  cupertino_icons: ^1.0.8
+
+  # =========================================================
+  # UTILITAIRES fichier (extension, mime type)
+  # =========================================================
+  # path : extraire ".jpg" depuis un chemin local
+  # mime : deduire le content-type a fournir a Supabase Storage
+  path: ^1.9.0
+  mime: ^2.0.0
+
+  # =========================================================
+  # PATH_PROVIDER  -  chemins systeme (documents app, cache)
+  # =========================================================
+  # Sert au mode mock : on persiste les images uploadees dans le
+  # dossier documents de l'app (Android : /data/data/.../app_flutter)
+  # pour qu'elles survivent au kill / cold start.
+  path_provider: ^2.1.5
+
+  # =========================================================
+  # SHARED_PREFERENCES  -  preferences cle/valeur persistantes
+  # =========================================================
+  # Sert au toggle de musique de fond (on/off) qui doit etre
+  # memorise entre les lancements.
+  shared_preferences: ^2.3.4
+
+  # =========================================================
+  # AUDIOPLAYERS  -  lecture audio (musique de fond)
+  # =========================================================
+  # Permet de jouer un asset audio en boucle quand le toggle
+  # "musique" est ON. Si l'asset n'existe pas dans assets/audio/,
+  # le toggle reste fonctionnel mais aucun son n'est emis.
+  audioplayers: ^6.1.0
+
+  # =========================================================
+  # DIO  -  client HTTP riche (interceptors, multipart, retry)
+  # =========================================================
+  # Utilise par les Http*Repository pour parler au backend FastAPI.
+  # Choisi pour : interceptors (Bearer auto + refresh 401), upload
+  # multipart natif (MultipartFile.fromBytes), parse JSON auto.
+  dio: ^5.7.0
+
+  # =========================================================
+  # FLUTTER_SECURE_STORAGE  -  Keystore / Keychain pour les JWT
+  # =========================================================
+  # Persiste les tokens access + refresh dans le keystore Android.
+  # Plus sur que SharedPreferences (chiffre par defaut).
+  flutter_secure_storage: ^9.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # =========================================================
+  # FLUTTER_LAUNCHER_ICONS  -  remplace l'icone Flutter par celle
+  # de TRIALGO sur Android (et iOS si on l'active). Genere
+  # mipmap-hdpi/mdpi/xhdpi/xxhdpi/xxxhdpi a partir d'assets/icon/icon.png
+  # Pour regenerer : dart run flutter_launcher_icons
+  # =========================================================
+  flutter_launcher_icons: ^0.14.2
+
+# Config du generator (utilisee par flutter_launcher_icons).
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  # Adaptive icon (Android 8+) : couleur de fond + foreground.
+  # background = canvas anthracite, foreground = la meme image.
+  adaptive_icon_background: "#121419"
+  adaptive_icon_foreground: "assets/icon/icon.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+
+  # =========================================================
+  # ASSETS — images embarquees dans l'APK
+  # =========================================================
+  # Le logo TRIALGO sert d'identite visuelle : AppBars, empty
+  # state du hub, bandeau d'intro du wizard. Charge depuis
+  # AssetImage('assets/images/logo.jpeg') dans les widgets.
+  assets:
+    - assets/images/
+    - assets/audio/

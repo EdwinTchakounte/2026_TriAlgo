@@ -1,14 +1,29 @@
 // =============================================================
 // FICHIER : lib/data/repositories/graph_repository_impl.dart
-// ROLE   : Implementation Supabase du GraphRepository
+// ROLE   : Implementation du GraphRepository (Supabase OU FastAPI)
 // COUCHE : Data > Repositories
 // =============================================================
 //
-// TOUTES les requetes sont filtrees par game_id car la BDD
-// contient plusieurs jeux. On ne sync qu'un jeu a la fois.
+// Charge le graphe complet (cartes + fusions) d'un jeu pour permettre
+// au generateur de questions cote client de fabriquer les triplets.
+//
+// Toutes les requetes sont filtrees par game_id car la DB contient
+// plusieurs jeux. On ne sync qu'un jeu a la fois.
+//
+// BRANCHEMENT BACKEND :
+//   - Supabase : SELECT direct sur cards/nodes (RLS authenticated)
+//   - FastAPI  : GET /api/games/{gid}/cards et /api/games/{gid}/nodes
+//                (auth user requise dans les deux cas)
+//
+// Les operations ADMIN (insert/delete) restent sur Supabase historique :
+// elles ne sont pas appelees depuis l'app joueur. Si plus tard on veut
+// les exposer (ex: studio admin sur trialgo aussi), on branchera vers
+// les endpoints admin FastAPI a ce moment-la.
 // =============================================================
 
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_public_games_datasource.dart';
 import 'package:trialgo/domain/entities/graph_card_entity.dart';
 import 'package:trialgo/domain/entities/graph_node_entity.dart';
 import 'package:trialgo/domain/repositories/graph_repository.dart';
@@ -17,14 +32,26 @@ import 'package:trialgo/data/models/graph_node_model.dart';
 
 class GraphRepositoryImpl implements GraphRepository {
 
+  // Datasource HTTP partagee (singleton Dio).
+  final HttpPublicGamesDatasource _httpGames = HttpPublicGamesDatasource();
+
+  // =============================================================
+  // LECTURE (utilisee par le client joueur)
+  // =============================================================
+
   /// SELECT * FROM cards WHERE game_id = $gameId
   @override
   Future<List<GraphCardEntity>> getAllCards(String gameId) async {
+    if (ApiConfig.isFastApi) {
+      // GET /api/games/{gid}/cards (auth user, inclut card_type).
+      // Le datasource renvoie une List<Map<String, dynamic>> brute.
+      final rows = await _httpGames.listGameCardsAuth(gameId);
+      return rows.map((j) => GraphCardModel.fromJson(j)).toList();
+    }
     final data = await supabase
         .from('cards')
         .select()
         .eq('game_id', gameId);
-
     return data
         .map((json) => GraphCardModel.fromJson(json))
         .toList();
@@ -33,12 +60,17 @@ class GraphRepositoryImpl implements GraphRepository {
   /// SELECT * FROM nodes WHERE game_id = $gameId ORDER BY node_index ASC
   @override
   Future<List<GraphNodeEntity>> getAllNodes(String gameId) async {
+    if (ApiConfig.isFastApi) {
+      // GET /api/games/{gid}/nodes (auth user, deja ordered par node_index
+      // cote backend cf nodes/routes.py).
+      final rows = await _httpGames.listGameNodesAuth(gameId);
+      return rows.map((j) => GraphNodeModel.fromJson(j)).toList();
+    }
     final data = await supabase
         .from('nodes')
         .select()
         .eq('game_id', gameId)
         .order('node_index', ascending: true);
-
     return data
         .map((json) => GraphNodeModel.fromJson(json))
         .toList();
@@ -46,6 +78,11 @@ class GraphRepositoryImpl implements GraphRepository {
 
   // =============================================================
   // ADMIN OPERATIONS
+  // =============================================================
+  // Ces methodes ne sont PAS appelees depuis l'app joueur, elles
+  // restent sur Supabase historique. L'app admin FastAPI a ses
+  // propres endpoints (cf ok_trialgo_admin/lib/data/repositories/
+  // http_card_repository.dart et http_node_repository.dart).
   // =============================================================
 
   @override
@@ -63,7 +100,6 @@ class GraphRepositoryImpl implements GraphRepository {
         })
         .select()
         .single();
-
     return GraphCardModel.fromJson(json);
   }
 
@@ -88,7 +124,6 @@ class GraphRepositoryImpl implements GraphRepository {
         })
         .select()
         .single();
-
     return GraphNodeModel.fromJson(json);
   }
 
@@ -114,7 +149,6 @@ class GraphRepositoryImpl implements GraphRepository {
         })
         .select()
         .single();
-
     return GraphNodeModel.fromJson(json);
   }
 

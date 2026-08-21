@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+{% block content %}
+<h2 style="margin:0 0 12px;color:#fff">Bienvenue sur TRIALGO !</h2>
+<p>Bonjour {{ name or "" }},</p>
+<p>Votre compte a ete cree avec succes. Pour profiter de toutes les fonctionnalites, confirmez votre adresse email en cliquant sur le bouton ci-dessous :</p>
+<p style="text-align:center;margin:28px 0">
+    <a href="{{ confirm_url }}"
+       style="background:#7fdcff;color:#0e1116;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">
+        Confirmer mon email
+    </a>
+</p>
+<p style="font-size:13px;color:#9aa5b1">Ce lien expire dans {{ ttl_hours }} heures.</p>
+<p style="font-size:13px;color:#9aa5b1">Si vous n'avez pas cree de compte, ignorez ce mail.</p>
+{% endblock %}

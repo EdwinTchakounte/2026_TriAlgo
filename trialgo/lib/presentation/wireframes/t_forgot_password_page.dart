@@ -23,12 +23,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
 import 'package:trialgo/core/design_system/tokens/elevation.dart';
 import 'package:trialgo/core/design_system/tokens/motion.dart';
 import 'package:trialgo/core/design_system/tokens/spacing.dart';
 import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_auth_datasource.dart';
 import 'package:trialgo/presentation/widgets/core/app_button.dart';
 import 'package:trialgo/presentation/widgets/core/app_text_field.dart';
 import 'package:trialgo/presentation/widgets/core/page_scaffold.dart';
@@ -104,18 +106,37 @@ class _TForgotPasswordPageState extends State<TForgotPasswordPage>
     });
 
     try {
-      // Appel Supabase. redirectTo doit etre enregistre dans le
-      // Dashboard Supabase -> Auth -> URL Configuration -> Redirect URLs.
-      await supabase.auth.resetPasswordForEmail(
-        email,
-        redirectTo: 'trialgo://reset-password',
-      );
+      // ---------------------------------------------------------
+      // BRANCHEMENT BACKEND : FastAPI ou Supabase selon ApiConfig.
+      // Dans les deux cas, le serveur ne revele jamais si l'email
+      // existe (anti-enumeration). On bascule en "email envoye"
+      // meme si l'email est inconnu.
+      // ---------------------------------------------------------
+      if (ApiConfig.isFastApi) {
+        // /api/auth/forgot-password : le backend envoie un mail
+        // avec un token TTL (1h) via Brevo. Le lien dans le mail
+        // pointe vers APP_FRONTEND_URL/reset-password?token=... .
+        // En mobile, le user devra ouvrir l'app et coller le token,
+        // ou ouvrir le lien deep-link si configure.
+        await HttpAuthDatasource().forgotPassword(email: email);
+      } else {
+        // Supabase : redirectTo doit etre enregistre dans le
+        // Dashboard Supabase -> Auth -> URL Configuration.
+        await supabase.auth.resetPasswordForEmail(
+          email,
+          redirectTo: 'trialgo://reset-password',
+        );
+      }
       if (mounted) setState(() => _emailSent = true);
     } on AuthException catch (e) {
       if (mounted) setState(() => _globalError = e.message);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        setState(() => _globalError = tr('forgot.error_network'));
+        // FastAPI : on remonte le message du backend si disponible,
+        // sinon message reseau generique.
+        final raw = e.toString().replaceFirst('Exception: ', '');
+        setState(() => _globalError =
+            ApiConfig.isFastApi && raw.isNotEmpty ? raw : tr('forgot.error_network'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

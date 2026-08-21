@@ -175,19 +175,47 @@ class CardModel extends CardEntity {
       // -------------------------------------------------------
       // distanceLevel : json['distance_level']
       // -------------------------------------------------------
-      // En base : distance_level INT
-      // En Dart : int
-      // Pas de conversion necessaire, Supabase retourne deja un int.
+      // En base Supabase : distance_level INT, toujours renseigne.
+      //
+      // ATTENTION : le backend FastAPI n'a PAS cette colonne. Sa
+      // table `cards` se limite a (id, game_id, label, object_key,
+      // content_type, card_type). La distance n'y est plus une
+      // propriete de la carte : elle se deduit du graphe de noeuds,
+      // ce qui est plus juste puisqu'une meme carte peut apparaitre
+      // a des distances differentes selon la chaine qui la traverse.
+      //
+      // "as int?" caste en int NULLABLE (au lieu de planter sur un
+      // null) et "?? 1" retombe sur la distance de base. Sans ce
+      // repli, distanceLevel etant un `int` non-nullable et requis,
+      // toute lecture de carte en mode fastapi levait un TypeError.
+      //
+      // La valeur 1 est neutre ici : en mode fastapi les filtres sur
+      // distance_level sont de toute facon ignores (voir la note de
+      // branchement en tete de card_repository_impl.dart).
       // -------------------------------------------------------
-      distanceLevel: json['distance_level'],
+      distanceLevel: (json['distance_level'] as int?) ?? 1,
 
       // -------------------------------------------------------
-      // imagePath : json['image_path']
+      // imagePath : json['image_path'] OU json['image_url']
       // -------------------------------------------------------
-      // Le chemin relatif dans Supabase Storage.
-      // Exemple : "emettrices/savane/lion_base.webp"
+      // Supabase renvoie 'image_path' : un chemin RELATIF dans le
+      // bucket, ex "emettrices/savane/lion_base.webp".
+      //
+      // FastAPI renvoie 'image_url' : une URL ABSOLUE deja construite
+      // par le backend a partir de S3_PUBLIC_ENDPOINT_URL, ex
+      // "https://files.trialgo.io/trialgo-cards/<game_id>/<uuid>.jpg".
+      // Sa reponse ne contient aucune cle 'image_path'.
+      //
+      // L'operateur "??" prend la premiere des deux valeurs qui n'est
+      // pas nulle. Le "?? ''" final evite un crash si aucune des deux
+      // n'existe : on prefere une carte sans image (l'UI affiche son
+      // errorWidget) a l'echec du chargement de toute la liste.
+      //
+      // C'est ensuite CardEntity.imageUrl qui tranche a la lecture :
+      // URL absolue -> utilisee telle quelle ; chemin relatif ->
+      // prefixe par StorageConstants.baseUrl.
       // -------------------------------------------------------
-      imagePath: json['image_path'],
+      imagePath: ((json['image_path'] ?? json['image_url']) as String?) ?? '',
 
       // -------------------------------------------------------
       // imageWidth : json['image_width']

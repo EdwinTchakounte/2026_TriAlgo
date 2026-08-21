@@ -44,7 +44,12 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:flutter/material.dart';
+
+import 'package:trialgo/core/api/api_config.dart';
+import 'package:trialgo/core/navigation/app_navigator.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/presentation/wireframes/t_new_password_page.dart';
 
 
 /// Service d'ecoute des deep-links de l'application.
@@ -118,21 +123,47 @@ class DeepLinkService {
   // =============================================================
 
   /// Traite un URI deep-link recu.
+  ///
+  /// Deux formats selon le backend :
+  ///   - Supabase : trialgo://reset-password#access_token=...&refresh_token=...
+  ///     -> getSessionFromUrl pose une session de recovery puis
+  ///        TWireframeApp ecoute AuthChangeEvent.passwordRecovery.
+  ///   - FastAPI  : trialgo://reset-password?token=`token_clair`
+  ///        ou https://app.trialgo.io/reset-password?token=`...`
+  ///     -> on extrait le param token et on push TNewPasswordPage
+  ///        avec recoveryToken pre-rempli.
   Future<void> _handleUri(Uri uri) async {
-    // Filtre : on ne traite que le scheme "trialgo".
-    // Si un autre scheme arrivait (cas theorique), on ignore.
-    if (uri.scheme != 'trialgo') return;
+    // On accepte trialgo:// (custom scheme) et https:// (App Links / Universal Links).
+    final isTrialgoScheme = uri.scheme == 'trialgo';
+    final isHttpsApp = uri.scheme == 'https' && uri.host.contains('trialgo');
+    if (!isTrialgoScheme && !isHttpsApp) return;
 
-    // On laisse Supabase extraire les tokens de l'URI.
-    // Sur succes : une AuthChangeEvent.passwordRecovery sera emise.
-    // Sur echec  : une AuthException sera levee, on la log silencieusement
-    // pour ne pas crasher l'app. L'utilisateur verra simplement que la
-    // navigation ne se fait pas et pourra cliquer a nouveau sur le lien.
+    // ---- Branche FastAPI : extrait le token query param ----
+    if (ApiConfig.isFastApi) {
+      final token = uri.queryParameters['token'];
+      final isResetPath = uri.path.contains('reset-password') ||
+          uri.host == 'reset-password' ||
+          uri.host == 'reset_password';
+      if (isResetPath && token != null && token.isNotEmpty) {
+        final navigator = appNavigatorKey.currentState;
+        if (navigator != null) {
+          // ignore: unawaited_futures
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => TNewPasswordPage(recoveryToken: token),
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    // ---- Branche SUPABASE : delegation au SDK ----
     try {
       await supabase.auth.getSessionFromUrl(uri);
     } catch (_) {
-      // Lien deja consomme, expire, ou format inattendu :
-      // l'utilisateur peut relancer le flux "mot de passe oublie".
+      // Lien deja consomme, expire, ou format inattendu : l'user
+      // peut relancer le flux "mot de passe oublie".
     }
   }
 

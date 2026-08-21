@@ -1,0 +1,19 @@
+{% extends "_base.html" %}
+{% block content %}
+<h2 style="margin:0 0 12px;color:#fff">Bienvenue dans le jeu {{ game_name }} !</h2>
+<p>Bonjour {{ name or "joueur" }},</p>
+<p>Votre code <strong style="color:#7fdcff">{{ code }}</strong> a ete active avec succes sur ce device. Vous pouvez maintenant commencer a jouer.</p>
+{% if changes_left is not none %}
+<p style="background:#1f2630;border-left:3px solid #7fdcff;padding:12px 16px;border-radius:6px;font-size:13px;color:#9aa5b1">
+    <strong style="color:#fff">{{ changes_left }}</strong> changement{{ 's' if changes_left > 1 else '' }} de device restant{{ 's' if changes_left > 1 else '' }} pour ce code.<br>
+    Apres epuisement, le code sera definitivement lie a ce telephone.
+</p>
+{% endif %}
+<p style="text-align:center;margin:28px 0">
+    <a href="{{ app_url }}"
+       style="background:#7fdcff;color:#0e1116;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">
+        Commencer a jouer
+    </a>
+</p>
+<p style="font-size:13px;color:#9aa5b1">Si vous n'avez pas active ce code, contactez-nous immediatement.</p>
+{% endblock %}

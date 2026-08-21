@@ -82,6 +82,18 @@ dependencies:
   # Chaque carte physique a un QR code encodant son UUID (cards.id).
   mobile_scanner: ^5.2.3
 
+  # --- HTTP CLIENT (backend FastAPI) ---
+  # dio : client HTTP avec interceptors (Bearer injection + 401 retry).
+  # Utilise pour appeler le backend FastAPI TRIALGO en parallele de
+  # Supabase. La bascule se fait via ApiConfig.mode.
+  dio: ^5.7.0
+
+  # --- TOKEN STORAGE SECURISE ---
+  # flutter_secure_storage : stockage chiffre (Keystore / Keychain)
+  # pour les JWT access + refresh du backend FastAPI. Ne pas utiliser
+  # SharedPreferences pour les tokens (lisibles en clair).
+  flutter_secure_storage: ^9.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

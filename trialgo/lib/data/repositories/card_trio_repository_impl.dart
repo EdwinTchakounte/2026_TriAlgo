@@ -1,42 +1,104 @@
 // =============================================================
 // FICHIER : lib/data/repositories/card_trio_repository_impl.dart
-// ROLE   : Implementation CONCRETE du CardTrioRepository avec Supabase
+// ROLE   : Implementation CONCRETE du CardTrioRepository (bi-mode)
 // COUCHE : Data > Repositories
 // =============================================================
 //
 // Implemente les 3 methodes de CardTrioRepository :
-//   1. getRandomTrio  -> un trio aleatoire pour une question
-//   2. isCoherent     -> verifier si un trio est valide
-//   3. getTriosByDistance -> tous les trios d'une distance
+//   1. getRandomTrio       -> un trio aleatoire pour une question
+//   2. isCoherent          -> verifier si un trio est valide
+//   3. getTriosByDistance  -> tous les trios d'une distance
+//
+// BRANCHEMENT BACKEND :
+//   - Supabase : SELECT direct sur table card_trios (vue precalculee).
+//   - FastAPI  : pas de table card_trios cote backend ; on reconstruit
+//                les trios a la volee depuis les nodes du jeu actif.
+//                Un GameNode correspond exactement a un trio :
+//                  emettrice_id (ou parent.receptrice_id si chaine)
+//                  + cable_id + receptrice_id
+//                  -> CardTrioEntity (depth devient distanceLevel).
 //
 // REFERENCE : Recueil de conception v3.0, sections 3.3 et 4.5
 // =============================================================
 
+import 'dart:math';
+
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_public_games_datasource.dart';
+import 'package:trialgo/data/services/profile_service.dart';
 import 'package:trialgo/domain/entities/card_trio_entity.dart';
 import 'package:trialgo/domain/repositories/card_trio_repository.dart';
 import 'package:trialgo/data/models/card_trio_model.dart';
 
-/// Implementation de [CardTrioRepository] utilisant Supabase.
-///
-/// Interroge la table `card_trios` pour recuperer et valider
-/// les combinaisons de cartes.
+/// Implementation de [CardTrioRepository] bi-mode.
 class CardTrioRepositoryImpl implements CardTrioRepository {
+
+  // -----------------------------------------------------------
+  // DATASOURCES (mode FastAPI)
+  // -----------------------------------------------------------
+  final HttpPublicGamesDatasource _httpGames = HttpPublicGamesDatasource();
+  final ProfileService _profileService = ProfileService();
+
+  // -----------------------------------------------------------
+  // Cache nodes en memoire (mode FastAPI) pour eviter de
+  // re-telecharger a chaque appel. Cle = gameId.
+  // -----------------------------------------------------------
+  final Map<String, List<Map<String, dynamic>>> _nodesCache = {};
+
+  // =============================================================
+  // HELPERS FASTAPI
+  // =============================================================
+
+  /// Recupere les nodes du jeu actif (avec cache).
+  /// Renvoie [] si aucun jeu n'est selectionne.
+  Future<List<Map<String, dynamic>>> _loadNodesFastApi() async {
+    var gameId = _profileService.selectedGameId;
+    if (gameId == null) {
+      await _profileService.loadProfile();
+      gameId = _profileService.selectedGameId;
+    }
+    if (gameId == null) return const <Map<String, dynamic>>[];
+    if (_nodesCache.containsKey(gameId)) return _nodesCache[gameId]!;
+    final rows = await _httpGames.listGameNodesAuth(gameId);
+    _nodesCache[gameId] = rows;
+    return rows;
+  }
+
+  /// Convertit un GameNode (FastAPI) en CardTrioEntity, avec
+  /// resolution de l'emettrice effective (deduite du parent si chaine).
+  CardTrioEntity _nodeToTrio(
+    Map<String, dynamic> node,
+    Map<String, Map<String, dynamic>> nodesById,
+  ) {
+    // emettrice_id NULL = node enfant : on prend parent.receptrice.
+    String? emettriceId = node['emettrice_id'] as String?;
+    if (emettriceId == null) {
+      final parentId = node['parent_node_id'] as String?;
+      if (parentId != null) {
+        final parent = nodesById[parentId];
+        emettriceId = parent?['receptrice_id'] as String?;
+      }
+    }
+    // CardTrioModel attend un JSON proche de Supabase. On forge un
+    // Map compatible : id, emettrice_id, cable_id, receptrice_id,
+    // distance_level (= depth), parent_trio_id, difficulty.
+    final json = <String, dynamic>{
+      'id': node['id'],
+      'emettrice_id': emettriceId ?? '',
+      'cable_id': node['cable_id'],
+      'receptrice_id': node['receptrice_id'],
+      'distance_level': node['depth'],
+      'parent_trio_id': node['parent_node_id'],
+      // Difficulty inconnu cote FastAPI : on met 1.0 par defaut
+      // (le client peut moduler ailleurs si besoin).
+      'difficulty': 1.0,
+    };
+    return CardTrioModel.fromJson(json);
+  }
 
   // =============================================================
   // METHODE : getRandomTrio
-  // =============================================================
-  // Recupere un trio aleatoire pour generer une question de jeu.
-  //
-  // La difficulte principale est de choisir AU HASARD parmi
-  // les trios disponibles, en excluant ceux deja utilises.
-  //
-  // Supabase ne supporte pas "ORDER BY RANDOM()" directement
-  // dans son SDK Flutter. On utilise donc une RPC (Remote Procedure Call)
-  // ou on charge plusieurs trios et on en choisit un au hasard cote client.
-  //
-  // Approche choisie : charger quelques trios et en prendre un au hasard.
-  // C'est plus simple qu'une RPC et suffisant pour le volume de donnees.
   // =============================================================
 
   /// Recupere un trio aleatoire d'une [distance] donnee.
@@ -47,100 +109,44 @@ class CardTrioRepositoryImpl implements CardTrioRepository {
     required int distance,
     List<String> excludeIds = const [],
   }) async {
-    // Construction de la requete de base :
-    //   SELECT * FROM card_trios WHERE distance_level = $distance
-    //
-    // "var" au lieu de "final" car on va potentiellement modifier
-    // la requete avec des filtres supplementaires.
-    //
-    // ATTENTION : "var query = supabase.from(...).select()..."
-    // ne lance PAS la requete immediatement. Elle construit un
-    // objet "builder" qui sera execute quand on fera "await".
-    // C'est le pattern BUILDER : on configure d'abord, on execute ensuite.
+    // ---- Mode FastAPI : construction depuis les nodes ----
+    if (ApiConfig.isFastApi) {
+      final nodes = await _loadNodesFastApi();
+      final nodesById = {for (final n in nodes) (n['id'] as String): n};
+      // Filtre par depth (= distance) + exclusion.
+      final exclude = excludeIds.toSet();
+      final pool = nodes
+          .where((n) => (n['depth'] as int) == distance)
+          .where((n) => !exclude.contains(n['id'] as String))
+          .toList();
+      if (pool.isEmpty) {
+        throw Exception('Aucun trio disponible pour la distance $distance');
+      }
+      pool.shuffle(Random());
+      return _nodeToTrio(pool.first, nodesById);
+    }
+
+    // ---- Mode Supabase : SELECT sur card_trios ----
     var query = supabase
         .from('card_trios')
         .select()
         .eq('distance_level', distance);
-
-    // --- Exclure les trios deja utilises ---
-    // Si la liste d'exclusion n'est pas vide, on ajoute un filtre.
-    //
-    // ".not('id', 'in', excludeIds)" : filtre NOT IN
-    //   -> Equivalent SQL : WHERE id NOT IN ('uuid1', 'uuid2', ...)
-    //   -> Exclut les trios dont l'ID est dans la liste
-    //
-    // "isNotEmpty" : verifie que la liste contient au moins un element.
-    //   Si la liste est vide, le filtre NOT IN serait invalide.
     if (excludeIds.isNotEmpty) {
-      // On convertit la liste en format attendu par Supabase :
-      // "(uuid1,uuid2,uuid3)"
       query = query.not('id', 'in', excludeIds);
     }
-
-    // --- Limiter et executer ---
-    // ".limit(10)" : on ne charge que 10 trios (pas toute la table).
-    //   C'est suffisant pour en choisir un au hasard.
-    //   Charger toute la table serait un gaspillage de bande passante.
-    //
-    // "await" : execute la requete et attend la reponse.
     final data = await query.limit(10);
-
-    // --- Verification : au moins un trio disponible ---
-    // "data" est une List<Map<String, dynamic>>.
-    // Si la liste est vide, il n'y a aucun trio pour cette distance
-    // (ou tous ont ete exclus). On leve une exception.
-    //
-    // "isEmpty" : propriete des List, true si la liste n'a aucun element.
-    //
-    // "throw Exception(...)" : leve une exception generique.
-    // Dans un vrai projet, on utiliserait CardFailure.noTrioAvailable().
     if (data.isEmpty) {
       throw Exception('Aucun trio disponible pour la distance $distance');
     }
-
-    // --- Choisir un trio au hasard ---
-    // "data.length" : nombre de trios retournes (1 a 10).
-    //
-    // "DateTime.now().millisecondsSinceEpoch" : nombre de millisecondes
-    //   depuis le 1er janvier 1970. Change a chaque milliseconde.
-    //   Utilise comme SEED (graine) pour le generateur aleatoire.
-    //
-    // "% data.length" : operateur MODULO
-    //   Retourne le reste de la division entiere.
-    //   Exemple : 1728493827123 % 7 = 4 -> on prend l'element 4
-    //   Garantit un index entre 0 et data.length - 1.
-    //
-    // Alternative plus propre : Random().nextInt(data.length)
-    // On utilise le modulo ici car c'est plus leger qu'importer dart:math.
     final randomIndex = DateTime.now().millisecondsSinceEpoch % data.length;
-
-    // "data[randomIndex]" : accede au Map a l'index aleatoire.
-    // "CardTrioModel.fromJson(...)" : convertit en objet Dart.
     return CardTrioModel.fromJson(data[randomIndex]);
   }
 
   // =============================================================
   // METHODE : isCoherent
   // =============================================================
-  // Verifie si un trio (E, C, R) existe dans la table card_trios.
-  //
-  // C'est LA verification qui determine si la reponse du joueur
-  // est correcte ou non.
-  //
-  // SQL equivalent :
-  //   SELECT EXISTS (
-  //     SELECT 1 FROM card_trios
-  //     WHERE emettrice_id = $emettriceId
-  //       AND cable_id = $cableId
-  //       AND receptrice_id = $receptriceId
-  //   )
-  //
-  // Note : dans le jeu final, cette verification se fait cote serveur
-  // (Edge Function validate-answer). Cette methode est un apercu client.
-  // =============================================================
 
-  /// Verifie si le trio (E, C, R) existe dans `card_trios`.
-  ///
+  /// Verifie si le trio (E, C, R) existe dans le graphe du jeu actif.
   /// Retourne `true` si la combinaison est valide, `false` sinon.
   @override
   Future<bool> isCoherent({
@@ -148,40 +154,60 @@ class CardTrioRepositoryImpl implements CardTrioRepository {
     required String cableId,
     required String receptriceId,
   }) async {
-    // On fait un SELECT avec les 3 filtres d'egalite.
-    // Si le trio existe, on obtient 1 resultat.
-    // Si non, on obtient 0 resultats.
+    // ---- Mode FastAPI : parcours des nodes en local ----
+    if (ApiConfig.isFastApi) {
+      final nodes = await _loadNodesFastApi();
+      final nodesById = {for (final n in nodes) (n['id'] as String): n};
+      for (final n in nodes) {
+        // Calcule l'emettrice effective : si null, on remonte au parent.
+        String? effectiveA = n['emettrice_id'] as String?;
+        if (effectiveA == null) {
+          final parentId = n['parent_node_id'] as String?;
+          if (parentId != null) {
+            effectiveA = nodesById[parentId]?['receptrice_id'] as String?;
+          }
+        }
+        if (effectiveA == emettriceId &&
+            n['cable_id'] == cableId &&
+            n['receptrice_id'] == receptriceId) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // ---- Mode Supabase : SELECT EXISTS sur card_trios ----
     final data = await supabase
         .from('card_trios')
-        .select('id')               // On ne charge que l'ID (plus leger)
-        .eq('emettrice_id', emettriceId)   // WHERE emettrice_id = ...
-        .eq('cable_id', cableId)           // AND cable_id = ...
-        .eq('receptrice_id', receptriceId); // AND receptrice_id = ...
-
-    // "data" est une List<Map<String, dynamic>>.
-    // "isNotEmpty" retourne true s'il y a au moins 1 resultat.
-    //   -> true  = le trio existe = bonne reponse
-    //   -> false = le trio n'existe pas = mauvaise reponse
+        .select('id')
+        .eq('emettrice_id', emettriceId)
+        .eq('cable_id', cableId)
+        .eq('receptrice_id', receptriceId);
     return data.isNotEmpty;
   }
 
   // =============================================================
   // METHODE : getTriosByDistance
   // =============================================================
-  // Recupere TOUS les trios d'une distance.
-  //
-  // SQL : SELECT * FROM card_trios WHERE distance_level = $distance
-  // =============================================================
 
   /// Recupere tous les trios d'une [distance] donnee.
   @override
   Future<List<CardTrioEntity>> getTriosByDistance(int distance) async {
+    // ---- Mode FastAPI : nodes -> trios ----
+    if (ApiConfig.isFastApi) {
+      final nodes = await _loadNodesFastApi();
+      final nodesById = {for (final n in nodes) (n['id'] as String): n};
+      return nodes
+          .where((n) => (n['depth'] as int) == distance)
+          .map((n) => _nodeToTrio(n, nodesById))
+          .toList();
+    }
+
+    // ---- Mode Supabase ----
     final data = await supabase
         .from('card_trios')
         .select()
         .eq('distance_level', distance);
-
-    // Convertit chaque Map JSON en CardTrioModel.
     return data.map((json) => CardTrioModel.fromJson(json)).toList();
   }
 }

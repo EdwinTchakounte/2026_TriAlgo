@@ -453,13 +453,27 @@ class CardEntity {
   //   - "get" indique que c'est un getter (pas une methode)
   //   - "=>" est le raccourci pour "{ return expression; }"
   //
-  // Role : reconstruit l'URL publique complete de l'image
-  //        a partir du chemin relatif (imagePath) et de l'URL
-  //        de base du bucket (StorageConstants.baseUrl).
+  // Role : fournir une URL d'image directement affichable, quel que
+  //        soit le backend qui a rempli [imagePath].
   //
-  // Exemple :
-  //   imagePath = "emettrices/savane/lion_base.webp"
-  //   imageUrl  = "https://olovolsbopjporwpuphm.supabase.co/storage/v1/object/public/trialgo-cards/emettrices/savane/lion_base.webp"
+  // DEUX CAS A DISTINGUER
+  // ---------------------
+  // 1) Supabase : [imagePath] est un chemin RELATIF dans le bucket.
+  //    Il faut le prefixer par StorageConstants.baseUrl.
+  //      imagePath = "emettrices/savane/lion_base.webp"
+  //      imageUrl  = "https://<projet>.supabase.co/storage/v1/object/public/trialgo-cards/emettrices/savane/lion_base.webp"
+  //
+  // 2) FastAPI : le backend renvoie deja une URL ABSOLUE, construite
+  //    a partir de S3_PUBLIC_ENDPOINT_URL. [imagePath] contient donc
+  //    quelque chose comme :
+  //      "https://files.trialgo.io/trialgo-cards/<game_id>/<uuid>.jpg"
+  //    La prefixer une deuxieme fois produirait une URL absurde
+  //    ("https://<projet>.supabase.co/.../https://files.trialgo.io/...")
+  //    et TOUTES les cartes s'afficheraient cassees.
+  //
+  // D'ou le test sur le prefixe : c'est le meme raisonnement, et le
+  // meme code, que dans GraphCardEntity.imageUrl. Les deux entites
+  // doivent rester coherentes entre elles.
   //
   // Utilise par : CachedNetworkImage dans CardImageWidget
   //   CachedNetworkImage(imageUrl: card.imageUrl, ...)
@@ -467,15 +481,23 @@ class CardEntity {
 
   /// URL publique complete de l'image de cette carte.
   ///
-  /// Reconstruit l'URL a partir de [imagePath] (chemin relatif en base)
-  /// et de [StorageConstants.baseUrl] (URL de base du bucket).
+  /// Si [imagePath] est deja une URL absolue (backend FastAPI), elle est
+  /// renvoyee telle quelle. Sinon (backend Supabase), elle est prefixee
+  /// par [StorageConstants.baseUrl].
   ///
   /// Cette URL est directement utilisable par les widgets d'image Flutter :
   /// ```dart
   /// Image.network(card.imageUrl)
   /// CachedNetworkImage(imageUrl: card.imageUrl)
   /// ```
-  String get imageUrl => StorageConstants.fullUrl(imagePath);
+  String get imageUrl {
+    // startsWith() teste le debut de la chaine. On couvre http ET https
+    // pour tolerer un backend expose en clair pendant les tests locaux.
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    return StorageConstants.fullUrl(imagePath);
+  }
 
   // =============================================================
   // GETTER : isRootEmettrice

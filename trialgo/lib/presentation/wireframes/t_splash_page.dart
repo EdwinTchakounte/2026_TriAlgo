@@ -30,6 +30,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
+import 'package:trialgo/core/api/dio_client.dart';
 import 'package:trialgo/core/design_system/tokens/brand.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
 import 'package:trialgo/core/design_system/tokens/motion.dart';
@@ -151,7 +153,11 @@ class _TSplashPageState extends State<TSplashPage>
 
     // --- Phase 3 : attente avant navigation ---
     // Si deja connecte (retour), on reduit fortement la pause.
-    final isReturning = supabase.auth.currentUser != null;
+    // Mode FastAPI : on regarde si un access_token est persiste.
+    // Mode Supabase : currentUser existe deja apres restore.
+    final isReturning = ApiConfig.isFastApi
+        ? await DioClient.storage.hasSession()
+        : supabase.auth.currentUser != null;
     final waitMs = isReturning ? 500 : 1500;
     await Future.delayed(Duration(milliseconds: waitMs));
     if (!mounted) return;

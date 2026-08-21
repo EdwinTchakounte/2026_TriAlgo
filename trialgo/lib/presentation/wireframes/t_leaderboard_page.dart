@@ -16,12 +16,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
 import 'package:trialgo/core/design_system/tokens/elevation.dart';
 import 'package:trialgo/core/design_system/tokens/radius.dart';
 import 'package:trialgo/core/design_system/tokens/spacing.dart';
 import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_providers.dart';
 import 'package:trialgo/presentation/providers/profile_provider.dart';
 import 'package:trialgo/presentation/widgets/core/app_card.dart';
 import 'package:trialgo/presentation/widgets/core/empty_state.dart';
@@ -72,7 +74,6 @@ class _TLeaderboardPageState extends ConsumerState<TLeaderboardPage> {
   Future<void> _load() async {
     try {
       final profile = ref.read(profileProvider);
-      final currentUserId = supabase.auth.currentUser?.id;
       final gameId = profile.selectedGameId;
 
       if (gameId == null) {
@@ -83,60 +84,87 @@ class _TLeaderboardPageState extends ConsumerState<TLeaderboardPage> {
         return;
       }
 
-      // STEP 1 : Top 10 de user_games pour le jeu actif.
-      // On evite l'embed Supabase (user_profiles!inner) qui necessite
-      // une FK explicite entre user_games et user_profiles — absente
-      // car les deux referencent auth.users separement.
-      final gamesData = await supabase
-          .from('user_games')
-          .select('total_score, current_level, user_id')
-          .eq('game_id', gameId)
-          .order('total_score', ascending: false)
-          .limit(10);
+      List<_LeaderEntry> rows;
 
-      final gamesList = (gamesData as List<dynamic>).cast<Map<String, dynamic>>();
-      if (gamesList.isEmpty) {
-        if (!mounted) return;
-        setState(() {
-          _loading = false;
-          _list = [];
-        });
-        return;
+      // ---------------------------------------------------------
+      // BRANCHEMENT BACKEND.
+      // ---------------------------------------------------------
+      if (ApiConfig.isFastApi) {
+        // ======== FASTAPI ========
+        // /api/games/{gid}/leaderboard renvoie deja la liste typee
+        // avec rank/username/avatar/score/level. On a juste a
+        // identifier le current_user via le profil deja charge.
+        // En FastAPI, ProfileOut.user_id donne l'id ; en Supabase
+        // historique c'est user_profiles.id.
+        final currentUserId = (profile.general?['user_id'] as String?)
+            ?? (profile.general?['id'] as String?);
+        final data = await ref
+            .read(httpLeaderboardDatasourceProvider)
+            .getLeaderboard(gameId: gameId, limit: 10);
+        final entries = (data['entries'] as List<dynamic>?) ?? [];
+        if (entries.isEmpty) {
+          if (!mounted) return;
+          setState(() { _loading = false; _list = []; });
+          return;
+        }
+        rows = entries.map((e) {
+          final m = e as Map<String, dynamic>;
+          return _LeaderEntry(
+            rank: m['rank'] as int,
+            username: m['username'] as String? ?? 'Joueur',
+            avatarId: m['avatar_id'] as String? ?? 'avatar_1',
+            score: m['total_score'] as int,
+            level: m['current_level'] as int,
+            isCurrentUser: m['user_id'] == currentUserId,
+          );
+        }).toList();
+      } else {
+        // ======== SUPABASE (historique) ========
+        final currentUserId = supabase.auth.currentUser?.id;
+        // STEP 1 : Top 10 de user_games pour le jeu actif.
+        final gamesData = await supabase
+            .from('user_games')
+            .select('total_score, current_level, user_id')
+            .eq('game_id', gameId)
+            .order('total_score', ascending: false)
+            .limit(10);
+
+        final gamesList = (gamesData as List<dynamic>).cast<Map<String, dynamic>>();
+        if (gamesList.isEmpty) {
+          if (!mounted) return;
+          setState(() { _loading = false; _list = []; });
+          return;
+        }
+
+        // STEP 2 : recuperer username + avatar pour tous ces user_ids.
+        final userIds = gamesList.map((g) => g['user_id'] as String).toList();
+        final profilesData = await supabase
+            .from('user_profiles')
+            .select('id, username, avatar_id')
+            .inFilter('id', userIds);
+
+        final profilesById = <String, Map<String, dynamic>>{
+          for (final p in (profilesData as List<dynamic>))
+            (p as Map<String, dynamic>)['id'] as String: p,
+        };
+
+        rows = gamesList.asMap().entries.map((e) {
+          final idx = e.key;
+          final g = e.value;
+          final userId = g['user_id'] as String;
+          final p = profilesById[userId] ?? const <String, dynamic>{};
+          return _LeaderEntry(
+            rank: idx + 1,
+            username: p['username'] as String? ?? 'Joueur',
+            avatarId: p['avatar_id'] as String? ?? 'avatar_1',
+            score: g['total_score'] as int,
+            level: g['current_level'] as int,
+            isCurrentUser: userId == currentUserId,
+          );
+        }).toList();
       }
 
-      // STEP 2 : recuperer username + avatar pour tous ces user_ids.
-      // Seconde requete mais simple, pas de JOIN -> pas de risque
-      // de Schema cache error.
-      final userIds = gamesList.map((g) => g['user_id'] as String).toList();
-      final profilesData = await supabase
-          .from('user_profiles')
-          .select('id, username, avatar_id')
-          .inFilter('id', userIds);
-
-      // Map user_id -> profil pour lookup O(1).
-      final profilesById = <String, Map<String, dynamic>>{
-        for (final p in (profilesData as List<dynamic>))
-          (p as Map<String, dynamic>)['id'] as String: p,
-      };
-
       if (!mounted) return;
-
-      // STEP 3 : assembler les entrees en conservant l'ordre de ranking.
-      final rows = gamesList.asMap().entries.map((e) {
-        final idx = e.key;
-        final g = e.value;
-        final userId = g['user_id'] as String;
-        final p = profilesById[userId] ?? const <String, dynamic>{};
-        return _LeaderEntry(
-          rank: idx + 1,
-          username: p['username'] as String? ?? 'Joueur',
-          avatarId: p['avatar_id'] as String? ?? 'avatar_1',
-          score: g['total_score'] as int,
-          level: g['current_level'] as int,
-          isCurrentUser: userId == currentUserId,
-        );
-      }).toList();
-
       setState(() {
         _loading = false;
         _list = rows;

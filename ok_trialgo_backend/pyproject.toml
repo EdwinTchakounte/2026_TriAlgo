@@ -1,0 +1,68 @@
+# =============================================================
+# pyproject.toml  -  Dependances + outillage Python du backend
+# =============================================================
+# On utilise le format PEP 621 (project.dependencies) que pip/uv
+# comprennent nativement. Pas de Poetry : un simple
+# `pip install -e .` ou `uv pip install -r requirements.txt`
+# (genere) suffit.
+# =============================================================
+
+[project]
+name = "ok-trialgo-backend"
+version = "0.1.0"
+description = "Backend FastAPI pour TRIALGO (admin + jeu)"
+requires-python = ">=3.12"
+
+dependencies = [
+    # ----- Framework HTTP -----
+    "fastapi>=0.115.0",          # routing + validation + OpenAPI
+    "uvicorn[standard]>=0.32.0", # ASGI server, hot-reload en dev
+
+    # ----- Validation / config -----
+    "pydantic[email]>=2.9.0",        # email-validator pour EmailStr
+    "pydantic-settings>=2.6.0",  # BaseSettings (lit .env)
+
+    # ----- DB -----
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",           # driver Postgres async
+    "alembic>=1.14.0",           # migrations
+    "psycopg2-binary>=2.9.10",   # uniquement pour alembic sync
+
+    # ----- Auth -----
+    "python-jose[cryptography]>=3.3.0",  # JWT
+    "passlib[bcrypt]>=1.7.4",            # hash mots de passe
+    "bcrypt==4.0.1",                     # contrainte passlib
+
+    # ----- Storage S3 / MinIO -----
+    "boto3>=1.35.0",
+    "aioboto3>=13.2.0",          # client async
+
+    # ----- Multipart / images -----
+    "python-multipart>=0.0.17",  # multipart/form-data parser
+    "pillow>=11.0.0",            # resize, recompresse
+    "python-magic>=0.4.27",      # detection MIME par magic bytes
+
+    # ----- Misc -----
+    "aiofiles>=24.1.0",          # I/O fichiers async
+    "httpx>=0.27.0",             # tests + appels HTTP sortants + Brevo
+    "jinja2>=3.1.4",             # rendering templates email HTML
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.7.0",               # linter / formatter
+    "mypy>=1.13.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]   # line length gere par formatter
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

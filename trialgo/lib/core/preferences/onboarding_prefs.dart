@@ -31,7 +31,7 @@
 // =============================================================
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/core/session/session_utilisateur.dart';
 
 
 /// Helper pour le flag "onboarding vu" en SharedPreferences.
@@ -59,7 +59,11 @@ class OnboardingPrefs {
 
   /// Retourne la cle SharedPreferences scopee au user actuel.
   static String _keyForCurrentUser() {
-    final userId = supabase.auth.currentUser?.id ?? 'anon';
+    // SessionUtilisateur.id resout l'identite dans les deux modes :
+    // cache alimente par TAuthGate en fastapi, SDK Supabase sinon.
+    // Passer par lui evite de toucher le client Supabase, qui n'est
+    // pas initialise en mode fastapi.
+    final userId = SessionUtilisateur.id ?? 'anon';
     return '$_keyPrefix$userId';
   }
 

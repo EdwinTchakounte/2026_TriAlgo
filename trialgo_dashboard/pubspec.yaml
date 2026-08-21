@@ -1,0 +1,81 @@
+name: trialgo_dashboard
+description: "Dashboard admin TRIALGO : upload cartes + creation graphe + preview."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # =========================================================
+  # SUPABASE — backend (auth + tables + storage + RLS)
+  # =========================================================
+  # Le SDK officiel Supabase Flutter. Il regroupe :
+  #   - GoTrue (auth) pour signIn / signUp / session
+  #   - PostgREST pour interroger les tables (cards, nodes...)
+  #   - Storage pour uploader les images des cartes
+  #   - Realtime (non utilise ici mais inclus)
+  # On reutilise le MEME projet Supabase que l'app trialgo
+  # principale : meme schema, donc le dashboard peut ecrire et
+  # le jeu en lit immediatement les nouvelles cartes.
+  supabase_flutter: ^2.8.4
+
+  # =========================================================
+  # GESTION D'ETAT — Riverpod
+  # =========================================================
+  # Riverpod expose des "providers" reactifs. Quand un provider
+  # change (ex: liste des cartes apres upload), tous les widgets
+  # qui le consomment se reconstruisent automatiquement.
+  flutter_riverpod: ^2.6.1
+
+  # =========================================================
+  # IMAGES distantes
+  # =========================================================
+  # cached_network_image telecharge les URLs et les met en cache
+  # disque. Indispensable pour la liste des cartes (sinon on
+  # re-telecharge a chaque scroll).
+  cached_network_image: ^3.4.1
+
+  # =========================================================
+  # POLICES Google — police "Rajdhani" pour matcher l'app jeu
+  # =========================================================
+  google_fonts: ^6.2.1
+
+  # =========================================================
+  # SELECTION D'IMAGES — galerie / camera
+  # =========================================================
+  # image_picker ouvre soit la galerie soit la camera et renvoie
+  # un XFile (chemin local + nom). C'est l'entree du flux
+  # d'upload : galerie => XFile => bytes => Storage Supabase.
+  image_picker: ^1.1.2
+
+  # =========================================================
+  # VISUALISATION DE GRAPHE / ARBRE
+  # =========================================================
+  # graphview gere le calcul automatique de positions pour les
+  # graphes / arbres. Layout BuchheimWalker = algorithme
+  # classique de mise en page d'arbre, equilibre les branches.
+  # Tres adapte pour montrer la chaine D1->D5 de TRIALGO.
+  graphview: ^1.2.0
+
+  # =========================================================
+  # ICONES iOS-style (utilise par le scaffold)
+  # =========================================================
+  cupertino_icons: ^1.0.8
+
+  # =========================================================
+  # Utilitaires fichier (extension .jpg/.png pour Storage)
+  # =========================================================
+  path: ^1.9.0
+  mime: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

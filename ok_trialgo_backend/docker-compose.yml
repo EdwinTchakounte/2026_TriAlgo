@@ -1,0 +1,110 @@
+# =============================================================
+# docker-compose.yml  -  Stack dev complet de TRIALGO backend
+# =============================================================
+# 3 services orchestres :
+#   - postgres : base de donnees principale (port 5432)
+#   - minio    : stockage S3-compatible des images cartes (port 9000)
+#   - api      : FastAPI avec hot-reload pour le dev
+#
+# Volumes persistants :
+#   - pg_data    : donnees Postgres
+#   - minio_data : fichiers cartes uploadees
+#
+# Healthchecks : on attend que postgres et minio soient prets avant
+# de demarrer l'api (depends_on.condition: service_healthy).
+# =============================================================
+
+services:
+
+  # -----------------------------------------------------------
+  # POSTGRES  -  base de donnees relationnelle
+  # -----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trialgo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trialgo_dev_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-trialgo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trialgo} -d ${POSTGRES_DB:-trialgo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # -----------------------------------------------------------
+  # MINIO  -  stockage objet S3-compatible
+  # -----------------------------------------------------------
+  # En production tu peux remplacer par AWS S3, R2, Wasabi, etc. :
+  # le code backend ne change pas (boto3 / aioboto3 standard).
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minio_dev}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minio_dev_secret_change_me}
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console web admin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsSL", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # -----------------------------------------------------------
+  # CREATE_BUCKET  -  job one-shot qui cree le bucket S3
+  # -----------------------------------------------------------
+  # On utilise mc (MinIO Client) pour creer le bucket des qu'il
+  # n'existe pas. Necessaire au 1er demarrage (sinon le backend
+  # echoue sur le 1er upload).
+  create_bucket:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-minio_dev} ${S3_SECRET_KEY:-minio_dev_secret_change_me};
+      mc mb -p local/${S3_BUCKET:-trialgo-cards};
+      mc anonymous set download local/${S3_BUCKET:-trialgo-cards};
+      echo 'Bucket pret.';
+      "
+
+  # -----------------------------------------------------------
+  # API  -  FastAPI (hot-reload en dev)
+  # -----------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      # En dev : montage du code source pour hot-reload.
+      # En prod : commenter ce volume, l'image embarque le code.
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    # Override de la commande pour dev (uvicorn --reload).
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  pg_data:
+  minio_data:

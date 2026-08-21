@@ -1,0 +1,12 @@
+{% extends "_base.html" %}
+{% block content %}
+<h2 style="margin:0 0 12px;color:#fff">Compte verifie !</h2>
+<p>Merci {{ name or "joueur" }},</p>
+<p>Votre adresse email est confirmee. Vous pouvez maintenant explorer les jeux disponibles et tenter vos premieres fusions.</p>
+<p style="text-align:center;margin:28px 0">
+    <a href="{{ app_url }}"
+       style="background:#7fdcff;color:#0e1116;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;display:inline-block">
+        Commencer a jouer
+    </a>
+</p>
+{% endblock %}

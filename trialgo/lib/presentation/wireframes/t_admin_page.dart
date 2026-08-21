@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:trialgo/core/design_system/tokens/colors.dart';
+import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
 import 'package:trialgo/data/models/graph_card_model.dart';
 import 'package:trialgo/data/models/graph_node_model.dart';
@@ -87,10 +88,41 @@ class _TAdminPageState extends State<TAdminPage>
   // =============================================================
   // Charge les cartes et les noeuds depuis Supabase.
   // Appele au demarrage et apres chaque modification.
+  //
+  // ECRAN INDISPONIBLE EN MODE FASTAPI
+  // ----------------------------------
+  // Cette page ecrit DIRECTEMENT dans les tables Supabase `cards` et
+  // `nodes`. Le backend FastAPI, lui, expose ces operations derriere
+  // des endpoints qui valident les invariants du graphe (unicite de
+  // node_index, coherence emettrice/parent, profondeur 1 a 5) avant
+  // d'ecrire. Rebrancher cet ecran sur ces endpoints reviendrait a
+  // reconstruire l'assistant de creation.
+  //
+  // Or cet assistant existe deja : c'est l'application studio
+  // ok_trialgo_admin, qui est precisement faite pour cela et qui
+  // couvre bien davantage (analyse de fusion, apercu, gestion des
+  // jeux). Dupliquer ce travail ici n'aurait aucun interet.
+  //
+  // Cet ecran reste donc fonctionnel en mode supabase, et affiche un
+  // message explicite en mode fastapi. Son point d'entree est par
+  // ailleurs masque dans THomePage, si bien qu'on ne devrait pas
+  // arriver ici -- ce garde-fou couvre les acces par un autre chemin.
   // =============================================================
 
   /// Charge les cartes et noeuds depuis Supabase.
   Future<void> _loadData() async {
+    if (ApiConfig.isFastApi) {
+      // Aucune requete : le client Supabase n'est pas initialise dans
+      // ce mode et l'atteindre leverait une StateError.
+      setState(() {
+        _loading = false;
+        _error = 'Ecran indisponible avec le backend FastAPI.\n\n'
+            'La creation des cartes et des fusions se fait desormais '
+            'dans l\'application studio TRIALGO Admin.';
+      });
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;

@@ -23,12 +23,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:trialgo/core/api/api_config.dart';
+import 'package:trialgo/core/session/session_utilisateur.dart';
 import 'package:trialgo/core/design_system/tokens/colors.dart';
 import 'package:trialgo/core/design_system/tokens/motion.dart';
 import 'package:trialgo/core/design_system/tokens/radius.dart';
 import 'package:trialgo/core/design_system/tokens/spacing.dart';
 import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/network/supabase_client.dart';
+import 'package:trialgo/data/datasources/http/http_providers.dart';
 import 'package:trialgo/presentation/providers/profile_provider.dart';
 import 'package:trialgo/presentation/widgets/core/app_button.dart';
 import 'package:trialgo/presentation/widgets/core/app_text_field.dart';
@@ -188,35 +191,61 @@ class _TAuthPageState extends ConsumerState<TAuthPage>
     });
 
     try {
-      final profileService = ref.read(profileServiceProvider);
+      // ---------------------------------------------------------
+      // BRANCHEMENT BACKEND : selon ApiConfig.mode on parle a
+      // Supabase (historique) ou au backend FastAPI (nouveau).
+      // ---------------------------------------------------------
+      if (ApiConfig.isFastApi) {
+        // ======== MODE FASTAPI ========
+        // Le backend gere tout en une requete :
+        //   - register : cree user + email_preferences + envoi mail
+        //                welcome+confirm + renvoie tokens (auto-login)
+        //   - login    : valide credentials + renvoie tokens
+        // Le profile (username, avatar, selected_game) vit dans users
+        // et est cree avec defauts a l'inscription, donc pas besoin
+        // d'appeler explicitement createProfile.
+        final authDs = ref.read(httpAuthDatasourceProvider);
+        if (_isLogin) {
+          await authDs.login(email: email, password: password);
+        } else {
+          await authDs.register(email: email, password: password);
+        }
 
-      if (_isLogin) {
-        // CONNEXION
-        await supabase.auth.signInWithPassword(
-          email: email,
-          password: password,
-        );
-        // Charger le profil : le device binding se fait a l'activation,
-        // pas ici.
-        await profileService.loadProfile();
+        // Renseigne l'identite courante pour tout le code synchrone
+        // qui en depend (AdminConstants.isAdmin, cle d'onboarding...).
+        //
+        // login() ne renvoie que les jetons, et register() une charge
+        // imbriquee : plutot que de traiter ces deux formes, on relit
+        // /api/auth/me, qui expose toujours id + email + is_admin sous
+        // la meme forme. Une requete de plus, mais un seul chemin de
+        // code, et la valeur de is_admin vient de la base.
+        SessionUtilisateur.memoriserDepuisJson(await authDs.me());
       } else {
-        // INSCRIPTION
-        final response = await supabase.auth.signUp(
-          email: email,
-          password: password,
-        );
-        // Si la verification email est active, signUp ne cree pas de
-        // session. En dev/prod sans verif, on tente le login direct.
-        if (response.session == null) {
+        // ======== MODE SUPABASE (historique) ========
+        final profileService = ref.read(profileServiceProvider);
+        if (_isLogin) {
           await supabase.auth.signInWithPassword(
             email: email,
             password: password,
           );
+          await profileService.loadProfile();
+        } else {
+          final response = await supabase.auth.signUp(
+            email: email,
+            password: password,
+          );
+          // Si la verification email est active, signUp ne cree pas de
+          // session. En dev/prod sans verif, on tente le login direct.
+          if (response.session == null) {
+            await supabase.auth.signInWithPassword(
+              email: email,
+              password: password,
+            );
+          }
+          await profileService.createProfile(
+            username: email.split('@').first,
+          );
         }
-        // Profil initial : username = prefixe de l'email.
-        await profileService.createProfile(
-          username: email.split('@').first,
-        );
       }
 
       // Succes : on navigue vers l'activation du code.
@@ -232,26 +261,40 @@ class _TAuthPageState extends ConsumerState<TAuthPage>
       if (mounted) {
         setState(() => _globalError = _translateError(e.message));
       }
-    } catch (_) {
+    } catch (e) {
+      // En mode FastAPI on intercepte les Exception generiques que
+      // le datasource throw avec le detail du backend.
       if (mounted) {
-        setState(() => _globalError = TLocale.of(context)('auth.error_network'));
+        final raw = e.toString().replaceFirst('Exception: ', '');
+        setState(() => _globalError =
+            ApiConfig.isFastApi ? _translateError(raw) : TLocale.of(context)('auth.error_network'));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Traduit les messages Supabase en langue courante.
+  /// Traduit les messages d'erreur backend (Supabase OU FastAPI)
+  /// en langue courante affichable au joueur.
   String _translateError(String raw) {
     final tr = TLocale.of(context);
+    // Supabase + FastAPI : email deja pris.
     if (raw.contains('already registered') ||
-        raw.contains('already in use')) {
+        raw.contains('already in use') ||
+        raw.contains('Email deja utilise')) {
       return tr('auth.error_taken');
     }
-    if (raw.contains('Invalid login credentials')) {
+    // Supabase + FastAPI : credentials invalides.
+    if (raw.contains('Invalid login credentials') ||
+        raw.contains('Email ou mot de passe invalide')) {
       return tr('auth.error_invalid');
     }
+    // Supabase : email non confirme.
     if (raw.contains('Email not confirmed')) {
+      return tr('auth.error_unconfirmed');
+    }
+    // FastAPI : compte desactive.
+    if (raw.contains('Compte desactive')) {
       return tr('auth.error_unconfirmed');
     }
     if (raw.contains('weak') || raw.contains('at least')) {

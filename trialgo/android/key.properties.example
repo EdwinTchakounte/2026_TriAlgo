@@ -1,0 +1,31 @@
+# =============================================================
+# key.properties.example  -  gabarit de signature Android
+# =============================================================
+# Copier ce fichier en "key.properties" DANS LE MEME DOSSIER
+# (android/), puis renseigner les valeurs reelles.
+#
+# key.properties et le fichier .jks sont ignores par git : ils
+# contiennent des mots de passe et la cle privee de publication.
+#
+# GENERER LE KEYSTORE (une seule fois pour toute la vie de l'app) :
+#
+#   keytool -genkey -v -keystore ~/trialgo-release.jks \
+#           -keyalg RSA -keysize 2048 -validity 10000 \
+#           -alias trialgo
+#
+# PERDRE CE FICHIER OU SON MOT DE PASSE = PLUS AUCUNE MISE A JOUR
+# POSSIBLE de l'app sur le Play Store. En faire une sauvegarde
+# chiffree, hors du poste de developpement.
+# =============================================================
+
+# Alias passe a -alias lors du genkey.
+keyAlias=trialgo
+
+# Mot de passe de la cle (-keypass).
+keyPassword=<mot-de-passe-de-la-cle>
+
+# Chemin du .jks, relatif au dossier android/ ou absolu.
+storeFile=/home/<utilisateur>/trialgo-release.jks
+
+# Mot de passe du keystore (-storepass).
+storePassword=<mot-de-passe-du-keystore>
