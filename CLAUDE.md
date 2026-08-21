@@ -332,6 +332,48 @@ specification : `flutter build apk --release` echouait sur `processReleaseMainMa
   `public_url()` concatene sans normaliser, et un double separateur donne des images en 404
   pendant que tout le reste fonctionne.
 
+### Pages de rebond des courriels
+
+`app/links/` sert deux pages HTML **hors du prefixe `/api`** (elles n'apparaissent donc pas
+dans OpenAPI) :
+
+| Page | Comportement |
+|---|---|
+| `GET /reset-password?token=` | Bascule vers `trialgo://reset-password?token=`, avec bouton manuel de repli. **Ne consomme pas le jeton** : un aspirateur de liens le brulerait avant le clic |
+| `GET /confirm-email?token=` | **Consomme** le jeton et affiche le resultat. Confirmer ne demande aucune saisie, le clic *est* l'action |
+
+Les deux liens des courriels sont desormais batis sur **`PUBLIC_BASE_URL`** et non plus sur
+`APP_FRONTEND_URL` : ces pages sont servies par l'API, seule brique de la topologie capable
+d'executer du code. Le studio est un binaire Flutter web sans routes serveur — y pointer menait
+a sa page de connexion, et **la reinitialisation de mot de passe etait donc inutilisable sans
+qu'aucune erreur ne le signale.** `APP_FRONTEND_URL` continue de servir aux liens de navigation
+(classement, jeu), ce qui reste correct.
+
+Le schema applicatif vient de `APP_DEEP_LINK_SCHEME` (defaut `trialgo`), a garder aligne avec
+`deep_link_service.dart` et les manifestes.
+
+En mode DRY-RUN (`BREVO_API_KEY` vide), `app/mail/client.py` journalise aussi les liens porteurs
+de jeton — sans quoi ces deux parcours sont **intestables en local** : le courriel ne part pas et
+la base ne stocke que le condensat du jeton. Ce branchement ne s'execute jamais en production.
+
+### Stockage des jetons cote studio : pas de `flutter_secure_storage` sur le web
+
+`TokenStorage` utilise `flutter_secure_storage` sur mobile (Keystore / Keychain, protection
+reelle) et **`SharedPreferences` sur le web**. Deux raisons :
+
+1. **Fiabilite** — les operations du plugin sur le web ne se terminaient pas toujours : ni
+   resultat, ni erreur, la `Future` restait en attente. Le studio se figeait sur « Chargement de
+   votre session », indefiniment, sans message et sans autre recours que vider le stockage du
+   navigateur. **Constate sur le build web destine a `dashboard.mixalgo.com` : apres la premiere
+   connexion, toute reprise de session etait impossible.**
+2. **Fond** — sur le web ce chiffrement ne protege de rien : la cle est rangee dans le meme
+   `localStorage`, a cote des valeurs. Toute faille XSS lit les deux. On payait en fiabilite une
+   securite qui n'existait pas.
+
+Toutes les operations sont bornees par un delai : lire un jeton est une commodite, jamais une
+raison de figer l'application. `HttpAuthRepository` a par ailleurs recu un `catch` general —
+sans lui, toute exception hors `DioException` laissait l'etat sur `loading` pour toujours.
+
 ### Ce qui a ete valide sur stack reelle
 
 Auth (premier inscrit admin, jetons imbriques au register et a plat au login, refresh) ·
@@ -341,6 +383,15 @@ immutable) · graphe (racine, chainage, XOR emettrice/parent) · analyzer · cod
 admin) · played-nodes · verify-collective (emettrice heritee du parent) · sessions (vies
 decrementees par le serveur) · etoiles · classement · endpoints publics ·
 **routage Caddy complet, topologie de production**.
+
+Et **le studio web pilote dans un navigateur reel** contre cette stack : connexion, reprise de
+session apres rechargement, liste des jeux, ecran des codes (generation par lot de 5 codes
+verifies en base), ecran des comptes (garde-fou « dernier admin actif » remonte tel quel par le
+serveur), wizard, et affichage des images de cartes servies par MinIO.
+
+Non exerce : **l'import de cartes par lot**. Le declencher ouvre le selecteur de fichiers natif,
+qui bloque l'automatisation du navigateur. La chaine d'upload sous-jacente est prouvee par
+ailleurs, et la deduction de libelle a ses tests unitaires.
 
 ---
 

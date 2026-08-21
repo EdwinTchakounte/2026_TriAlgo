@@ -127,12 +127,32 @@ def collecter_problemes_de_configuration() -> list[str]:
             "l'origine exacte du front (schema + domaine + port)."
         )
 
-    # ---- 5. Liens contenus dans les emails ----
+    # ---- 5. Liens de rebond des emails (reset / confirmation) ----
+    # Depuis l'ajout de app/links/, ces deux liens sont bati sur
+    # PUBLIC_BASE_URL et non plus sur APP_FRONTEND_URL : les pages
+    # qui les traitent sont servies par l'API elle-meme. C'est donc
+    # PUBLIC_BASE_URL qu'il faut controler ici, quel que soit le
+    # backend de stockage (le controle 3 ne la verifie qu'en mode
+    # local).
+    if _est_local(settings.PUBLIC_BASE_URL):
+        problemes.append(
+            f"PUBLIC_BASE_URL vaut '{settings.PUBLIC_BASE_URL}'. C'est elle "
+            f"qui construit les liens de confirmation d'adresse et de "
+            f"reinitialisation de mot de passe : ils seront inutilisables "
+            f"pour les destinataires."
+        )
+
+    # ---- 5bis. Liens de navigation des emails ----
+    # APP_FRONTEND_URL sert encore aux liens non critiques (classement,
+    # jeu, administration). Une valeur locale les rend inertes, sans
+    # bloquer aucun parcours : avertissement de moindre gravite.
     if _est_local(settings.APP_FRONTEND_URL):
         problemes.append(
             f"APP_FRONTEND_URL vaut '{settings.APP_FRONTEND_URL}'. Les liens "
-            f"de confirmation d'email et de reinitialisation de mot de passe "
-            f"seront inutilisables pour les destinataires."
+            f"de navigation des emails (classement, jeu) pointeront vers une "
+            f"adresse locale. Sans effet sur la connexion ni sur la "
+            f"reinitialisation de mot de passe, qui passent par "
+            f"PUBLIC_BASE_URL."
         )
 
     # ---- 6. Envoi d'emails desactive ----

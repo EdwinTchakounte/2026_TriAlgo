@@ -20,6 +20,7 @@
 # =============================================================
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -30,6 +31,26 @@ from ..config import settings
 logger = logging.getLogger("trialgo.mail")
 
 _BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
+
+# -------------------------------------------------------------
+# Extraction des liens d'action (mode DRY RUN uniquement)
+# -------------------------------------------------------------
+# On ne remonte que les deux chemins qui portent un jeton et sans
+# lesquels un parcours ne peut pas etre suivi de bout en bout. Les
+# liens ordinaires des courriels (classement, jeu, vitrine) ne sont
+# pas repris : ils n'apprennent rien et alourdiraient les journaux.
+_CHEMINS_A_JOURNALISER = ("/reset-password?token=", "/confirm-email?token=")
+
+
+def _liens_dactions(html: str) -> list[str]:
+    """Retourne les liens porteurs de jeton contenus dans [html]."""
+    liens = re.findall(r'href="([^"]+)"', html)
+    return [
+        lien
+        for lien in liens
+        if any(chemin in lien for chemin in _CHEMINS_A_JOURNALISER)
+    ]
 
 
 @dataclass(frozen=True)
@@ -72,6 +93,28 @@ class BrevoClient:
                 to_email,
                 subject,
             )
+            # On journalise aussi les liens d'action contenus dans le
+            # message.
+            #
+            # POURQUOI, ET POURQUOI C'EST SANS DANGER ICI
+            # -------------------------------------------
+            # Sans cela, les parcours "mot de passe oublie" et
+            # "confirmation d'adresse" sont tout simplement
+            # intestables en local : le jeton n'est jamais affiche
+            # (le courriel n'est pas envoye) et la base ne stocke que
+            # son condensat. Il fallait une cle Brevo et une vraie
+            # boite aux lettres pour verifier une page de rebond.
+            #
+            # Un lien de reinitialisation est un secret, et il n'a
+            # normalement rien a faire dans un journal. Mais ce
+            # branchement ne s'execute QUE lorsque BREVO_API_KEY est
+            # vide -- c'est-a-dire quand aucun courriel ne part, une
+            # situation que les controles de demarrage signalent deja
+            # comme incompatible avec la production. En production,
+            # la cle est renseignee et pas une ligne de ceci ne
+            # s'execute.
+            for lien in _liens_dactions(html):
+                logger.warning("DRY-RUN lien | %s", lien)
             return SendResult(message_id="DRY_RUN", dry_run=True)
 
         payload = {

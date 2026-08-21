@@ -58,6 +58,10 @@ class HttpAuthRepository implements AuthRepository {
       return const Ok<UserProfile?>(null);
     } on DioException catch (e) {
       return Err(DataFailure('Erreur reseau : ${e.message}'));
+    } catch (e) {
+      // Meme raison que dans signIn : le bootstrap laisse l'etat en
+      // `loading` tant que cette methode n'a pas rendu la main.
+      return Err(DataFailure('Session illisible : $e'));
     }
   }
 
@@ -97,6 +101,25 @@ class HttpAuthRepository implements AuthRepository {
       return Ok(profile);
     } on DioException catch (e) {
       return Err(DataFailure('Erreur reseau : ${e.message}'));
+    } catch (e) {
+      // FILET DE SECURITE, ET POURQUOI IL EST INDISPENSABLE
+      // ---------------------------------------------------
+      // Sans ce catch, seules les DioException etaient traitees.
+      // N'importe quelle autre erreur -- un champ absent de la
+      // reponse, un cast qui echoue, un plugin indisponible sur la
+      // plateforme -- remontait hors de signIn.
+      //
+      // Le notifier d'authentification place l'etat en `loading`
+      // AVANT d'appeler cette methode et ne le change qu'au retour.
+      // Une exception non rattrapee ici signifiait donc : etat bloque
+      // sur `loading` pour toujours, ecran de chargement fige, aucun
+      // message, aucun moyen de reessayer autrement qu'en rechargeant
+      // la page. Le pire comportement possible pour un echec de
+      // connexion.
+      //
+      // On renvoie desormais une Failure lisible : l'utilisateur voit
+      // ce qui s'est passe et retrouve le formulaire.
+      return Err(DataFailure('Connexion impossible : $e'));
     }
   }
 

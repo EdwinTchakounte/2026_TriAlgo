@@ -26,6 +26,7 @@ from .config import settings
 from .core.startup_checks import journaliser_controles_de_demarrage
 from .games.routes import router as games_router
 from .leaderboard.routes import router as leaderboard_router
+from .links.routes import router as links_router
 from .nodes.routes import router as nodes_router
 from .played_nodes.routes import router as played_nodes_router
 from .profiles.routes import router as profiles_router
@@ -108,6 +109,14 @@ def create_app() -> FastAPI:
     # Note: ce router monte BOTH /api/me/stats ET /api/games/.../leaderboard,
     # donc on le prefixe a /api (pas /api/me) et chaque route inclut son chemin complet.
     app.include_router(leaderboard_router,      prefix="/api",      tags=["leaderboard"])
+
+    # ----- Pages de rebond des liens envoyes par courriel -----
+    # Montees a la RACINE, sans prefixe /api : ce sont des pages
+    # ouvertes dans un navigateur, pas des ressources d'API. Elles
+    # n'apparaissent pas dans OpenAPI (include_in_schema=False).
+    #   GET /reset-password  -> rend la main a l'application mobile
+    #   GET /confirm-email   -> consomme le jeton et affiche le resultat
+    app.include_router(links_router, tags=["links"])
 
     return app
 

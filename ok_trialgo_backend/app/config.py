@@ -76,6 +76,13 @@ class Settings(BaseSettings):
     # URL frontale (app web/landing) servant a construire les
     # liens reset/confirm dans les emails. En dev : localhost.
     APP_FRONTEND_URL: str = "http://localhost:5173"
+
+    # Schema d'URL propre a l'application mobile, utilise par la page
+    # de rebond /reset-password pour rendre la main a l'app :
+    #     trialgo://reset-password?token=...
+    # Doit rester aligne sur le schema declare cote Flutter
+    # (deep_link_service.dart) et dans les manifestes Android/iOS.
+    APP_DEEP_LINK_SCHEME: str = "trialgo"
     # TTL des tokens email (confirm/reset). 1h pour reset (best
     # practice secu) ; 48h pour confirm (un user peut tarder).
     EMAIL_TOKEN_TTL_RESET_MINUTES: int = 60

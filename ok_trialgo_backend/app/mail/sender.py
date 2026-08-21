@@ -52,8 +52,13 @@ async def send_welcome_confirm(
 ) -> SendResult:
     # Lien de confirmation construit cote serveur pour rester
     # source de verite (le front se contente d'ouvrir l'URL).
+    # PUBLIC_BASE_URL et non APP_FRONTEND_URL : la page qui consomme
+    # ce jeton est servie par l'API (app/links/routes.py), seule
+    # brique de la topologie capable d'executer du code. Le studio
+    # d'administration, lui, est un binaire Flutter web sans routes
+    # serveur -- y pointer menait a sa page de connexion.
     confirm_url = (
-        f"{settings.APP_FRONTEND_URL.rstrip('/')}/confirm-email?token={confirm_token}"
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}/confirm-email?token={confirm_token}"
     )
     html = _render(
         "welcome_confirm.html",
@@ -101,7 +106,9 @@ async def send_password_reset(
     reset_token: str,
 ) -> SendResult:
     reset_url = (
-        f"{settings.APP_FRONTEND_URL.rstrip('/')}/reset-password?token={reset_token}"
+        # Meme raison que pour confirm_url : la page de rebond vers
+        # l'application est servie par l'API.
+        f"{settings.PUBLIC_BASE_URL.rstrip('/')}/reset-password?token={reset_token}"
     )
     html = _render(
         "password_reset.html",
