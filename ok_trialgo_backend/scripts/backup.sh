@@ -93,8 +93,16 @@ DEST="${TRIALGO_BACKUP_DIR:-/var/backups/trialgo}"
 # ne sont jamais purgees (voir plus haut).
 RETENTION_JOURS="${TRIALGO_BACKUP_RETENTION:-30}"
 
-# Fichier compose a utiliser. La prod par defaut ; en dev,
-# surcharger avec TRIALGO_COMPOSE_FILE=docker-compose.yml.
+# Fichier(s) compose a utiliser. La prod par defaut.
+#
+# La variable accepte PLUSIEURS fichiers separes par des espaces,
+# parce que la stack peut en combiner deux -- c'est le cas derriere
+# un nginx deja installe :
+#
+#   TRIALGO_COMPOSE_FILE="docker-compose.prod.yml docker-compose.nginx.yml"
+#
+# En dev :
+#   TRIALGO_COMPOSE_FILE=docker-compose.yml
 COMPOSE_FILE="${TRIALGO_COMPOSE_FILE:-docker-compose.prod.yml}"
 
 # --- Contexte -----------------------------------------------
@@ -105,13 +113,21 @@ COMPOSE_FILE="${TRIALGO_COMPOSE_FILE:-docker-compose.prod.yml}"
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RACINE"
 
-if [ ! -f "$COMPOSE_FILE" ]; then
-  echo "ERREUR : $COMPOSE_FILE introuvable depuis $RACINE" >&2
-  echo "        Preciser TRIALGO_COMPOSE_FILE si la stack est ailleurs." >&2
-  exit 1
-fi
+for _fichier in $COMPOSE_FILE; do
+  if [ ! -f "$_fichier" ]; then
+    echo "ERREUR : $_fichier introuvable depuis $RACINE" >&2
+    echo "        Preciser TRIALGO_COMPOSE_FILE si la stack est ailleurs." >&2
+    exit 1
+  fi
+done
 
-COMPOSE=(docker compose -f "$COMPOSE_FILE")
+# Un drapeau -f par fichier. Le decoupage repose sur l'expansion
+# non protegee de $COMPOSE_FILE : c'est ici volontaire, c'est la
+# facon la plus simple de traiter une liste separee par des espaces.
+COMPOSE=(docker compose)
+for _fichier in $COMPOSE_FILE; do
+  COMPOSE+=(-f "$_fichier")
+done
 
 HORODATAGE="$(date +%Y-%m-%d_%H%M%S)"
 DOSSIER_DUMPS="$DEST/postgres"

@@ -246,6 +246,11 @@ crontab -e   # 15 3 * * * cd /srv/trialgo/ok_trialgo_backend && ./scripts/backup
 
 ### Variante nginx — quand le serveur en héberge déjà d'autres
 
+**La procédure complète depuis un serveur vierge est dans `ok_trialgo_backend/DEPLOIEMENT.md`** :
+accès SSH, Docker, pare-feu, génération des secrets, TLS, premier admin, sauvegardes et
+vérifications finales. Ce qui suit n'en explique que les choix d'architecture.
+
+
 `docker-compose.prod.yml` embarque Caddy, qui prend 80/443 et gère seul ses certificats.
 C'est le chemin le plus court **sur une machine dédiée**. Le serveur retenu (`169.58.139.73`)
 n'en est pas une : nginx 1.24 y sert déjà d'autres sites en Let's Encrypt. Deux serveurs ne

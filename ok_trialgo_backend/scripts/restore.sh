@@ -44,11 +44,27 @@
 set -euo pipefail
 
 DEST="${TRIALGO_BACKUP_DIR:-/var/backups/trialgo}"
+# Fichier(s) compose a utiliser. La prod par defaut.
+#
+# La variable accepte PLUSIEURS fichiers separes par des espaces,
+# parce que la stack peut en combiner deux -- c'est le cas derriere
+# un nginx deja installe :
+#
+#   TRIALGO_COMPOSE_FILE="docker-compose.prod.yml docker-compose.nginx.yml"
+#
+# En dev :
+#   TRIALGO_COMPOSE_FILE=docker-compose.yml
 COMPOSE_FILE="${TRIALGO_COMPOSE_FILE:-docker-compose.prod.yml}"
 
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RACINE"
-COMPOSE=(docker compose -f "$COMPOSE_FILE")
+# Un drapeau -f par fichier. Le decoupage repose sur l'expansion
+# non protegee de $COMPOSE_FILE : c'est ici volontaire, c'est la
+# facon la plus simple de traiter une liste separee par des espaces.
+COMPOSE=(docker compose)
+for _fichier in $COMPOSE_FILE; do
+  COMPOSE+=(-f "$_fichier")
+done
 
 DUMP="${1:-}"
 CONFIRME=0
@@ -152,5 +168,8 @@ fi
 echo
 echo "==> Restauration terminee."
 echo "    Verifier ensuite l'alignement du schema :"
-echo "        docker compose -f $COMPOSE_FILE exec api alembic current"
-echo "        docker compose -f $COMPOSE_FILE exec api alembic upgrade head"
+# On reaffiche la commande avec ses drapeaux deja assembles : avec
+# deux fichiers compose, un "-f $COMPOSE_FILE" litteral serait faux
+# et donnerait une commande a recopier qui ne marche pas.
+echo "        ${COMPOSE[*]} exec api alembic current"
+echo "        ${COMPOSE[*]} exec api alembic upgrade head"
