@@ -354,6 +354,28 @@ class GenerateLogicalNodesUseCase {
           continue;
         }
 
+        // Regle 2 du document coeur : |T| = 3.
+        //
+        // Une carte est NEUTRE : rien n'interdit qu'un meme cable
+        // serve dans deux noeuds de la meme chaine, et un vrai jeu
+        // en contiendra forcement (un cable "miroir" a vocation a
+        // etre reutilise). Dans ce cas deux slots distincts de la
+        // chaine pointent la meme carte, et la combinaison de trois
+        // slots ne compte que deux images.
+        //
+        // Sans ce filtre, le joueur recevait une question ou la
+        // meme image apparait deux fois parmi les trois, ou pire :
+        // ou la carte a deviner est deja visible a l'ecran.
+        //
+        // Consequence assumee : une chaine qui reutilise une carte
+        // produit moins de MaxTrios(Dk) trios. La distribution en
+        // tables l'absorbe deja (elle s'arrete a trios.length), et
+        // la garantie "un seul trio par chaine et par table" tient
+        // toujours.
+        if (trioCardIds.length != 3) {
+          continue;
+        }
+
         // Construire le LogicalNodeEntity.
         // L'ordre cardA/B/C suit l'ordre des slots dans la chaine
         // pour rendre le trio plus "naturel" visuellement.
