@@ -238,7 +238,79 @@ cp -r build/web/* ../ok_trialgo_backend/docker/dashboard/
 # 5. APK release (l'URL de prod est le défaut en release, --dart-define facultatif)
 cd trialgo && flutter build appbundle --release
 cd ok_trialgo_admin && flutter build apk --release
+
+# 6. Sauvegardes : premiere execution manuelle, puis cron quotidien
+cd ok_trialgo_backend && ./scripts/backup.sh
+crontab -e   # 15 3 * * * cd /srv/trialgo/ok_trialgo_backend && ./scripts/backup.sh >> /var/log/trialgo-backup.log 2>&1
 ```
+
+### Variante nginx — quand le serveur en héberge déjà d'autres
+
+`docker-compose.prod.yml` embarque Caddy, qui prend 80/443 et gère seul ses certificats.
+C'est le chemin le plus court **sur une machine dédiée**. Le serveur retenu (`169.58.139.73`)
+n'en est pas une : nginx 1.24 y sert déjà d'autres sites en Let's Encrypt. Deux serveurs ne
+peuvent pas écouter sur les mêmes ports, et on ne débranche pas de la production pour installer
+le nouveau.
+
+TRIALGO se met donc **derrière** le nginx existant :
+
+```
+Internet ─ nginx (hôte, 443, TLS)
+             ├─ api.mixalgo.com        → 127.0.0.1:8000   API
+             ├─ api.mixalgo.com/files/ → 127.0.0.1:9000   MinIO
+             └─ dashboard.mixalgo.com  → /srv/dashboard   fichiers
+```
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.nginx.yml up -d --build
+```
+
+La surcouche ne redéfinit que ce qui change : elle neutralise Caddy (via un `profiles` jamais
+activé — on ne peut pas *supprimer* un service hérité) et publie les ports **sur la boucle
+locale uniquement**.
+
+**`127.0.0.1:` n'est pas décoratif.** Sans ce préfixe, Docker ouvre le port sur toutes les
+interfaces *et* écrit une règle iptables qui court-circuite ufw : le pare-feu affiche
+`8000 DENY` pendant que le port répond au monde entier. L'API serait joignable en clair sur
+`http://<ip>:8000` hors de tout contrôle de nginx, et MinIO avec elle sur 9000, console
+comprise. Docker ne prévient pas.
+
+Vhosts dans `docker/nginx/`, à copier dans `/etc/nginx/sites-available/`, lier dans
+`sites-enabled/`, puis `certbot --nginx -d api.mixalgo.com -d dashboard.mixalgo.com`
+(certbot écrit lui-même les directives `ssl_*` et la redirection 80→443 ; ne pas les poser à
+la main, il les réécrirait au renouvellement).
+
+Trois traductions du Caddyfile qui ne vont pas de soi :
+
+| Point | Caddy | nginx |
+|---|---|---|
+| Retrait du préfixe `/files` | `uri strip_prefix /files` | **barre finale** de `proxy_pass http://127.0.0.1:9000/;` |
+| Lecture seule sur `/files` | `method GET HEAD` + `respond 405` | `if ($request_method !~ ^(GET\|HEAD)$) { return 405; }` |
+| Taille des téléversements | illimitée par défaut | **`client_max_body_size 6m;`** |
+
+Le troisième est le piège coûteux : **nginx plafonne par défaut à 1 Mo** alors que l'API accepte
+5 Mo. Sans cette directive, toute carte entre 1 et 5 Mo est rejetée par un 413 que l'API n'a
+jamais émis, absent de ses journaux, affiché tel quel par le studio. La valeur est au-dessus de
+`MAX_UPLOAD_BYTES` pour que ce soit l'API qui refuse, avec son message.
+
+**`TRUST_PROXY_HEADERS=true` est obligatoire dans le `.env` de production.** `startup_checks.py`
+le signale déjà (contrôle 8). `$proxy_add_x_forwarded_for` **ajoute** l'IP du client à la valeur
+reçue au lieu de la remplacer : le dernier maillon est celui écrit par nginx, le seul digne de
+confiance — même sémantique que Caddy, contre laquelle `app/core/rate_limit.py` a été écrit.
+Sans ce réglage l'API voit tout venir de `127.0.0.1` et compte dans un unique seau partagé : le
+premier utilisateur actif bloque tous les autres.
+
+Piège nginx dans le vhost du studio : **un `add_header` dans un `location` annule ceux du niveau
+serveur** — ils se remplacent, ils ne s'ajoutent pas. HSTS et `nosniff` sont donc répétés dans
+les blocs qui posent un `Cache-Control`, sans quoi `index.html` — la toute première réponse reçue
+par un visiteur — serait servi sans protection pendant que le reste du site les porte.
+
+**Vérifié** en montant un nginx réel devant la stack : `/healthz` relayé, image servie en 200
+`image/jpeg` via `/files/` (préfixe retiré), `POST` et `DELETE` sur `/files/` en 405, inventaire
+du bucket en 403, route API inconnue en 404 de FastAPI, HSTS et `nosniff` présents, 2 Mo
+téléversés sans encombre et 8 Mo refusés en 413 — et surtout **14 tentatives de connexion
+annonçant chacune une IP différente bloquées dès la 11ᵉ** : l'usurpation de `X-Forwarded-For` ne
+contourne pas le limiteur.
 
 ### Contrôles au démarrage
 
@@ -250,6 +322,78 @@ bloquer casserait le dev local et la CI. Lire les logs du premier démarrage.
 Le piège que ces contrôles adressent : `S3_PUBLIC_ENDPOINT_URL` est recopiée telle quelle dans
 chaque `image_url` renvoyée aux clients. Restée sur `localhost`, l'API répond 200 partout,
 les logs serveur sont vides, et toutes les cartes s'affichent cassées sur mobile.
+
+### Sauvegardes — `scripts/backup.sh` et `scripts/restore.sh`
+
+Un `docker compose down -v` malheureux efface comptes, codes vendus, parties et images.
+Le code se reconstruit depuis git ; une carte photographiée et découpée à la main, non.
+
+```bash
+cd ok_trialgo_backend
+./scripts/backup.sh                       # base + images
+./scripts/restore.sh                      # liste les sauvegardes disponibles
+./scripts/restore.sh <dump>               # restaure (demande confirmation)
+```
+
+Destination par défaut `/var/backups/trialgo`, surchargeable par `TRIALGO_BACKUP_DIR`.
+En dev, ajouter `TRIALGO_COMPOSE_FILE=docker-compose.yml`.
+
+En cron :
+
+```
+15 3 * * * cd /srv/trialgo/ok_trialgo_backend && ./scripts/backup.sh >> /var/log/trialgo-backup.log 2>&1
+```
+
+**Ni l'un ni l'autre ne copie les volumes Docker.** Copier `pg_data` pendant que Postgres écrit
+donne une archive incohérente qui se restaure sans erreur visible — `pg_dump -Fc` prend un
+instantané transactionnel. Et `minio_data` contient l'inventaire interne du serveur, lié à sa
+version : on sauvegarde le **contenu** du bucket (`mc mirror`), qui se remet dans n'importe
+quel S3.
+
+**L'ordre est base d'abord, images ensuite.** Les deux moitiés ne sont pas prises au même
+instant ; une carte téléversée entre les deux tombe forcément d'un côté. Dans ce sens elle est
+un fichier orphelin — invisible, inoffensif. Dans l'autre, la base référencerait un fichier
+absent et la carte s'afficherait cassée. C'est le même arbitrage qu'à la suppression d'une carte
+dans l'API, appliqué à l'envers du temps.
+
+**Les images sont cumulatives, pas datées.** Un dump horodaté par exécution, mais un seul
+dossier `objects/` où rien n'est jamais supprimé (`mc mirror` sans `--remove`). Les clés sont des
+UUID et le contenu est immuable : une copie par jour dupliquerait des gigaoctets à l'identique.
+Et ne rien supprimer rend récupérable une carte effacée par erreur dans le studio, des mois
+après. Seuls les dumps sont purgés (`TRIALGO_BACKUP_RETENTION`, 30 jours).
+
+Le script relit la table des matières de chaque dump avec `pg_restore --list` avant de le
+déclarer bon : un dump tronqué par un disque plein ne provoque **aucune** erreur — la
+redirection réussit, `pg_dump` meurt en silence de l'autre côté du tube. Un manifeste `.txt`
+accompagne chaque dump (date, tailles, nombre d'images, version Alembic) pour choisir quoi
+restaurer sans ouvrir les archives.
+
+`restore.sh` est le seul script du dépôt capable de détruire des données de production :
+`pg_restore --clean` supprime les tables avant de les recréer, tout ce qui est postérieur au
+dump disparaît. D'où la confirmation à taper en toutes lettres, et `--single-transaction` —
+une restauration à moitié appliquée est pire que pas de restauration.
+
+Après restauration, réaligner le schéma : le dump porte la version Alembic de son époque, plus
+ancienne que le code déployé.
+
+```bash
+docker compose -f docker-compose.prod.yml exec api alembic upgrade head
+```
+
+**Deux choses que ces scripts ne font pas, et qui restent à faire à la main :**
+
+1. **Sortir les sauvegardes de la machine.** Un dossier sur le serveur meurt avec le serveur.
+   `rclone sync /var/backups/trialgo distant:trialgo-backups` après le cron, ou un montage NAS.
+2. **Sauvegarder le `.env`,** hors dépôt et chiffré. Il n'est pas dans le miroir : c'est un
+   fichier de secrets, il n'a rien à faire à côté d'un dump en clair. Le perdre ne détruit pas
+   les données mais rend le volume Postgres inutilisable (mot de passe) et invalide tous les
+   jetons émis (`JWT_SECRET`). Même règle que le keystore Android.
+
+**Vérifié sur la stack de dev** : dump relu, restauration dans une base jetable (comptes, jeux,
+cartes, nœuds et codes retrouvés à l'identique, une ligne insérée après la sauvegarde bien
+absente), `object_key` de chaque carte confronté au miroir — zéro fichier manquant — et second
+passage à 0 octet retransféré. Le chemin destructeur de `restore.sh` sur une base **vivante**
+n'a volontairement pas été exercé.
 
 ### Signature Android
 
@@ -322,6 +466,17 @@ devinent pas.
 
 **Le manifeste Android etait invalide.** Un `--` dans un commentaire XML, interdit par la
 specification : `flutter build apk --release` echouait sur `processReleaseMainManifest`.
+
+**Un cable reutilise produisait des trios a deux cartes.** La combinatoire D1->D5 n'avait
+jamais tourne au-dela de D2, faute de contenu en base. Un test sur une chaine de 5 noeuds
+synthetiques confirme les comptes (1/5/14/27/44 tables), l'appartenance de R_k a tout trio et
+l'exclusion des noeuds natifs — mais **la regle |T| = 3 n'etait pas implementee**. Une carte
+etant neutre, rien n'interdit qu'un meme cable serve dans deux noeuds d'une chaine, et un vrai
+jeu en contiendra forcement. Deux slots pointaient alors la meme carte, et
+`generate_logical_nodes_usecase` emettait un trio de deux images : le joueur voyait la meme
+carte deux fois parmi les trois — ou devait deviner une carte deja visible a l'ecran. Une
+chaine qui reutilise une carte produit desormais moins de `MaxTrios(Dk)` trios ; la
+distribution en tables l'absorbait deja. Verrouille par `test/combinatoire_distances_test.dart`.
 
 ### Durcissements
 

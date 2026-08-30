@@ -1,0 +1,75 @@
+# =============================================================
+# docker-compose.nginx.yml  -  surcouche pour un nginx deja en place
+# =============================================================
+# A UTILISER AVEC docker-compose.prod.yml, PAS A LA PLACE :
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.nginx.yml up -d --build
+#
+# Ce fichier ne redefinit que ce qui change. Les services
+# (postgres, minio, api) gardent leur definition unique dans
+# docker-compose.prod.yml : une seule source de verite.
+#
+#
+# POURQUOI CETTE VARIANTE
+# -----------------------
+# docker-compose.prod.yml embarque Caddy, qui prend les ports 80
+# et 443 et gere seul ses certificats. C'est le chemin le plus
+# court sur une machine dediee a TRIALGO.
+#
+# Ce n'est pas la situation ici : le serveur fait deja tourner
+# nginx 1.24 sur 80/443, avec ses propres certificats Let's
+# Encrypt, devant d'autres sites. Deux serveurs ne peuvent pas
+# ecouter sur les memes ports. Il faut choisir, et le choix est
+# vite fait : on ne debranche pas des sites en production pour
+# installer le nouveau.
+#
+# TRIALGO se met donc DERRIERE le nginx existant :
+#
+#   Internet -> nginx (hote, 443, TLS)
+#                 |-- api.mixalgo.com        -> 127.0.0.1:8000  (API)
+#                 |-- api.mixalgo.com/files/ -> 127.0.0.1:9000  (MinIO)
+#                 `-- dashboard.mixalgo.com  -> /srv/dashboard   (fichiers)
+#
+# Les fichiers de configuration nginx correspondants sont dans
+# docker/nginx/. Ils reprennent exactement les regles du
+# Caddyfile -- y compris celles qui ne sautent pas aux yeux.
+#
+#
+# LE POINT IMPORTANT : 127.0.0.1
+# ------------------------------
+# Les ports sont publies sur la boucle locale UNIQUEMENT.
+#
+#   ports: ["127.0.0.1:8000:8000"]     et non     ["8000:8000"]
+#
+# Sans le prefixe, Docker ouvre le port sur TOUTES les interfaces
+# et, pire, ecrit lui-meme une regle dans iptables qui court-
+# circuite ufw : le pare-feu affiche "8000 DENY" pendant que le
+# port repond au monde entier. L'API serait alors joignable en
+# clair sur http://<ip>:8000, sans TLS, hors de tout controle de
+# nginx -- et MinIO avec elle sur 9000, y compris sa console.
+#
+# C'est un piege connu de Docker et il ne previent pas.
+# =============================================================
+
+services:
+
+  # Caddy n'a plus lieu d'etre : nginx fait son travail.
+  # `profiles` est le seul moyen propre de neutraliser un service
+  # herite d'un autre fichier compose -- on ne peut pas le
+  # "supprimer" dans une surcouche. Le profil "avec-caddy" n'etant
+  # jamais active, le service n'est ni construit ni demarre.
+  caddy:
+    profiles: ["avec-caddy"]
+
+  api:
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  minio:
+    ports:
+      - "127.0.0.1:9000:9000"
+      # Console d'administration MinIO. Sur la boucle locale elle
+      # aussi : on y accede par un tunnel SSH depuis son poste.
+      #   ssh -L 9001:127.0.0.1:9001 <serveur>
+      # puis http://localhost:9001 dans le navigateur.
+      - "127.0.0.1:9001:9001"
