@@ -279,6 +279,53 @@ class GameConstants {
   }
 
   // ---------------------------------------------------------------
+  // SCORE D'UNE BONNE REPONSE
+  // ---------------------------------------------------------------
+  // Reference : TRIALGO_CORE.md, section 9.1
+  //
+  //   score = pointsBase x multiplicateurDistance x bonusTemps
+  //           + bonusSerie
+  //
+  // POURQUOI UNE FONCTION PURE ICI
+  // ------------------------------
+  // Ce calcul vivait en dur dans t_game_page.dart, ou il avait
+  // silencieusement divergé de la specification : points de base
+  // figes a 20, multiplicateur de distance jamais applique, bonus de
+  // temps remplace par une formule lineaire, et palier de serie a 7
+  // declare mais absent du code. Une question D5 rapportait autant
+  // qu'une D1.
+  //
+  // Sorti du widget, le calcul devient verifiable sans monter une UI.
+  // ---------------------------------------------------------------
+
+  /// Points gagnes pour une bonne reponse.
+  ///
+  /// [basePoints]      : points de base du niveau (LevelConfig.basePoints)
+  /// [distance]        : distance du trio, 1 a 5
+  /// [elapsedSeconds]  : temps mis pour repondre
+  /// [maxSeconds]      : temps alloue a la question
+  /// [streak]          : nombre de bonnes reponses consecutives, celle-ci incluse
+  static int scoreForCorrectAnswer({
+    required int basePoints,
+    required int distance,
+    required int elapsedSeconds,
+    required int maxSeconds,
+    required int streak,
+  }) {
+    final points = basePoints *
+        distanceMultiplier(distance) *
+        timeBonus(elapsedSeconds, maxSeconds);
+    return points.round() + streakBonus(streak);
+  }
+
+  /// Bonus de serie : palier a 3 bonnes reponses, palier renforce a 7.
+  static int streakBonus(int streak) {
+    if (streak >= 7) return 25;
+    if (streak >= 3) return 10;
+    return 0;
+  }
+
+  // ---------------------------------------------------------------
   // DUREES MAXIMALES DE SESSION
   // ---------------------------------------------------------------
   // Reference : Recueil v3.0, section 8.2

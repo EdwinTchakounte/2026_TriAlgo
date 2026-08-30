@@ -102,6 +102,20 @@ class _TGamePageState extends ConsumerState<TGamePage>
   int _streak = 0;
   int _maxStreak = 0;
   int _remainingSeconds = 30;
+
+  // Parametres du niveau, calcules UNE SEULE FOIS dans initState.
+  //
+  // Avant, deux appels differents cohabitaient dans ce fichier :
+  // getLevelConfig() (fige sur [1,5,14,0,0]) pour le nombre de
+  // questions, et getLevelConfigForTables() pour la distance. Les
+  // deux pouvaient donc decrire des niveaux differents dans la meme
+  // partie. Une seule source de verite desormais.
+  late LevelConfig _levelConfig;
+
+  // Points reellement gagnes a la derniere bonne reponse. Sert au
+  // texte de feedback : il affichait auparavant une formule recopiee
+  // a la main, qui a fini par ne plus correspondre au calcul reel.
+  int _lastPointsGained = 0;
   Timer? _timer;
   String? _selectedCardId;
   bool _isAnswered = false;
@@ -230,9 +244,12 @@ class _TGamePageState extends ConsumerState<TGamePage>
       TweenSequenceItem(tween: Tween(begin: -3, end: 0), weight: 25),
     ]).animate(_shakeController);
 
-    // Initialiser le nombre de questions depuis la config du niveau.
-    // Exemple : niveau 1-3 = 8 questions, niveau 4-6 = 10, etc.
-    _totalQuestions = GameConstants.getLevelConfig(widget.level).questions;
+    // Parametres du niveau : distance, configs autorisees, nombre de
+    // questions, seuil de reussite, points de base, vies par erreur et
+    // temps par tour. Tout vient d'ici, plus rien n'est ecrit en dur.
+    _levelConfig = _construireConfigDuNiveau();
+    _totalQuestions = _levelConfig.questions;
+    _remainingSeconds = _levelConfig.turnTimeSeconds;
 
     // Lire les vies depuis le profil (source unique). La page d'accueil
     // affiche ce meme compteur -> elles sont forcement synchrones.
@@ -537,21 +554,11 @@ class _TGamePageState extends ConsumerState<TGamePage>
   /// Si tous les noeuds logiques sont epuises, retourne null
   /// et termine la session immediatement.
   void _setupQuestion() {
-    // --- Lire les parametres du niveau ---
-    // Le niveau encode (distance, tableIndex) via la config dynamique
-    // basee sur le nombre reel de tables disponibles dans le pool.
-    final pool = ref.read(graphSyncServiceProvider).logicalNodes;
-    final tablesPerDistance = [
-      pool?.numberOfTables(1) ?? 0,
-      pool?.numberOfTables(2) ?? 0,
-      pool?.numberOfTables(3) ?? 0,
-      pool?.numberOfTables(4) ?? 0,
-      pool?.numberOfTables(5) ?? 0,
-    ];
-    final levelConfig = GameConstants.getLevelConfigForTables(
-      widget.level,
-      tablesPerDistance,
-    );
+    // --- Parametres du niveau ---
+    // Calcules une fois dans initState, relus ici. Recalculer a chaque
+    // question ferait courir le risque qu'une question ne joue pas au
+    // meme niveau que la precedente.
+    final levelConfig = _levelConfig;
 
     // --- Generer la question via le usecase ---
     // Pioche dans la table specifique (distance + tableIndex) pour
@@ -657,6 +664,28 @@ class _TGamePageState extends ConsumerState<TGamePage>
     }
   }
 
+  // =============================================================
+  // METHODE : _construireConfigDuNiveau
+  // =============================================================
+  // Traduit le numero de niveau en parametres de jeu, en fonction du
+  // nombre de tables REELLEMENT disponibles dans le jeu charge.
+  //
+  // Ce detail compte : avec trois noeuds en base il n'existe pas 44
+  // niveaux D5. Le plan doit s'adapter au contenu, sinon le joueur
+  // atteint des niveaux vides.
+  // =============================================================
+
+  LevelConfig _construireConfigDuNiveau() {
+    final pool = ref.read(graphSyncServiceProvider).logicalNodes;
+    return GameConstants.getLevelConfigForTables(widget.level, [
+      pool?.numberOfTables(1) ?? 0,
+      pool?.numberOfTables(2) ?? 0,
+      pool?.numberOfTables(3) ?? 0,
+      pool?.numberOfTables(4) ?? 0,
+      pool?.numberOfTables(5) ?? 0,
+    ]);
+  }
+
   /// Traite la reponse du joueur (ou null pour timeout).
   /// Calcule le score : basePoints (20) + timeBonus + streakBonus.
   /// Gere les vies (perd 1 vie toutes les 2 erreurs).
@@ -690,10 +719,21 @@ class _TGamePageState extends ConsumerState<TGamePage>
         _correctAnswers++;
         _streak++;
         if (_streak > _maxStreak) _maxStreak = _streak;
-        final basePoints = 20;
-        final timeBonus = (_remainingSeconds * 0.5).round();
-        final streakBonus = _streak >= 3 ? 10 : 0;
-        _score += basePoints + timeBonus + streakBonus;
+        // Score = pointsBase x multiplicateur de distance x bonus de
+        // temps, plus le bonus de serie.
+        //
+        // Les deux multiplicateurs existaient dans GameConstants mais
+        // n'etaient appeles nulle part : une question D5 rapportait
+        // exactement autant qu'une D1, alors que la profondeur est
+        // toute l'idee du jeu.
+        _lastPointsGained = GameConstants.scoreForCorrectAnswer(
+          basePoints: _levelConfig.basePoints,
+          distance: _levelConfig.distance,
+          elapsedSeconds: _levelConfig.turnTimeSeconds - _remainingSeconds,
+          maxSeconds: _levelConfig.turnTimeSeconds,
+          streak: _streak,
+        );
+        _score += _lastPointsGained;
 
         // Feedback visuel : particules vertes + animation scale du score.
         _particleTargetColor = const Color(0xFF66BB6A);
@@ -701,10 +741,11 @@ class _TGamePageState extends ConsumerState<TGamePage>
       } else {
         _wrongAnswers++;
         _streak = 0;
-        // Perte de vie toutes les 2 mauvaises reponses. La deduction
-        // locale + persistance DB se fait ensemble pour que la home
-        // page (qui ecoute profileProvider) reflete la perte en direct.
-        if (_wrongAnswers % 2 == 0 && _lives > 0) {
+        // Perte de vie selon la difficulte du niveau : une vie toutes
+        // les livesPerWrong erreurs (3 au debut, 2 puis 1 en montant).
+        // Le pas etait fige a 2 quel que soit le niveau, ce qui rendait
+        // les niveaux profonds aussi indulgents que les premiers.
+        if (_wrongAnswers % _levelConfig.livesPerWrong == 0 && _lives > 0) {
           _lives--;
           // Fire-and-forget : la persistance n'est pas critique au
           // rythme de l'UI (si le reseau est lent, _lives local est
@@ -725,7 +766,13 @@ class _TGamePageState extends ConsumerState<TGamePage>
       if (!mounted) return;
       if (_questionNumber >= _totalQuestions || _lives <= 0) {
         // Jouer le son de fin de partie.
-        final passed = _correctAnswers >= 4;
+        // Seuil de reussite du niveau : 6/8 en D1, jusqu'a 11/15 en D5.
+        //
+        // Il etait fige a 4, alors que la valeur exacte etait calculee
+        // ET DEJA AFFICHEE sur la page d'accueil. Un niveau D5 de 15
+        // questions se validait donc avec 4 bonnes reponses, et le
+        // passage au niveau suivant etait accorde la-dessus.
+        final passed = _correctAnswers >= _levelConfig.threshold;
         ref.read(audioServiceProvider).playSfx(
           passed ? SoundEffect.victory : SoundEffect.defeat,
         );
@@ -785,7 +832,7 @@ class _TGamePageState extends ConsumerState<TGamePage>
   Widget build(BuildContext context) {
     final tr = TLocale.of(context);
     // Ratio du timer pour les indicateurs visuels (1.0 = plein, 0.0 = vide).
-    final timerRatio = _remainingSeconds / 30;
+    final timerRatio = _remainingSeconds / _levelConfig.turnTimeSeconds;
     // Couleur dynamique du timer : vert > 60%, jaune > 30%, rouge sinon.
     final Color timerColor = timerRatio > 0.6
         ? const Color(0xFF66BB6A)
@@ -1338,7 +1385,7 @@ class _TGamePageState extends ConsumerState<TGamePage>
                                   // Texte de feedback avec points.
                                   Text(
                                     _lastAnswerCorrect
-                                        ? '${tr('game.correct')}  +${20 + (_remainingSeconds * 0.5).round()} ${tr('common.pts')}'
+                                        ? '${tr('game.correct')}  +$_lastPointsGained ${tr('common.pts')}'
                                         : _selectedCardId == null
                                             ? tr('game.timeout')
                                             : tr('game.incorrect'),
