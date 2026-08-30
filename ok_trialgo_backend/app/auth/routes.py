@@ -30,6 +30,7 @@ from jose import JWTError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.rate_limit import RateLimit, verifier_quota
 from ..db import get_db
 from ..mail.models import (
     EMAIL_PURPOSE_CONFIRM,
@@ -69,6 +70,7 @@ router = APIRouter()
 # -------------------------------------------------------------
 @router.post(
     "/register",
+    dependencies=[Depends(RateLimit("inscription", limite=5, fenetre_secondes=3600))],
     response_model=RegisterOut,
     status_code=201,
     summary="Inscription d'un nouveau compte (1er = admin bootstrap)",
@@ -137,6 +139,7 @@ async def register(
 # -------------------------------------------------------------
 @router.post(
     "/login",
+    dependencies=[Depends(RateLimit("connexion", limite=10, fenetre_secondes=60))],
     response_model=TokenPair,
     summary="Connexion par email/mot de passe (user)",
     description=(
@@ -151,6 +154,23 @@ async def login(
     body: UserLogin,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenPair:
+    # Seconde limite, adossee au COMPTE vise et non a l'IP.
+    #
+    # La limite par IP ci-dessus arrete un attaquant unique. Elle
+    # n'arrete pas une attaque repartie sur des centaines de machines
+    # visant un seul compte : chaque IP reste sous son quota, et le
+    # compte se fait pilonner quand meme. On plafonne donc aussi les
+    # tentatives par adresse email.
+    #
+    # L'email est normalise en minuscules pour qu'une simple variation
+    # de casse ne fabrique pas un compteur neuf.
+    await verifier_quota(
+        db,
+        cle=f"connexion:compte:{body.email.lower()}",
+        limite=10,
+        fenetre_secondes=900,
+    )
+
     user = await db.scalar(select(User).where(User.email == body.email))
     # Message volontairement vague (anti-enumeration).
     if not user or not verify_password(body.password, user.password_hash):
@@ -223,6 +243,7 @@ async def me(user: Annotated[User, Depends(get_current_user)]) -> User:
 # -------------------------------------------------------------
 @router.post(
     "/confirm-email",
+    dependencies=[Depends(RateLimit("confirmation", limite=20, fenetre_secondes=3600))],
     response_model=GenericOk,
     summary="Confirme l'email via un token recu par mail (no auth)",
     description=(
@@ -268,6 +289,7 @@ async def confirm_email(
 # -------------------------------------------------------------
 @router.post(
     "/resend-confirmation",
+    dependencies=[Depends(RateLimit("renvoi", limite=5, fenetre_secondes=3600))],
     response_model=GenericOk,
     summary="Renvoie un mail de confirmation d'email (no auth)",
     description=(
@@ -304,6 +326,7 @@ async def resend_confirmation(
 # -------------------------------------------------------------
 @router.post(
     "/forgot-password",
+    dependencies=[Depends(RateLimit("oubli", limite=5, fenetre_secondes=3600))],
     response_model=GenericOk,
     summary="Declenche l'envoi d'un mail de reinitialisation (no auth)",
     description=(
@@ -339,6 +362,7 @@ async def forgot_password(
 # -------------------------------------------------------------
 @router.post(
     "/reset-password",
+    dependencies=[Depends(RateLimit("reset", limite=20, fenetre_secondes=3600))],
     response_model=GenericOk,
     summary="Consomme un token de reset et change le mot de passe (no auth)",
     description=(

@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth.deps import get_current_admin, get_current_user
 from ..auth.models import User
+from ..core.rate_limit import RateLimit, verifier_quota
 from ..db import get_db
 from ..games.models import Game
 from ..mail.sender import send_code_activated
@@ -51,6 +52,7 @@ router = APIRouter()
 # =============================================================
 @router.post(
     "/codes/activate",
+    dependencies=[Depends(RateLimit("activation", limite=20, fenetre_secondes=3600))],
     response_model=ActivateCodeOut,
     summary="Active un code d'activation pour le user (user)",
     description=(
@@ -69,6 +71,22 @@ async def activate_code(
     user: Annotated[User, Depends(get_current_user)],
     background: BackgroundTasks,
 ) -> ActivateCodeOut:
+    # Limite adossee au COMPTE, en plus de celle par IP.
+    #
+    # C'est ici que se joue la protection du produit : un code devine
+    # est une licence volee. La limite par IP se contourne avec un
+    # simple relais ; celle-ci oblige a creer un compte par tranche de
+    # 20 essais, ce qui rend l'enumeration inexploitable.
+    #
+    # 20 essais par heure laisse toute la place aux fautes de frappe
+    # d'un acheteur legitime, qui en fait deux ou trois au plus.
+    await verifier_quota(
+        db,
+        cle=f"activation:compte:{user.id}",
+        limite=20,
+        fenetre_secondes=3600,
+    )
+
     # 1. Charger le code (PK = string).
     code = await db.get(ActivationCode, body.code)
     if not code:

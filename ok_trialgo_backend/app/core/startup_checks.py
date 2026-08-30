@@ -163,6 +163,36 @@ def collecter_problemes_de_configuration() -> list[str]:
             "reinitialisation de mot de passe seront inoperantes."
         )
 
+    # ---- 7. Limitation de debit desactivee ----
+    if not settings.RATE_LIMIT_ENABLED:
+        problemes.append(
+            "RATE_LIMIT_ENABLED est a False : la force brute sur les mots de "
+            "passe et l'enumeration des codes de vente ne sont plus bridees. "
+            "A ne laisser ainsi que pour des tests."
+        )
+
+    # ---- 8. Reverse proxy non declare ----
+    #
+    # Piege silencieux et severe. Derriere Caddy, sans ce drapeau,
+    # toutes les requetes portent l'IP du proxy : elles partagent donc
+    # UN SEUL compteur. Le premier utilisateur a atteindre la limite
+    # verrouille l'endpoint pour tout le monde — connexions comprises.
+    #
+    # On le detecte a l'indice le plus fiable : une URL publique en
+    # https implique forcement un terminateur TLS devant l'API.
+    if (
+        settings.RATE_LIMIT_ENABLED
+        and settings.PUBLIC_BASE_URL.startswith("https://")
+        and not settings.TRUST_PROXY_HEADERS
+    ):
+        problemes.append(
+            "PUBLIC_BASE_URL est en https mais TRUST_PROXY_HEADERS vaut "
+            "False. Toutes les requetes seront comptees sous l'IP du reverse "
+            "proxy, donc dans un compteur commun : le premier visiteur a "
+            "atteindre la limite bloquera la connexion de tous les autres. "
+            "Passer TRUST_PROXY_HEADERS=true."
+        )
+
     return problemes
 
 

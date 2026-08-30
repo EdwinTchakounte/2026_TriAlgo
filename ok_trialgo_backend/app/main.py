@@ -11,6 +11,7 @@
 # `app.main:app`.
 # =============================================================
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -36,6 +37,8 @@ from .stars.routes import router as stars_router
 from .unlocked_cards.routes import router as unlocked_cards_router
 from .user_games.routes import router as user_games_router
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -47,6 +50,25 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # On les signale bruyamment dans les logs plutot que de laisser
     # le probleme se manifester par des images cassees sur mobile.
     journaliser_controles_de_demarrage()
+
+    # Menage des compteurs de limitation de debit.
+    #
+    # Les fenetres passees ne servent plus a rien. On les purge ici
+    # plutot que via une tache planifiee : la table reste petite sans
+    # infrastructure supplementaire, et le cout est paye une fois par
+    # demarrage. Une panne de ce menage ne doit rien empecher — d'ou
+    # le try/except large.
+    try:
+        from .core.rate_limit import purger_fenetres_expirees
+        from .db import SessionLocal
+
+        async with SessionLocal() as session:
+            efface = await purger_fenetres_expirees(session)
+        if efface:
+            logger.info("rate-limit : %d compteurs expires purges", efface)
+    except Exception:  # noqa: BLE001
+        logger.warning("rate-limit : purge au demarrage impossible", exc_info=True)
+
     yield
     # Shutdown : ici on dispose les ressources (engine, etc.).
     from .db import engine

@@ -63,6 +63,21 @@ class Settings(BaseSettings):
     IMAGE_MAX_DIMENSION: int = 1024
     IMAGE_JPEG_QUALITY: int = 85
 
+    # ---- Limitation de debit ----
+    # Voir app/core/rate_limit.py. Desactivable pour les tests, jamais
+    # en production : c'est la seule protection contre la force brute
+    # sur les mots de passe et l'enumeration des codes de vente.
+    RATE_LIMIT_ENABLED: bool = True
+
+    # Derriere un reverse proxy (Caddy en production), l'IP vue par
+    # l'API est celle du proxy : sans ce drapeau, tous les clients
+    # partagent le meme compteur et le premier a depasser la limite
+    # bloque tous les autres.
+    #
+    # A laisser sur False en dev (acces direct), et a passer a True
+    # des qu'un proxy est devant. startup_checks.py signale l'oubli.
+    TRUST_PROXY_HEADERS: bool = False
+
     # ---- CORS ----
     CORS_ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:8080"
 
