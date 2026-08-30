@@ -102,8 +102,19 @@ Le dépôt est **public** : aucun identifiant n'est nécessaire sur le serveur.
 sudo mkdir -p /srv && cd /srv
 git clone https://github.com/EdwinTchakounte/2026_TriAlgo.git trialgo
 cd trialgo/ok_trialgo_backend
-git checkout feat/backend-fastapi-et-preparation-deploiement
 ```
+
+`main` porte l'état déployable : rien à basculer, le clone suffit. Les mises à jour
+ultérieures sont un simple `git pull` suivi d'une reconstruction :
+
+```bash
+cd /srv/trialgo && git pull
+cd ok_trialgo_backend
+docker compose -f docker-compose.prod.yml -f docker-compose.nginx.yml up -d --build
+docker compose -f docker-compose.prod.yml -f docker-compose.nginx.yml exec api alembic upgrade head
+```
+
+`up -d --build` et non `restart` : voir §6 pour la raison.
 
 > Le dépôt étant public, **aucun secret ne doit jamais y être commité**. Le `.env` est
 > dans `.gitignore` ; l'historique a été vérifié, il est propre. Un secret poussé une
