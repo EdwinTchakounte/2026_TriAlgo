@@ -1,6 +1,10 @@
 # Déploiement complet de MIXALGO
 
-Guide unique, du serveur nu jusqu'à l'APK téléchargeable. À suivre dans l'ordre.
+Guide de référence : le *pourquoi* de chaque choix, et ce qui casse si on s'en écarte.
+
+> **Pour exécuter, préférez [`SUIVI_DEPLOIEMENT.md`](SUIVI_DEPLOIEMENT.md)** : les mêmes
+> étapes réduites aux commandes et au résultat attendu, numérotées et à cocher, déjà
+> adaptées au serveur `169.58.139.73`. Revenez ici quand une étape coince.
 
 Les deux autres documents restent utiles et ne sont pas répétés ici :
 [`ok_trialgo_backend/RESSOURCES_MUTUALISEES.md`](ok_trialgo_backend/RESSOURCES_MUTUALISEES.md)
