@@ -1,0 +1,187 @@
+# =============================================================
+# FICHIER : referentiels/mixalgo-savane.yml
+# ROLE    : Source de verite du graphe d'un jeu MIXALGO
+# =============================================================
+#
+# CE FICHIER EST LA SOURCE, PAS UN RESUME.
+# ------------------------------------------
+# Le dictionnaire illustre (dictionnaire/dictionnaire.jpeg) est un
+# INDEX : il repete chaque trio une fois par carte concernee, donc
+# 2 a 3 fois. Maintenu a la main, il finit toujours par diverger --
+# il se contredisait deja (B4+D9 y donnait P8 a une entree et E7 a
+# une autre, et deux couples y etaient ecrits dans les deux sens).
+#
+# Ici chaque trio n'apparait QU'UNE FOIS. Le dictionnaire se
+# regenere depuis ce fichier, jamais l'inverse.
+#
+# LES DEUX FORMES D'UN TRIO
+# -------------------------
+#   parents: [X, Y]     racine  -- X et Y sont poses explicitement
+#   depuis: nNN         enfant  -- herite l'enfant du trio nNN
+#   avec: Z             le second parent d'un enfant
+#
+# `parents` est une paire NON ORDONNEE : [C9, D8] et [D8, C9]
+# designent le meme trio, et le validateur les refuse en double.
+# La fusion ne depend pas de l'ordre.
+#
+# `depuis` en revanche est explicite et obligatoire des qu'un trio
+# se chaine. Ce n'est pas une redondance : quand les DEUX parents
+# sont eux-memes des enfants d'autres trios (8 cas ici), l'ordre
+# ecrit etait la seule chose qui disait a quelle chaine le trio
+# appartient -- une information qu'une paire non ordonnee perd.
+# Le chainage change les elements disponibles, donc les questions
+# generees. Il devait devenir explicite.
+#
+# CE QUI N'EST PAS ECRIT ICI
+# --------------------------
+# depth, node_index et parent_node_id sont CALCULES a l'import.
+# Ajouter un trio = ajouter une ligne, rien d'autre a renumeroter.
+# =============================================================
+
+jeu: mixalgo-savane
+libelle: MIXALGO -- Savane
+version: 1
+
+# -------------------------------------------------------------
+# CARTES
+# -------------------------------------------------------------
+# `image` est un nom de fichier, resolu par l'importeur dans le
+# dossier passe via --images. Le libelle est ce que le joueur lit
+# (mode collectif, ecran de resultat) : a renseigner.
+# -------------------------------------------------------------
+cartes:
+  A3:  {libelle: "A3", image: "A3.jpg"}
+  A4:  {libelle: "A4", image: "A4.jpg"}
+  A6:  {libelle: "A6", image: "A6.jpg"}
+  A7:  {libelle: "A7", image: "A7.jpg"}
+  A8:  {libelle: "A8", image: "A8.jpg"}
+  B3:  {libelle: "B3", image: "B3.jpg"}
+  B4:  {libelle: "B4", image: "B4.jpg"}
+  B5:  {libelle: "B5", image: "B5.jpg"}
+  B9:  {libelle: "B9", image: "B9.jpg"}
+  C2:  {libelle: "C2", image: "C2.jpg"}
+  C6:  {libelle: "C6", image: "C6.jpg"}
+  C7:  {libelle: "C7", image: "C7.jpg"}
+  C9:  {libelle: "C9", image: "C9.jpg"}
+  D1:  {libelle: "D1", image: "D1.jpg"}
+  D7:  {libelle: "D7", image: "D7.jpg"}
+  D8:  {libelle: "D8", image: "D8.jpg"}
+  D9:  {libelle: "D9", image: "D9.jpg"}
+  E4:  {libelle: "E4", image: "E4.jpg"}
+  E5:  {libelle: "E5", image: "E5.jpg"}
+  E7:  {libelle: "E7", image: "E7.jpg"}
+  F1:  {libelle: "F1", image: "F1.jpg"}
+  F2:  {libelle: "F2", image: "F2.jpg"}
+  F7:  {libelle: "F7", image: "F7.jpg"}
+  G1:  {libelle: "G1", image: "G1.jpg"}
+  G3:  {libelle: "G3", image: "G3.jpg"}
+  G4:  {libelle: "G4", image: "G4.jpg"}
+  G5:  {libelle: "G5", image: "G5.jpg"}
+  G8:  {libelle: "G8", image: "G8.jpg"}
+  H3:  {libelle: "H3", image: "H3.jpg"}
+  H4:  {libelle: "H4", image: "H4.jpg"}
+  H6:  {libelle: "H6", image: "H6.jpg"}
+  H7:  {libelle: "H7", image: "H7.jpg"}
+  J5:  {libelle: "J5", image: "J5.jpg"}
+  J8:  {libelle: "J8", image: "J8.jpg"}
+  J9:  {libelle: "J9", image: "J9.jpg"}
+  K3:  {libelle: "K3", image: "K3.jpg"}
+  K4:  {libelle: "K4", image: "K4.jpg"}
+  K6:  {libelle: "K6", image: "K6.jpg"}
+  L2:  {libelle: "L2", image: "L2.jpg"}
+  L4:  {libelle: "L4", image: "L4.jpg"}
+  L9:  {libelle: "L9", image: "L9.jpg"}
+  M1:  {libelle: "M1", image: "M1.jpg"}
+  M3:  {libelle: "M3", image: "M3.jpg"}
+  M6:  {libelle: "M6", image: "M6.jpg"}
+  M7:  {libelle: "M7", image: "M7.jpg"}
+  M8:  {libelle: "M8", image: "M8.jpg"}
+  N1:  {libelle: "N1", image: "N1.jpg"}
+  N7:  {libelle: "N7", image: "N7.jpg"}
+  N9:  {libelle: "N9", image: "N9.jpg"}
+  P5:  {libelle: "P5", image: "P5.jpg"}
+  P6:  {libelle: "P6", image: "P6.jpg"}
+  P7:  {libelle: "P7", image: "P7.jpg"}
+  P8:  {libelle: "P8", image: "P8.jpg"}
+  P9:  {libelle: "P9", image: "P9.jpg"}
+  Q1:  {libelle: "Q1", image: "Q1.jpg"}
+  Q4:  {libelle: "Q4", image: "Q4.jpg"}
+  Q5:  {libelle: "Q5", image: "Q5.jpg"}
+  R1:  {libelle: "R1", image: "R1.jpg"}
+  R4:  {libelle: "R4", image: "R4.jpg"}
+  R5:  {libelle: "R5", image: "R5.jpg"}
+  R8:  {libelle: "R8", image: "R8.jpg"}
+  S8:  {libelle: "S8", image: "S8.jpg"}
+  T1:  {libelle: "T1", image: "T1.jpg"}
+  T2:  {libelle: "T2", image: "T2.jpg"}
+  U2:  {libelle: "U2", image: "U2.jpg"}
+  V6:  {libelle: "V6", image: "V6.jpg"}
+  V8:  {libelle: "V8", image: "V8.jpg"}
+  V9:  {libelle: "V9", image: "V9.jpg"}
+  W3:  {libelle: "W3", image: "W3.jpg"}
+  W6:  {libelle: "W6", image: "W6.jpg"}
+  W9:  {libelle: "W9", image: "W9.jpg"}
+  X3:  {libelle: "X3", image: "X3.jpg"}
+  X6:  {libelle: "X6", image: "X6.jpg"}
+  Y7:  {libelle: "Y7", image: "Y7.jpg"}
+  Y9:  {libelle: "Y9", image: "Y9.jpg"}
+  Z8:  {libelle: "Z8", image: "Z8.jpg"}
+
+# -------------------------------------------------------------
+# TRIOS
+# -------------------------------------------------------------
+# 46 trios : 24 racines et 22 enfants.
+# -------------------------------------------------------------
+trios:
+
+  # ---- D1 ----
+  - {id: n01, parents: [R4, S8], enfant: A3}
+  - {id: n02, parents: [J5, M8], enfant: A6}
+  - {id: n03, parents: [D9, Y9], enfant: A8}
+  - {id: n04, parents: [A7, K4], enfant: B3}
+  - {id: n05, parents: [M8, E4], enfant: B9}
+  - {id: n06, parents: [B4, D9], enfant: E7}
+  - {id: n07, parents: [D9, E5], enfant: F1}
+  - {id: n08, parents: [P6, D8], enfant: F2}
+  - {id: n09, parents: [K4, B5], enfant: F7}
+  - {id: n10, parents: [Y7, W9], enfant: G1}
+  - {id: n11, parents: [D8, C9], enfant: G4}
+  - {id: n12, parents: [H7, S8], enfant: K3}
+  - {id: n13, parents: [M8, G5], enfant: K6}
+  - {id: n14, parents: [J9, W3], enfant: L2}
+  - {id: n15, parents: [Z8, B3], enfant: L9}
+  - {id: n16, parents: [R5, Q1], enfant: M7}
+  - {id: n17, parents: [J9, V6], enfant: N9}
+  - {id: n18, parents: [B4, D9], enfant: P8}
+  - {id: n19, parents: [X6, M3], enfant: R1}
+  - {id: n20, parents: [G3, J9], enfant: T1}
+  - {id: n21, parents: [D8, M7], enfant: V9}
+  - {id: n22, parents: [K4, B4], enfant: W3}
+  - {id: n23, parents: [M1, N7], enfant: W6}
+  - {id: n24, parents: [H4, G8], enfant: W9}
+
+  # ---- D2 ----
+  - {id: n25, depuis: n04, avec: M3, enfant: A4}   # B3 + M3 = A4
+  - {id: n26, depuis: n04, avec: M8, enfant: C2}   # B3 + M8 = C2
+  - {id: n27, depuis: n22, avec: V6, enfant: D1}   # W3 + V6 = D1
+  - {id: n28, depuis: n01, avec: P9, enfant: D7}   # A3 + P9 = D7
+  - {id: n29, depuis: n05, avec: M8, enfant: E4}   # B9 + M8 = E4
+  - {id: n30, depuis: n13, avec: Q1, enfant: H3}   # K6 + Q1 = H3
+  - {id: n31, depuis: n09, avec: Q1, enfant: H6}   # F7 + Q1 = H6
+  - {id: n32, depuis: n13, avec: W3, enfant: J8}   # K6 + W3 = J8
+  - {id: n33, depuis: n20, avec: K6, enfant: L4}   # T1 + K6 = L4
+  - {id: n34, depuis: n13, avec: H4, enfant: M6}   # K6 + H4 = M6
+  - {id: n35, depuis: n04, avec: C7, enfant: N1}   # B3 + C7 = N1
+  - {id: n36, depuis: n21, avec: B3, enfant: P5}   # V9 + B3 = P5
+  - {id: n37, depuis: n24, avec: V6, enfant: Q1}   # W9 + V6 = Q1
+  - {id: n38, depuis: n08, avec: M8, enfant: Q4}   # F2 + M8 = Q4
+  - {id: n39, depuis: n07, avec: M8, enfant: T2}   # F1 + M8 = T2
+  - {id: n40, depuis: n23, avec: M8, enfant: X3}   # W6 + M8 = X3
+
+  # ---- D3 ----
+  - {id: n41, depuis: n29, avec: W3, enfant: C6}   # E4 + W3 = C6
+  - {id: n42, depuis: n26, avec: D9, enfant: P7}   # C2 + D9 = P7
+  - {id: n43, depuis: n40, avec: P9, enfant: Q5}   # X3 + P9 = Q5
+  - {id: n44, depuis: n38, avec: B3, enfant: R8}   # Q4 + B3 = R8
+  - {id: n45, depuis: n33, avec: F2, enfant: U2}   # L4 + F2 = U2
+  - {id: n46, depuis: n29, avec: J9, enfant: V8}   # E4 + J9 = V8
