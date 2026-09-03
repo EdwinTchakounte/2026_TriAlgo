@@ -21,6 +21,20 @@
 *.keystore
 key.properties
 
+# ---- Documents de travail ---------------------------------------
+# Planches d'impression, scans, exports : ces fichiers pesent lourd,
+# changent souvent, et git en garde chaque version pour toujours.
+# Les sources de travail vivent ailleurs.
+#
+# ok_logo.jpeg est l'exception explicite ci-dessous : ce n'est pas un
+# document de travail mais une ENTREE DE BUILD. vitrine/outils/
+# detourer_logo.py en derive tout le dossier vitrine/assets/, et sans
+# lui un clone frais ne peut pas regenerer les visuels du site.
+*.pdf
+*.jpeg
+!ok_logo.jpeg
+!dictionnaire/*.jpeg
+
 # ---- Systeme ----------------------------------------------------
 .DS_Store
 Thumbs.db
