@@ -14,6 +14,10 @@ Internet ─ nginx (hôte, 443, TLS déjà en place)
              └─ dashboard.mixalgo.com   → /srv/dashboard   studio Flutter web
 ```
 
+Quelles ressources du serveur on réutilise (nginx, certbot) et lesquelles on apporte
+(PostgreSQL, MinIO) est arbitré dans [`RESSOURCES_MUTUALISEES.md`](RESSOURCES_MUTUALISEES.md), avec les vérifications
+à faire sur la machine avant de lancer quoi que ce soit.
+
 ---
 
 ## 0. Avant de commencer
