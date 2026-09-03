@@ -455,8 +455,19 @@ ssh mixalgo@169.58.139.73 'sudo rsync -a --delete /tmp/dashboard/ /srv/dashboard
 ```bash
 # Sur votre poste
 cd trialgo
-flutter build apk --release
+flutter build apk --release -t lib/main_wireframe.dart
 ls -lh build/app/outputs/flutter-apk/app-release.apk
+```
+
+⚠️ **Le `-t lib/main_wireframe.dart` n'est pas optionnel.** L'app joueur n'a **pas** de
+`lib/main.dart` : son unique point d'entrée porte un autre nom. Sans ce drapeau, la
+compilation s'arrête sur `Target file "lib/main.dart" not found` avant même d'avoir
+commencé. La même règle vaut pour `flutter run` et pour `flutter build appbundle`.
+
+Pour le Play Store, c'est un **AAB** qu'il faut, pas un APK :
+
+```bash
+flutter build appbundle --release -t lib/main_wireframe.dart
 ```
 
 ⚠️ **Sans `android/key.properties`, Gradle retombe sur la clé de debug** avec un
