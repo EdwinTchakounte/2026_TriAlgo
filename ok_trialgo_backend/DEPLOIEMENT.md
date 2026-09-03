@@ -14,6 +14,15 @@ Internet ─ nginx (hôte, 443, TLS déjà en place)
              └─ dashboard.mixalgo.com   → /srv/dashboard   studio Flutter web
 ```
 
+> **Pour un déploiement de bout en bout** (utilisateur système, Docker, pare-feu, DNS,
+> stack, nginx, TLS, contenu du jeu, vitrine, studio et APK), suivre
+> [`../DEPLOIEMENT_COMPLET.md`](../DEPLOIEMENT_COMPLET.md). Le présent document ne couvre
+> que le backend sur une machine dédiée.
+
+Quelles ressources du serveur on réutilise (nginx, certbot) et lesquelles on apporte
+(PostgreSQL, MinIO) est arbitré dans [`RESSOURCES_MUTUALISEES.md`](RESSOURCES_MUTUALISEES.md), avec les vérifications
+à faire sur la machine avant de lancer quoi que ce soit.
+
 ---
 
 ## 0. Avant de commencer

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le fond de l'icone adaptative. Aplat et non degrade : le
+     lanceur peut animer le fond independamment de l'avant-plan,
+     et un degrade se decalerait alors de son centre. -->
+<resources>
+    <color name="ic_launcher_background">#06041A</color>
+</resources>

@@ -42,6 +42,12 @@ class Card(Base):
     )
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     object_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Cle de la vignette (256 px), servie dans la grille de choix du
+    # jeu. NULLABLE a dessein : les cartes creees avant l'ajout des
+    # vignettes n'en ont pas, et il ne faut pas qu'elles cessent de
+    # s'afficher. Le client retombe alors sur `object_key`.
+    # scripts/generer_vignettes.py comble le retard.
+    thumb_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
     content_type: Mapped[str] = mapped_column(String(60), nullable=False, default="image/jpeg")
     card_type: Mapped[CardType] = mapped_column(String(20), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

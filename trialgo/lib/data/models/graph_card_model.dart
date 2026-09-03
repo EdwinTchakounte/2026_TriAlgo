@@ -64,6 +64,7 @@ class GraphCardModel extends GraphCardEntity {
     required super.id,
     required super.label,
     required super.imagePath,
+    super.thumbPath,
   });
 
   // =============================================================
@@ -123,6 +124,12 @@ class GraphCardModel extends GraphCardEntity {
       // Chemin relatif (Supabase) ou URL absolue (FastAPI).
       // C'est GraphCardEntity.imageUrl qui tranche a la lecture.
       imagePath: localisationImage ?? '',
+
+      // 'thumb_url' n'existe que cote FastAPI, et vaut null pour
+      // une carte creee avant la migration 0010. Supabase ne le
+      // renvoie jamais. Dans les deux cas GraphCardEntity.thumbUrl
+      // retombe proprement sur l'image pleine : rien a traiter ici.
+      thumbPath: json['thumb_url'] as String?,
     );
   }
 

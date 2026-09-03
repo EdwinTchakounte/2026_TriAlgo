@@ -189,6 +189,12 @@ flutter run --dart-define=API_BASE_URL=https://api.trialgo.io
 
 ## 6. Déploiement
 
+**`DEPLOIEMENT_COMPLET.md` (racine) est le guide de référence** : du serveur nu à l'APK
+téléchargeable, en passant par l'utilisateur système, Docker, le pare-feu, le DNS, les
+trois vhosts nginx, le TLS, le contenu du jeu et les trois façades. Les deux documents du
+backend restent utiles : `RESSOURCES_MUTUALISEES.md` argumente ce qu'on partage avec le
+serveur hôte, `DEPLOIEMENT.md` couvre la variante sur machine dédiée.
+
 ### Topologie retenue
 
 Domaine `mixalgo.com` :
@@ -235,8 +241,10 @@ curl -X POST https://api.mixalgo.com/api/auth/register \
 cd ok_trialgo_admin && flutter build web --release
 cp -r build/web/* ../ok_trialgo_backend/docker/dashboard/
 
-# 5. APK release (l'URL de prod est le défaut en release, --dart-define facultatif)
-cd trialgo && flutter build appbundle --release
+# 5. APK release. Le -t est OBLIGATOIRE : l'app joueur n'a pas de lib/main.dart,
+#    et sans lui la compilation echoue sur "Target file not found".
+#    L'URL de prod est le defaut en release, --dart-define facultatif.
+cd trialgo && flutter build appbundle --release -t lib/main_wireframe.dart
 cd ok_trialgo_admin && flutter build apk --release
 
 # 6. Sauvegardes : premiere execution manuelle, puis cron quotidien

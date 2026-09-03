@@ -10,6 +10,24 @@
 #   3. Re-encoder en JPEG quality 85, redimensionner si > 1024px.
 #      Resultat : taille uniforme, format predictable, EXIF retire
 #      (privacy : pas de coordonnees GPS qui fuient).
+#   4. Produire EN PLUS une vignette (IMAGE_THUMB_DIMENSION, 256px).
+#
+# POURQUOI UNE VIGNETTE
+# ---------------------
+# Une question de jeu affiche 8 cartes : 2 en grand, et 6 dans une
+# grille de choix ou chacune fait environ 150 px de cote. Servir du
+# 1024 px pour ces six-la, c'est envoyer 10 a 20 fois plus d'octets
+# que ce que l'ecran affiche.
+#
+# Avec des photos reelles (1024 px, q85), une carte pese 150 a
+# 300 Ko : une question coute donc 1,5 a 2,5 Mo, et le deck complet
+# de 76 cartes 11 a 23 Mo. En 4G, c'est ce qui separe une partie
+# fluide d'une partie qui bute sur des images grises.
+#
+# La vignette est produite ICI plutot que par un service d'images a
+# la volee : l'image est deja decompressee en memoire, la seconde
+# reduction ne coute presque rien, et cela evite toute dependance
+# supplementaire au moment de servir.
 # =============================================================
 
 import io
@@ -25,6 +43,10 @@ class ProcessedImage(NamedTuple):
     bytes: bytes
     content_type: str
     extension: str
+    # Vignette : meme format, meme extension, seulement plus petite.
+    # Toujours renseignee -- une carte sans vignette obligerait le
+    # client a retomber sur le plein format sans le savoir.
+    thumb_bytes: bytes
 
 
 def detect_mime(content: bytes) -> str:
@@ -70,10 +92,29 @@ def validate_and_process(raw: bytes, claimed_mime: str | None = None) -> Process
 
             out = io.BytesIO()
             im.save(out, format="JPEG", quality=settings.IMAGE_JPEG_QUALITY, optimize=True)
+
+            # Vignette : on repart de l'image deja normalisee (RGB,
+            # sans EXIF, deja bornee a IMAGE_MAX_DIMENSION). `copy()`
+            # est indispensable -- thumbnail() modifie sur place, et
+            # sans copie on ecraserait l'image plein format qui vient
+            # d'etre encodee... mais surtout celle que la ligne
+            # suivante lirait si l'ordre changeait un jour.
+            vignette = im.copy()
+            thumb_dim = settings.IMAGE_THUMB_DIMENSION
+            vignette.thumbnail((thumb_dim, thumb_dim), Image.Resampling.LANCZOS)
+            out_thumb = io.BytesIO()
+            vignette.save(
+                out_thumb,
+                format="JPEG",
+                quality=settings.IMAGE_THUMB_QUALITY,
+                optimize=True,
+            )
+
             return ProcessedImage(
                 bytes=out.getvalue(),
                 content_type="image/jpeg",
                 extension=".jpg",
+                thumb_bytes=out_thumb.getvalue(),
             )
     except Exception as e:
         raise ValueError(f"Image illisible : {e}") from e

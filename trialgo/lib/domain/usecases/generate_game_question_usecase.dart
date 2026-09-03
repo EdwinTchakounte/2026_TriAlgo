@@ -58,8 +58,38 @@ class GameQuestion {
   /// Les 6 choix proposes (1 bonne + 5 distracteurs), melanges.
   final List<GraphCardEntity> choices;
 
-  /// L'ID de la bonne reponse (pour la verification).
+  /// L'ID de la carte effectivement masquee (celle qui sera revelee).
+  ///
+  /// C'est la reponse que l'interface met en avant apres coup. Pour
+  /// savoir si le joueur a eu juste, utiliser [validAnswerIds] : a
+  /// partir de D2, plusieurs cartes different peuvent completer
+  /// correctement la paire visible.
   final String correctCardId;
+
+  // =============================================================
+  // CHAMP : validAnswerIds
+  // =============================================================
+  // TOUTES les cartes qui completent valablement la paire visible.
+  //
+  // Contient toujours [correctCardId], et parfois davantage : voir
+  // le long commentaire de LogicalNodesPool.completionsFor, qui
+  // explique pourquoi les configs B et C sont structurellement
+  // ambigues (jusqu'a 9 reponses justes a D5).
+  //
+  // Deux usages, complementaires :
+  //   1. GENERATION - ces cartes sont retirees du vivier de
+  //      distracteurs, pour qu'une seule reponse juste figure
+  //      parmi les 6 choix. C'est la correction principale : le
+  //      joueur ne peut plus tomber sur un piege insoluble.
+  //   2. VERIFICATION - si malgre tout l'une d'elles apparait
+  //      (catalogue trop petit pour fournir assez de distracteurs,
+  //      pool reconstruit entre-temps), la reponse est acceptee.
+  //      Filet de securite : mieux vaut valider a tort que
+  //      sanctionner un joueur qui a raison.
+  // =============================================================
+
+  /// Toutes les reponses justes possibles (contient [correctCardId]).
+  final Set<String> validAnswerIds;
 
   /// Le noeud logique source (utile pour le debug).
   final LogicalNodeEntity sourceLogicalNode;
@@ -79,6 +109,7 @@ class GameQuestion {
     required this.maskedCard,
     required this.choices,
     required this.correctCardId,
+    required this.validAnswerIds,
     required this.sourceLogicalNode,
     required this.config,
   });
@@ -264,13 +295,62 @@ class GenerateGameQuestionUseCase {
         maskedCard = logicalNode.cardC;
     }
 
+    // =============================================================
+    // REPONSES JUSTES : il peut y en avoir plusieurs
+    // =============================================================
+    // On demande au pool toutes les cartes qui completent valablement
+    // la paire visible. A D1 (config A) il n'y en a qu'une ; a partir
+    // de D2, masquer autre chose que la receptrice finale en donne
+    // systematiquement 2 a 9 (cf. LogicalNodesPool.completionsFor).
+    //
+    // L'union avec maskedCard.id est defensive : si le pool a ete
+    // reconstruit entre le tirage et ici, la carte masquee reste
+    // par construction une reponse juste.
+    // =============================================================
+    final reponsesJustes = <String>{
+      maskedCard.id,
+      ...pool.completionsFor(visibleCards[0].id, visibleCards[1].id),
+    };
+
     // Generer les distracteurs depuis le catalogue local.
-    // On exclut les 3 cartes du trio pour eviter les doublons.
-    final excludeIds = logicalNode.allCards.map((c) => c.id).toSet();
+    //
+    // On exclut les 3 cartes du trio (pour eviter les doublons) ET
+    // toutes les autres reponses justes : sans cette seconde
+    // exclusion, une carte correcte pouvait se retrouver parmi les
+    // distracteurs, et le joueur qui la choisissait etait compte
+    // faux tout en ayant raison.
     final distractors = _pickDistractors(
-      exclude: excludeIds,
+      exclude: <String>{
+        ...logicalNode.allCards.map((c) => c.id),
+        ...reponsesJustes,
+      },
       count: distractorCount,
     );
+
+    // =============================================================
+    // CATALOGUE TROP PETIT : completer sans jamais pieger
+    // =============================================================
+    // Exclure toutes les reponses justes retrecit le vivier. Sur un
+    // jeu bien fourni (plusieurs dizaines de cartes) l'effet est
+    // negligeable, mais sur un petit catalogue on pourrait ne plus
+    // avoir assez de distracteurs et afficher une grille de 2 ou
+    // 3 cartes -- ce qui rend la reponse evidente.
+    //
+    // On complete donc avec les reponses justes restantes plutot
+    // que de laisser la grille depeuplee. C'est sans danger : ces
+    // cartes sont dans validAnswerIds, donc le joueur qui en choisit
+    // une est compte JUSTE. On perd un peu de difficulte, jamais
+    // l'equite.
+    if (distractors.length < distractorCount) {
+      final complement = _pickDistractors(
+        exclude: <String>{
+          ...logicalNode.allCards.map((c) => c.id),
+          ...distractors.map((c) => c.id),
+        },
+        count: distractorCount - distractors.length,
+      );
+      distractors.addAll(complement);
+    }
 
     // Assembler les choix : 1 bonne + 5 distracteurs = 6 cartes.
     // Melanger pour que la bonne reponse ne soit pas toujours en 1ere.
@@ -292,6 +372,7 @@ class GenerateGameQuestionUseCase {
       maskedCard: maskedCard,
       choices: choices,
       correctCardId: maskedCard.id,
+      validAnswerIds: reponsesJustes,
       sourceLogicalNode: logicalNode,
       config: config,
     );

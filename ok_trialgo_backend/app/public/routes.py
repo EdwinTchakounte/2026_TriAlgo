@@ -15,7 +15,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,11 +43,13 @@ def _to_public_game(g: Game) -> PublicGameOut:
 async def _to_public_card(c: Card, storage: CardStorage) -> PublicCardOut:
     """Card publique : pas de card_type, juste l'image + label."""
     url = await storage.public_url(c.object_key)
+    vignette = await storage.public_url(c.thumb_key) if c.thumb_key else None
     return PublicCardOut(
         id=c.id,
         game_id=c.game_id,
         label=c.label,
         image_url=url,
+        thumb_url=vignette,
     )
 
 
@@ -110,13 +112,18 @@ async def get_public_game(
     description=(
         "Liste publique des cartes d'un jeu actif, triees par label. "
         "Le card_type N'EST PAS expose (info de gameplay sensible) : "
-        "seulement id, label et image_url. Erreur 404 si jeu "
-        "introuvable ou inactif."
+        "seulement id, label, image_url et thumb_url. Erreur 404 si "
+        "jeu introuvable ou inactif."
     ),
 )
 async def list_public_cards(
     game_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
+    # La vitrine n'affiche qu'une poignee d'extraits ; renvoyer les
+    # 76 cartes d'un jeu pour en montrer douze est du gaspillage a
+    # chaque visite. Le defaut couvre le plus gros jeu existant,
+    # donc aucun appelant actuel ne change de comportement.
+    limite: Annotated[int, Query(ge=1, le=500)] = 200,
 ) -> list[PublicCardOut]:
     g = await db.get(Game, game_id)
     if not g or not g.is_active:
@@ -125,6 +132,7 @@ async def list_public_cards(
         select(Card)
         .where(Card.game_id == game_id)
         .order_by(Card.label.asc())
+        .limit(limite)
     )
     storage = get_storage()
     return [await _to_public_card(c, storage) for c in rows]

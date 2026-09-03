@@ -30,4 +30,11 @@ class PublicCardOut(BaseModel):
     label: str
     # URL signee/publique selon backend storage.
     image_url: str | None = None
+    # Vignette 256 px, ou None pour une carte anterieure a la
+    # migration 0010. La vitrine affiche des cartes de 200 px de
+    # cote : lui envoyer du 1024 px multiplie par quarante le poids
+    # de la page pour un rendu identique. Le contrat est le meme que
+    # cote joueur : absent veut dire "utiliser image_url", jamais
+    # "erreur".
+    thumb_url: str | None = None
     # Volontairement absent : card_type, object_key, created_at.

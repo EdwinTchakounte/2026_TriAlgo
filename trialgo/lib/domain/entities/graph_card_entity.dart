@@ -87,11 +87,30 @@ class GraphCardEntity {
   // ou sans label n'a pas de sens.
   // =============================================================
 
+  // =============================================================
+  // PROPRIETE : thumbPath
+  // =============================================================
+  // Localisation de la vignette 256 px, ou null.
+  //
+  // POURQUOI NULLABLE
+  // -----------------
+  // Les vignettes ont ete introduites apres coup (migration 0010).
+  // Une carte creee avant, ou servie par le chemin Supabase, n'en a
+  // pas. Le contrat est donc : null signifie « utilise l'image
+  // pleine », jamais « erreur ». C'est ce que fait le getter
+  // [thumbUrl] ci-dessous, et c'est pour cela qu'il ne renvoie
+  // jamais null lui-meme -- l'appelant n'a aucun cas a traiter.
+  // =============================================================
+
+  /// Chemin ou URL de la vignette, ou null si la carte n'en a pas.
+  final String? thumbPath;
+
   /// Cree une carte du catalogue.
   const GraphCardEntity({
     required this.id,
     required this.label,
     required this.imagePath,
+    this.thumbPath,
   });
 
   // =============================================================
@@ -123,5 +142,38 @@ class GraphCardEntity {
     }
     // Cas 2 : chemin relatif dans Supabase Storage.
     return 'https://olovolsbopjporwpuphm.supabase.co/storage/v1/object/public/trialgo-cards/$imagePath';
+  }
+
+  // =============================================================
+  // GETTER : thumbUrl
+  // =============================================================
+  // URL a utiliser quand la carte s'affiche PETITE : la grille de
+  // six choix, ou chaque vignette occupe environ 150 px.
+  //
+  // COMBIEN CELA CHANGE
+  // -------------------
+  // Une photo de carte pese environ 220 Ko en 1024 px ; sa vignette
+  // 256 px, quelques kilo-octets. Une grille de six choix passe donc
+  // de l'ordre du megaoctet a quelques dizaines de kilo-octets, et
+  // le deck complet de 76 cartes de ~16 Mo a moins d'un mega.
+  //
+  // REPLI SILENCIEUX, ET VOULU
+  // --------------------------
+  // Sans vignette, on rend l'image pleine. Le joueur voit la bonne
+  // carte, simplement plus lourde. C'est le seul comportement
+  // acceptable : une carte ancienne ne doit pas cesser de
+  // s'afficher parce qu'un champ ajoute plus tard est vide.
+  // =============================================================
+
+  /// URL de la vignette, ou celle de l'image pleine a defaut.
+  ///
+  /// Ne renvoie jamais null : l'appelant peut l'utiliser directement.
+  String get thumbUrl {
+    final chemin = thumbPath;
+    if (chemin == null || chemin.isEmpty) return imageUrl;
+    if (chemin.startsWith('http://') || chemin.startsWith('https://')) {
+      return chemin;
+    }
+    return 'https://olovolsbopjporwpuphm.supabase.co/storage/v1/object/public/trialgo-cards/$chemin';
   }
 }

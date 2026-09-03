@@ -63,6 +63,16 @@ class Settings(BaseSettings):
     IMAGE_MAX_DIMENSION: int = 1024
     IMAGE_JPEG_QUALITY: int = 85
 
+    # ---- Vignettes ----
+    # Servies dans la grille de 6 choix du jeu, ou chaque carte
+    # occupe environ 150 px. 256 px couvre les ecrans a forte densite
+    # sans envoyer 10 fois trop d'octets.
+    #
+    # Qualite un cran en dessous du plein format : a cette taille la
+    # difference ne se voit pas, et le gain en poids est net.
+    IMAGE_THUMB_DIMENSION: int = 256
+    IMAGE_THUMB_QUALITY: int = 80
+
     # ---- Limitation de debit ----
     # Voir app/core/rate_limit.py. Desactivable pour les tests, jamais
     # en production : c'est la seule protection contre la force brute

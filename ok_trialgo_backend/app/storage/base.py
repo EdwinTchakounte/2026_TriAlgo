@@ -30,6 +30,19 @@ class CardStorage(Protocol):
         """Ecrit le fichier. Retourne un object_key opaque (chemin storage)."""
         ...
 
+    async def read(self, object_key: str) -> bytes:
+        """Relit le contenu d'un objet deja stocke.
+
+        Utilise par les traitements differes qui doivent repartir de
+        l'original sans le redemander a l'administrateur -- par
+        exemple scripts/generer_vignettes.py, qui derive les
+        vignettes des cartes anterieures a leur introduction.
+
+        Leve si l'objet n'existe pas : contrairement a delete, ou
+        l'absence est un succes, ici elle empeche le travail.
+        """
+        ...
+
     async def delete(self, object_key: str) -> None:
         """Supprime le fichier. No-op si l'objet n'existe plus."""
         ...

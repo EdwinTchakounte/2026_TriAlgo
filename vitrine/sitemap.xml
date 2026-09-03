@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  sitemap.xml  -  mixalgo.com
+
+  La vitrine tient en une seule page. Les ancres (#regle,
+  #distances, #faq) ne sont PAS listees ici : un plan de site
+  declare des URL, et une ancre ne designe pas un document
+  distinct. En lister plusieurs pointant vers la meme page est
+  lu par les moteurs comme du contenu duplique.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://mixalgo.com/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://mixalgo.com/assets/mixalgo-og.jpg</image:loc>
+      <image:title>MIXALGO, jeu de fusion visuelle</image:title>
+    </image:image>
+  </url>
+</urlset>

@@ -1,0 +1,15 @@
+# =============================================================
+# robots.txt  -  mixalgo.com
+# =============================================================
+# La vitrine est faite pour etre trouvee : tout est indexable.
+# Le dossier des telechargements est exclu non pas parce qu'il
+# serait sensible, mais parce qu'un APK dans un index de moteur
+# de recherche n'apporte rien et brouille les resultats : c'est
+# la PAGE qui doit ressortir, pas le fichier.
+# =============================================================
+
+User-agent: *
+Allow: /
+Disallow: /telechargements/
+
+Sitemap: https://mixalgo.com/sitemap.xml

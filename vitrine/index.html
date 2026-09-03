@@ -1,0 +1,1525 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>MIXALGO, le jeu de fusion visuelle</title>
+<meta name="description" content="MIXALGO est un jeu d'observation où deux cartes fusionnent pour en donner une troisième. Découvrez la règle, les distances D1 à D5, le mode collectif, et téléchargez l'application Android.">
+<meta name="author" content="MIXALGO">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://mixalgo.com/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MIXALGO">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:url" content="https://mixalgo.com/">
+<meta property="og:title" content="MIXALGO, le jeu de fusion visuelle">
+<meta property="og:description" content="Deux cartes fusionnent, une troisième apparaît. Un jeu d'observation où la difficulté ne vient pas de la vitesse, mais de la profondeur du lien.">
+<meta property="og:image" content="https://mixalgo.com/assets/mixalgo-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Le logo MIXALGO, cinq cartes de personnages disposées en éventail au centre d'un diamant lumineux.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MIXALGO, le jeu de fusion visuelle">
+<meta name="twitter:description" content="Deux cartes fusionnent, une troisième apparaît. Découvrez la règle, les distances D1 à D5 et le mode collectif.">
+<meta name="twitter:image" content="https://mixalgo.com/assets/mixalgo-og.jpg">
+
+<meta name="theme-color" content="#06041A">
+<link rel="icon" href="/assets/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="/assets/favicon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://api.mixalgo.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://mixalgo.com/#organisation",
+      "name": "MIXALGO",
+      "url": "https://mixalgo.com/",
+      "logo": "https://mixalgo.com/assets/favicon.png"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://mixalgo.com/#site",
+      "url": "https://mixalgo.com/",
+      "name": "MIXALGO",
+      "inLanguage": "fr-FR",
+      "publisher": { "@id": "https://mixalgo.com/#organisation" }
+    },
+    {
+      "@type": "VideoGame",
+      "@id": "https://mixalgo.com/#jeu",
+      "name": "MIXALGO",
+      "url": "https://mixalgo.com/",
+      "description": "Jeu d'observation visuelle fondé sur une relation de fusion entre trois cartes. Une carte émettrice et une carte câble produisent une carte réceptrice. Les trios se chaînent, ce qui crée cinq niveaux de difficulté notés D1 à D5.",
+      "image": "https://mixalgo.com/assets/mixalgo-og.jpg",
+      "inLanguage": "fr-FR",
+      "genre": ["Réflexion", "Observation", "Jeu de cartes"],
+      "gamePlatform": ["Android"],
+      "playMode": ["SinglePlayer", "CoOp"],
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Android",
+      "publisher": { "@id": "https://mixalgo.com/#organisation" },
+      "offers": {
+        "@type": "Offer",
+        "category": "Code d'activation",
+        "availability": "https://schema.org/InStock"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://mixalgo.com/#faq",
+      "mainEntity": [
+        {
+                "@type": "Question",
+                "name": "Comment commencer une partie de MIXALGO ?",
+                "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil."
+                }
+        },
+        {
+                "@type": "Question",
+                "name": "Faut-il posséder les cartes physiques pour jouer ?",
+                "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Non pour le mode solo, qui se joue entièrement dans l'application. Les cartes physiques servent au mode collectif, où un animateur annonce un numéro de trio et où les joueurs cherchent les trois cartes correspondantes sur la table."
+                }
+        },
+        {
+                "@type": "Question",
+                "name": "Que veulent dire les attributs inscrits sur une carte ?",
+                "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout."
+                }
+        },
+        {
+                "@type": "Question",
+                "name": "MIXALGO fonctionne-t-il sans connexion internet ?",
+                "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Oui. Le deck est téléchargé une seule fois au premier lancement, puis les questions sont fabriquées sur l'appareil. Une partie entière se joue sans réseau."
+                }
+        },
+        {
+                "@type": "Question",
+                "name": "Que signifient les distances D1 à D5 ?",
+                "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "La distance mesure l'éloignement entre les cartes d'un trio dans le graphe du jeu. En D1 les trois cartes forment une fusion directe. À partir de D2, elles sont prélevées le long d'une chaîne de fusions, ce qui rend le lien de moins en moins visible."
+                }
+        },
+        {
+                "@type": "Question",
+                "name": "Combien de trios peut-on former dans une partie ?",
+                "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": "Une chaîne de k fusions donne au plus C(2k,2) moins 1 trios valides, soit 1 en D1, 5 en D2, 14 en D3, 27 en D4 et 44 en D5. Un deck de 76 cartes dépasse ainsi plusieurs centaines de questions distinctes."
+                }
+        }
+]
+    }
+  ]
+}
+</script>
+
+<style>
+/* =============================================================
+   MIXALGO, vitrine
+   -------------------------------------------------------------
+   Parti pris : un monde unique et sombre, assume. Pas de theme
+   clair. Le logo est une lumiere neon sur du noir ; le poser sur
+   du blanc reviendrait a l'eteindre. Toutes les couleurs sont
+   donc peintes explicitement, jamais heritees du navigateur.
+
+   La palette n'est pas inventee : elle est echantillonnee dans le
+   logo lui meme. Le cyan #00D8F0 en est la teinte dominante apres
+   le blanc, l'ambre #F0A800 vient du mot "Mix", le bleu #001878
+   des profondeurs du diamant, et la braise #F01800 de la fleche
+   basse, qui est aussi la seule couleur chaude et saturee de tout
+   le logo. Elle est donc traitee ici comme telle : rarissime.
+   ============================================================= */
+
+:root{
+  /* --- Fonds, du plus profond au plus proche ---------------- */
+  --nuit:      #06041A;
+  --voile:     #0C0930;
+  --voile-clair:#141046;
+  --abysse:    #001878;
+
+  /* --- Accents ---------------------------------------------- */
+  --cyan:      #00D8F0;
+  --cyan-doux: #7FE9F7;
+  --ambre:     #F0A800;
+  --ambre-clair:#FFC93C;
+  --braise:    #F01800;
+
+  /* --- Texte. Aucun gris pur : tout est biaise vers l'accent - */
+  --craie:     #EAF4FA;
+  --brume:     #96A2CC;
+  --brume-sourde:#5E679A;
+
+  /* --- Traits et voiles ------------------------------------- */
+  --trait:      rgba(0, 216, 240, .16);
+  --trait-fort: rgba(0, 216, 240, .38);
+  --ombre-nette: 0 24px 60px rgba(0, 6, 40, .7);
+
+  /* --- Typographie ------------------------------------------ */
+  --titre: "Unbounded", "Trebuchet MS", sans-serif;
+  --texte: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* --- Rythme ----------------------------------------------- */
+  --colonne: min(100% - 2.5rem, 70rem);
+  --section: clamp(3.75rem, 7vw, 6rem);
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+
+html{ scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  background:var(--nuit);
+  color:var(--craie);
+  font-family:var(--texte);
+  font-size:1.0625rem;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+img{ max-width:100%; display:block; }
+
+a{ color:var(--cyan); text-decoration-thickness:1px; text-underline-offset:3px; }
+a:hover{ color:var(--cyan-doux); }
+
+:focus-visible{
+  outline:2px solid var(--cyan);
+  outline-offset:3px;
+  border-radius:4px;
+}
+
+.saut-lien{
+  position:absolute; left:-9999px;
+  background:var(--cyan); color:var(--nuit);
+  padding:.7rem 1.2rem; font-weight:600; z-index:99;
+}
+.saut-lien:focus{ left:1rem; top:1rem; }
+
+.enveloppe{ width:var(--colonne); margin-inline:auto; }
+
+/* -------------------------------------------------------------
+   Le motif recurrent : le diamant du logo, reduit a un carre
+   pivote. Il sert de puce de section et de repere visuel. Il
+   n'est pas decoratif au hasard : c'est la forme du logo.
+   ------------------------------------------------------------- */
+.losange{
+  width:.5rem; height:.5rem;
+  background:var(--cyan);
+  transform:rotate(45deg);
+  flex:none;
+  box-shadow:0 0 12px var(--cyan);
+}
+
+.surtitre{
+  display:flex; align-items:center; gap:.75rem;
+  font-family:var(--mono);
+  font-size:.75rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:var(--cyan);
+  margin:0 0 1.1rem;
+}
+
+h1,h2,h3{ font-family:var(--titre); text-wrap:balance; margin:0; }
+
+h1{
+  font-weight:900;
+  font-size:clamp(2.35rem, 5.8vw, 4.25rem);
+  line-height:1.02;
+  letter-spacing:-.02em;
+}
+h2{
+  font-weight:700;
+  font-size:clamp(1.85rem, 3.6vw, 2.85rem);
+  line-height:1.12;
+  letter-spacing:-.01em;
+}
+h3{
+  font-weight:700;
+  font-size:1.15rem;
+  line-height:1.35;
+}
+/* h2 a margin:0 comme tous les titres, mais il est TOUJOURS suivi
+   d'un contenu : sans cette respiration, le chapeau vient se coller
+   sous le titre et les deux se lisent comme un seul bloc. */
+h2{ margin-bottom:1.35rem; }
+
+p{ margin:0 0 1.1rem; }
+.prose{ max-width:62ch; color:var(--brume); }
+.prose strong{ color:var(--craie); font-weight:600; }
+
+/* Justification.
+   Elle n'est appliquee qu'au dela de 620 px. Sur une colonne
+   etroite, justifier un texte francais creuse des rivieres de blanc
+   entre les mots : le gain d'alignement coute plus qu'il ne rapporte.
+   hyphens:auto est indissociable de la justification ; il s'appuie
+   sur le lang="fr" declare sur <html> pour couper les mots aux bons
+   endroits, ce qui resorbe l'essentiel de ces blancs. */
+@media (min-width:620px){
+  .prose p, .legende li{
+    text-align:justify;
+    text-wrap:pretty;
+    hyphens:auto;
+    -webkit-hyphens:auto;
+  }
+}
+
+section{ padding-block:var(--section); position:relative; }
+
+/* =============================================================
+   ENTETE
+   ============================================================= */
+.entete{
+  position:sticky; top:0; z-index:40;
+  background:rgba(6,4,26,.72);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--trait);
+}
+.entete__interieur{
+  width:var(--colonne); margin-inline:auto;
+  display:flex; align-items:center; gap:1.5rem;
+  min-height:4.25rem;
+}
+.marque{
+  display:flex; align-items:center; gap:.6rem;
+  font-family:var(--titre); font-weight:900;
+  font-size:1.05rem; letter-spacing:.04em;
+  color:var(--craie); text-decoration:none;
+}
+.marque b{ color:var(--ambre); font-weight:inherit; }
+.navigation{
+  margin-left:auto;
+  display:flex; align-items:center; gap:1.75rem;
+}
+/* :not(.bouton) est indispensable. Sans lui, ce selecteur (une
+   classe + un element) l'emporte en specificite sur .bouton--plein
+   (une seule classe) et repeint le texte du bouton en clair sur
+   fond ambre. Le bouton reste visible, mais son libelle devient
+   illisible : exactement le genre de collision qui ne se voit pas
+   en lisant le CSS. */
+.navigation a:not(.bouton){
+  color:var(--brume); text-decoration:none;
+  font-size:.9rem; font-weight:500;
+}
+.navigation a:not(.bouton):hover{ color:var(--craie); }
+@media (max-width:860px){
+  .navigation .repliable{ display:none; }
+}
+
+/* =============================================================
+   BOUTONS
+   ============================================================= */
+.bouton{
+  display:inline-flex; align-items:center; gap:.6rem;
+  padding:.85rem 1.5rem;
+  border-radius:2px;
+  font-family:var(--texte);
+  font-size:.95rem; font-weight:600;
+  text-decoration:none;
+  border:1px solid transparent;
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.bouton--plein{
+  background:linear-gradient(100deg, var(--ambre) 0%, var(--ambre-clair) 100%);
+  color:#1A0F00;
+  box-shadow:0 0 0 1px rgba(255,201,60,.35), 0 14px 34px rgba(240,168,0,.24);
+}
+.bouton--plein:hover{
+  transform:translateY(-2px);
+  box-shadow:0 0 0 1px rgba(255,201,60,.5), 0 18px 44px rgba(240,168,0,.34);
+  color:#1A0F00;
+}
+.bouton--trait{
+  background:transparent;
+  color:var(--craie);
+  border-color:var(--trait-fort);
+}
+.bouton--trait:hover{
+  transform:translateY(-2px);
+  border-color:var(--cyan);
+  background:rgba(0,216,240,.06);
+  color:var(--craie);
+}
+.bouton--menu{ padding:.55rem 1.05rem; font-size:.85rem; }
+
+/* =============================================================
+   HERO
+   -------------------------------------------------------------
+   Volontairement dimensionne par son CONTENU, pas par la fenetre.
+   Un hero en 100vh pousse hors du premier ecran ce que la page a
+   reellement a dire.
+   ============================================================= */
+.hero{ padding-block:clamp(1.5rem, 3.5vw, 2.75rem) var(--section); }
+
+#ciel{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  display:block;
+  z-index:0;
+  pointer-events:none;
+}
+.hero__voile{
+  position:absolute; inset:0; z-index:1;
+  background:
+    radial-gradient(70% 55% at 50% 34%, rgba(0,24,120,.42) 0%, transparent 70%),
+    linear-gradient(to bottom, transparent 62%, var(--nuit) 100%);
+  pointer-events:none;
+}
+.hero__contenu{ position:relative; z-index:2; text-align:center; }
+
+/* <picture> est un element INLINE : il s'assoit sur une ligne de
+   texte et traine derriere lui l'espace reserve aux jambages, une
+   trentaine de pixels de vide sous le logo que rien dans le CSS du
+   logo lui meme ne peut retirer. */
+.hero picture{ display:block; }
+
+.hero__logo{
+  /* 26rem et non 40rem : a 40rem le logo occupait tout le premier
+     ecran et repoussait le titre sous la ligne de flottaison. Le
+     logo annonce la marque, le titre annonce le jeu ; les deux
+     doivent tenir ensemble dans le premier regard. */
+  width:min(100%, 26rem);
+  margin:0 auto clamp(1.75rem, 3vw, 2.75rem);
+  filter:drop-shadow(0 18px 50px rgba(0,120,200,.35));
+}
+.hero h1{ margin-bottom:1.25rem; }
+.hero h1 em{
+  font-style:normal;
+  background:linear-gradient(96deg, var(--ambre) 8%, var(--cyan) 92%);
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent;
+}
+.hero__accroche{
+  max-width:46ch; margin:0 auto 2.25rem;
+  font-size:clamp(1.05rem, 1.7vw, 1.25rem);
+  color:var(--brume);
+}
+.hero__actions{
+  display:flex; flex-wrap:wrap; gap:.9rem;
+  justify-content:center;
+}
+.hero__note{
+  margin:1.5rem 0 0;
+  font-family:var(--mono); font-size:.78rem;
+  letter-spacing:.08em; color:var(--brume-sourde);
+}
+
+/* --- La bande de chiffres, sous le hero --------------------- */
+.chiffres{
+  position:relative; z-index:2;
+  margin-top:clamp(3rem, 6vw, 5rem);
+  display:grid; gap:1px;
+  grid-template-columns:repeat(auto-fit, minmax(11rem, 1fr));
+  background:var(--trait);
+  border:1px solid var(--trait);
+}
+.chiffre{ background:var(--nuit); padding:1.6rem 1.4rem; }
+.chiffre dt{
+  font-family:var(--mono); font-size:.7rem;
+  letter-spacing:.2em; text-transform:uppercase;
+  color:var(--brume-sourde); margin-bottom:.5rem;
+}
+.chiffre dd{
+  margin:0;
+  font-family:var(--titre); font-weight:700;
+  font-size:1.85rem; line-height:1;
+  font-variant-numeric:tabular-nums;
+  color:var(--craie);
+}
+.chiffre dd small{
+  display:block; margin-top:.45rem;
+  font-family:var(--texte); font-weight:400;
+  font-size:.82rem; letter-spacing:0; color:var(--brume);
+}
+
+/* =============================================================
+   LA REGLE, avec la demonstration de fusion en 3D
+   ============================================================= */
+.regle{ background:linear-gradient(to bottom, var(--nuit), var(--voile) 45%, var(--nuit)); }
+
+/* --largeur-carte est declaree ICI et pas en dur dans .carte :
+   les operateurs doivent s'aligner sur le MILIEU DU VISUEL, pas sur
+   le milieu de la figure entiere. Depuis que les cartes portent un
+   nom et des attributs sous elles, ces deux points ne coincident
+   plus, et un simple align-items:center posait le + et le = trop
+   bas. La formule les remonte exactement a la moitie de la hauteur
+   de l'image (rapport 540/380), moins la demi-hauteur du signe. */
+.fusion{
+  --largeur-carte:clamp(5rem, 14vw, 10.5rem);
+  margin-top:clamp(2.5rem, 5vw, 4rem);
+  display:flex; align-items:flex-start; justify-content:center;
+  gap:clamp(.4rem, 1.8vw, 1.5rem);
+  perspective:1400px;
+  flex-wrap:nowrap;
+}
+.fusion .carte{ width:var(--largeur-carte); }
+.operateur{
+  font-family:var(--titre); font-weight:700;
+  font-size:clamp(1.1rem, 3vw, 2.1rem);
+  color:var(--cyan);
+  flex:none;
+  line-height:1;
+  margin-top:calc(var(--largeur-carte) * 540 / 380 / 2 - .5em);
+  text-shadow:0 0 22px rgba(0,216,240,.6);
+}
+
+/* --- La carte, objet repete de toute la page ---------------- */
+.carte{
+  margin:0; flex:none;
+  width:clamp(5.5rem, 15vw, 11rem);
+  transform-style:preserve-3d;
+  transition:transform .7s cubic-bezier(.22,.9,.28,1);
+}
+.carte__face{
+  position:relative;
+  /* Le rapport exact des visuels extraits de la planche
+     d'impression (380 x 540). Un 3/4 approximatif rognerait le
+     cadre bleu que chaque carte porte deja. */
+  aspect-ratio:380/540;
+  border-radius:10px;
+  overflow:hidden;
+  border:1px solid var(--trait-fort);
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--voile-clair) 0%, var(--voile) 55%, var(--nuit) 100%);
+  box-shadow:var(--ombre-nette);
+  transition:box-shadow .35s ease, transform .35s cubic-bezier(.22,.9,.28,1);
+}
+.carte__face img{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover;
+}
+
+/* Une carte reelle porte deja son propre cadre bleu, son nom, son
+   code et ses attributs, peints dans l'image. Lui superposer une
+   bordure et une etiquette reviendrait a encadrer un cadre. Des
+   qu'un visuel est present, l'habillage de secours s'efface. */
+.carte__face.est-chargee{
+  border-color:transparent;
+  background:none;
+}
+.carte__face.est-chargee::after,
+.carte__face.est-chargee .carte__code{ display:none; }
+/* Filigrane en losange, visible tant que l'image n'est pas la. */
+.carte__face::after{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  width:44%; aspect-ratio:1;
+  transform:translate(-50%,-50%) rotate(45deg);
+  border:1px solid var(--trait-fort);
+  box-shadow:0 0 30px rgba(0,216,240,.25) inset;
+}
+.carte__face.est-chargee::after{ display:none; }
+
+.carte__code{
+  position:absolute; left:0; right:0; bottom:0; z-index:2;
+  padding:.5rem .6rem;
+  font-family:var(--mono); font-size:.78rem;
+  letter-spacing:.14em; text-align:center;
+  color:var(--craie);
+  background:linear-gradient(to top, rgba(6,4,26,.92), transparent);
+}
+.carte__role{
+  display:block;
+  margin:.7rem 0 0;
+  font-family:var(--mono); font-size:.66rem;
+  letter-spacing:.18em; text-transform:uppercase;
+  text-align:center; color:var(--brume-sourde);
+}
+.carte__nom{
+  display:block;
+  margin-top:.25rem;
+  font-family:var(--titre); font-weight:700;
+  font-size:.92rem; letter-spacing:.02em;
+  text-align:center; color:var(--craie);
+}
+.carte[data-role="receptrice"] .carte__role{ color:var(--ambre); }
+
+/* Les attributs, repris de la carte physique ou ils sont listes
+   sous le portrait. Ils ne sont pas decoratifs : c'est le
+   vocabulaire du jeu. */
+.attributs{
+  display:flex; flex-wrap:wrap; gap:.25rem;
+  justify-content:center;
+  margin:.55rem 0 0; padding:0; list-style:none;
+}
+.attribut{
+  font-family:var(--mono); font-size:.58rem;
+  letter-spacing:.1em; text-transform:uppercase;
+  padding:.18rem .4rem;
+  border:1px solid var(--trait);
+  color:var(--brume-sourde);
+  white-space:nowrap;
+}
+/* L'attribut que la fusion fait passer d'un parent a l'enfant.
+   C'est la seule chose de toute la page qui merite l'ambre a cet
+   endroit : elle designe le fil que le joueur doit voir. */
+.attribut.est-partage{
+  border-color:rgba(240,168,0,.55);
+  color:var(--ambre);
+  background:rgba(240,168,0,.07);
+}
+
+/* L'instant de fusion : les deux parents se penchent l'un vers
+   l'autre, l'enfant pivote pour apparaitre. */
+.fusion.est-active .carte[data-role="emettrice"]{ transform:rotateY(16deg) translateZ(30px); }
+.fusion.est-active .carte[data-role="cable"]{     transform:rotateY(-16deg) translateZ(30px); }
+.fusion.est-active .carte[data-role="receptrice"]{ transform:rotateY(360deg) scale(1.06); }
+
+/* La ligne de lecture. Elle est la vraie valeur pedagogique de la
+   demonstration : elle dit CE QU'IL FAUT REGARDER, ce qu'une suite
+   de trois images ne dit pas d'elle meme. */
+.fusion__lecture{
+  max-width:52ch;
+  margin:2rem auto 0;
+  text-align:center;
+  font-size:1.02rem;
+  color:var(--brume);
+}
+.fusion__lecture strong{
+  color:var(--ambre); font-weight:600;
+}
+
+.fusion__pilote{
+  margin-top:2.25rem;
+  display:flex; flex-wrap:wrap; align-items:center;
+  justify-content:center; gap:1rem;
+}
+.fusion__legende{
+  font-family:var(--mono); font-size:.78rem;
+  color:var(--brume-sourde); letter-spacing:.06em;
+}
+
+/* =============================================================
+   LES DISTANCES
+   ============================================================= */
+.distances{ display:grid; gap:1px; background:var(--trait); border:1px solid var(--trait); margin-top:3rem; }
+.distance{
+  background:var(--nuit);
+  display:grid;
+  grid-template-columns:4.5rem minmax(0,1fr) 5.5rem;
+  align-items:center; gap:clamp(.75rem,2vw,1.75rem);
+  padding:1.15rem 1.35rem;
+}
+.distance__cle{
+  font-family:var(--titre); font-weight:700; font-size:1.15rem;
+  color:var(--cyan);
+}
+.distance__nom{ font-size:.95rem; color:var(--brume); }
+.distance__nom b{ color:var(--craie); font-weight:600; }
+/* display:block est structurel, pas cosmetique : sur un span
+   inline, height et margin-top n'ont aucun effet et la jauge
+   n'apparait tout simplement pas. */
+.distance__jauge{
+  display:block;
+  height:5px; margin-top:.55rem;
+  background:var(--voile-clair);
+  overflow:hidden;
+}
+.distance__jauge i{
+  display:block; height:100%;
+  background:linear-gradient(90deg, var(--abysse), var(--cyan));
+  box-shadow:0 0 14px rgba(0,216,240,.5);
+}
+.distance__valeur{
+  font-family:var(--titre); font-weight:700;
+  font-size:1.5rem; text-align:right;
+  font-variant-numeric:tabular-nums;
+  color:var(--craie);
+}
+.distance__valeur small{
+  display:block;
+  font-family:var(--mono); font-weight:400;
+  font-size:.62rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--brume-sourde);
+}
+.formule{
+  margin-top:1.75rem;
+  font-family:var(--mono); font-size:.86rem;
+  color:var(--brume);
+}
+.formule code{
+  color:var(--cyan);
+  background:rgba(0,216,240,.08);
+  padding:.15rem .45rem;
+}
+
+/* =============================================================
+   LE DECK
+   ============================================================= */
+.deck{ background:linear-gradient(to bottom, var(--nuit), var(--voile) 50%, var(--nuit)); }
+/* Colonnes FIXES, pas auto-fill. Les douze cartes se repartissent
+   en 6, 4 ou 3 par rangee : trois nombres qui divisent douze, donc
+   une derniere rangee toujours pleine. Avec auto-fill, la largeur
+   disponible decidait seule et donnait 7 puis 5, avec un trou de
+   deux emplacements au milieu de la grille. */
+.grille-deck{
+  margin-top:3rem;
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:clamp(.75rem, 1.6vw, 1.15rem);
+}
+@media (min-width:560px){ .grille-deck{ grid-template-columns:repeat(4, 1fr); } }
+@media (min-width:900px){ .grille-deck{ grid-template-columns:repeat(6, 1fr); } }
+.grille-deck .carte{ width:100%; perspective:800px; }
+.grille-deck .carte:hover .carte__face,
+.grille-deck .carte:focus-within .carte__face{
+  transform:translateY(-8px) rotateX(7deg) rotateY(-7deg);
+  box-shadow:0 26px 60px rgba(0,6,40,.8), 0 0 0 1px var(--trait-fort),
+             0 0 34px rgba(0,216,240,.28);
+}
+.deck__etat{
+  margin-top:1.5rem;
+  font-family:var(--mono); font-size:.78rem;
+  color:var(--brume-sourde); letter-spacing:.06em;
+}
+
+/* =============================================================
+   ANATOMIE D'UNE CARTE
+   ============================================================= */
+.anatomie{ background:linear-gradient(to bottom, var(--nuit), var(--voile) 50%, var(--nuit)); }
+.anatomie__carte{
+  display:flex; justify-content:center;
+  perspective:1200px;
+}
+.anatomie__carte img{
+  /* Bornee en hauteur autant qu'en largeur : sur un ecran large la
+     colonne de texte fait environ 30rem de haut, et une carte plus
+     grande qu'elle desequilibrerait les deux moities. */
+  width:min(100%, 19rem);
+  max-height:30rem; object-fit:contain;
+  border-radius:12px;
+  transform:rotateY(-9deg) rotateX(3deg);
+  box-shadow:0 34px 80px rgba(0,6,40,.85), 0 0 46px rgba(0,216,240,.16);
+}
+/* Une liste numerotee parce que c'est un PARCOURS DE LECTURE : on
+   regarde le portrait, puis le nom, puis le code, puis les
+   attributs. L'ordre porte une information, il ne decore pas. */
+.legende{
+  margin:2rem 0 0; padding:0;
+  list-style:none; counter-reset:repere;
+  display:grid; gap:1.15rem;
+}
+.legende li{
+  position:relative;
+  display:grid;
+  grid-template-columns:2rem 1fr;
+  gap:.9rem;
+  color:var(--brume); font-size:.95rem;
+}
+/* Le repere est fait de DEUX pseudo-elements, et pas d'un seul.
+   Un losange obtenu en faisant pivoter la boite qui contient le
+   chiffre fait pivoter le chiffre avec elle : le 2 se couche, le 3
+   devient illisible. Le cadre tourne donc seul, en ::after posee
+   derriere, pendant que le chiffre reste droit dans ::before. */
+.legende li::before{
+  counter-increment:repere;
+  content:counter(repere);
+  position:relative; z-index:1;
+  display:grid; place-items:center;
+  width:2rem; height:2rem;
+  font-family:var(--mono); font-size:.75rem;
+  color:var(--cyan);
+}
+.legende li::after{
+  content:"";
+  position:absolute; left:0; top:0;
+  width:2rem; height:2rem;
+  border:1px solid var(--trait-fort);
+  transform:rotate(45deg);
+}
+.legende b{ color:var(--craie); font-weight:600; }
+.legende code{
+  font-family:var(--mono); font-size:.85em;
+  color:var(--ambre);
+}
+
+/* =============================================================
+   MODE COLLECTIF, en deux colonnes
+   ============================================================= */
+.duo{
+  display:grid; gap:clamp(2rem, 5vw, 4rem);
+  grid-template-columns:1fr;
+  align-items:center;
+}
+@media (min-width:900px){
+  .duo{ grid-template-columns:1fr 1fr; }
+  .duo--inverse > *:first-child{ order:2; }
+}
+.table-cartes{
+  position:relative;
+  display:flex; justify-content:center;
+  gap:.75rem;
+  perspective:1200px;
+  padding:clamp(1.5rem,4vw,3rem) 0;
+}
+.table-cartes .carte{ width:clamp(5rem, 12vw, 8rem); }
+.table-cartes .carte:nth-child(1){ transform:rotate(-7deg) translateY(6px); }
+.table-cartes .carte:nth-child(3){ transform:rotate(7deg) translateY(6px); }
+.table-cartes::before{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  width:min(100%, 26rem); aspect-ratio:1;
+  transform:translate(-50%,-50%) rotate(45deg);
+  border:1px solid var(--trait);
+  z-index:-1;
+}
+
+/* --- Les etapes, une vraie sequence ------------------------- */
+.etapes{
+  margin-top:3rem;
+  display:grid; gap:1.5rem;
+  grid-template-columns:repeat(auto-fit, minmax(15rem, 1fr));
+  counter-reset:etape;
+}
+.etape{
+  border-top:1px solid var(--trait-fort);
+  padding-top:1.25rem;
+}
+.etape::before{
+  counter-increment:etape;
+  content:counter(etape, decimal-leading-zero);
+  display:block; margin-bottom:.75rem;
+  font-family:var(--mono); font-size:.78rem;
+  letter-spacing:.18em; color:var(--cyan);
+}
+.etape p{ margin:.5rem 0 0; color:var(--brume); font-size:.95rem; }
+
+/* =============================================================
+   TELECHARGEMENT
+   ============================================================= */
+.telecharger{
+  border:1px solid var(--trait-fort);
+  background:
+    radial-gradient(90% 130% at 50% 0%, rgba(0,24,120,.5) 0%, transparent 68%),
+    var(--voile);
+  padding:clamp(2.5rem, 6vw, 4.5rem) clamp(1.5rem, 4vw, 3.5rem);
+  text-align:center;
+}
+.telecharger h2{ margin-bottom:1rem; }
+.telecharger .prose{ margin-inline:auto; }
+.telecharger__actions{
+  display:flex; flex-wrap:wrap; gap:.9rem; justify-content:center;
+  margin-top:2rem;
+}
+.telecharger__mentions{
+  margin:1.75rem 0 0;
+  font-family:var(--mono); font-size:.74rem;
+  letter-spacing:.06em; color:var(--brume-sourde);
+}
+
+/* --- Le pont vers le telephone -----------------------------
+   Affiche par defaut, et retire par le script sur Android, ou il
+   n'a plus lieu d'etre : l'appareil sous les yeux est deja le bon.
+   Dans ce sens, un visiteur sans JavaScript voit le QR de trop,
+   jamais l'inverse. */
+.pont{
+  margin-top:2.5rem;
+  padding-top:2.25rem;
+  border-top:1px solid var(--trait);
+  display:flex; flex-wrap:wrap;
+  align-items:center; justify-content:center;
+  gap:1.75rem;
+  text-align:left;
+}
+.pont__code{
+  flex:none;
+  background:#fff;
+  padding:.6rem;
+  border-radius:8px;
+  line-height:0;
+  box-shadow:0 12px 34px rgba(0,6,40,.55);
+}
+.pont__code img{ width:7.5rem; height:7.5rem; }
+.pont__texte{ max-width:30ch; }
+.pont__texte b{
+  display:block;
+  font-family:var(--titre); font-weight:700;
+  font-size:1rem; color:var(--craie);
+  margin-bottom:.4rem;
+}
+.pont__texte span{ font-size:.88rem; color:var(--brume); }
+
+/* =============================================================
+   FAQ
+   ============================================================= */
+.faq{ margin-top:3rem; max-width:52rem; }
+.question{
+  border-bottom:1px solid var(--trait);
+}
+.question summary{
+  cursor:pointer; list-style:none;
+  padding:1.3rem 0;
+  display:flex; align-items:center; gap:1rem;
+  font-family:var(--titre); font-weight:700;
+  font-size:1.02rem; line-height:1.4;
+  color:var(--craie);
+}
+.question summary::-webkit-details-marker{ display:none; }
+.question summary::after{
+  content:"+";
+  margin-left:auto; flex:none;
+  font-family:var(--mono); font-size:1.3rem;
+  color:var(--cyan); transition:transform .25s ease;
+}
+.question[open] summary::after{ transform:rotate(45deg); }
+.question p{
+  margin:0 0 1.4rem;
+  padding-left:1.5rem;
+  color:var(--brume); max-width:58ch;
+}
+
+/* =============================================================
+   PIED
+   ============================================================= */
+.pied{
+  border-top:1px solid var(--trait);
+  padding-block:3rem 2.5rem;
+  color:var(--brume-sourde);
+  font-size:.88rem;
+}
+.pied__interieur{
+  width:var(--colonne); margin-inline:auto;
+  display:flex; flex-wrap:wrap; gap:1.5rem 2.5rem;
+  align-items:baseline;
+}
+.pied nav{ display:flex; flex-wrap:wrap; gap:1.5rem; margin-left:auto; }
+.pied a{ color:var(--brume); text-decoration:none; }
+.pied a:hover{ color:var(--craie); }
+
+/* =============================================================
+   ACCESSIBILITE : le mouvement est une option, pas un du
+   ============================================================= */
+@media (prefers-reduced-motion:reduce){
+  html{ scroll-behavior:auto; }
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    transition-duration:.001ms !important;
+  }
+}
+</style>
+</head>
+
+<body>
+<a class="saut-lien" href="#contenu">Aller au contenu</a>
+
+<header class="entete">
+  <div class="entete__interieur">
+    <a class="marque" href="/">
+      <span class="losange" aria-hidden="true"></span>
+      <!-- Sur une seule ligne : un saut de ligne entre MIX et le
+           span serait rendu comme une espace, et le mot de la
+           marque apparaitrait coupe en deux. -->
+      <span>MIX<b>ALGO</b></span>
+    </a>
+    <nav class="navigation" aria-label="Navigation principale">
+      <a class="repliable" href="#regle">La règle</a>
+      <a class="repliable" href="#anatomie">La carte</a>
+      <a class="repliable" href="#distances">Les distances</a>
+      <a class="repliable" href="#deck">Le deck</a>
+      <a class="bouton bouton--plein bouton--menu" href="#telecharger">Télécharger</a>
+    </nav>
+  </div>
+</header>
+
+<main id="contenu">
+
+  <!-- ========================= HERO ========================= -->
+  <section class="hero">
+    <canvas id="ciel" aria-hidden="true"></canvas>
+    <div class="hero__voile" aria-hidden="true"></div>
+
+    <div class="enveloppe hero__contenu">
+      <img class="hero__logo"
+           src="/assets/mixalgo-logo.png"
+           srcset="/assets/mixalgo-logo-512.webp 512w, /assets/mixalgo-logo-900.webp 900w"
+           sizes="(max-width: 640px) 86vw, 26rem"
+           width="900" height="624"
+           alt="Logo MIXALGO : cinq cartes de personnages en éventail au centre d'un diamant lumineux."
+           fetchpriority="high">
+
+      <h1>Deux cartes fusionnent.<br><em>Une troisième apparaît.</em></h1>
+
+      <p class="hero__accroche">
+        MIXALGO est un jeu d'observation pure. Aucune règle à mémoriser,
+        aucun texte à déchiffrer. Vous regardez, et vous voyez le lien.
+        Ou vous ne le voyez pas encore.
+      </p>
+
+      <div class="hero__actions">
+        <a class="bouton bouton--plein" href="#telecharger">
+          Télécharger pour Android
+        </a>
+        <a class="bouton bouton--trait" href="#regle">
+          Voir la règle en dix secondes
+        </a>
+      </div>
+
+      <p class="hero__note">Application Android &middot; Deck activé par code &middot; Jouable hors connexion</p>
+
+      <dl class="chiffres">
+        <div class="chiffre">
+          <dt>Cartes du deck Savane</dt>
+          <dd>76<small>Toutes neutres, aucune n'a de rôle fixe</small></dd>
+        </div>
+        <div class="chiffre">
+          <dt>Fusions de référence</dt>
+          <dd>46<small>Les trios validés du jeu, vérifiés un à un</small></dd>
+        </div>
+        <div class="chiffre">
+          <dt>Niveaux de profondeur</dt>
+          <dd>D1 à D5<small>Du lien évident au lien presque invisible</small></dd>
+        </div>
+        <div class="chiffre">
+          <dt>Questions possibles</dt>
+          <dd>480<small>Sur les trois premières distances seulement</small></dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ========================= LA REGLE ========================= -->
+  <section class="regle" id="regle">
+    <div class="enveloppe">
+      <p class="surtitre"><span class="losange" aria-hidden="true"></span> La relation atomique</p>
+      <h2>Émettrice, câble, réceptrice</h2>
+      <div class="prose">
+        <p>
+          Une carte donne la forme. Une autre lui applique une transformation.
+          Le résultat est une troisième carte, déjà présente dans le deck.
+          C'est toute la grammaire du jeu, et elle ne change jamais.
+        </p>
+        <p>
+          <strong>Aucune carte n'a de rôle fixe.</strong> La réceptrice d'une fusion
+          devient l'émettrice de la suivante. C'est ce chaînage qui fait naître
+          la difficulté, sans jamais ajouter une seule règle.
+        </p>
+      </div>
+
+      <div class="fusion" id="fusion">
+        <figure class="carte" data-code="B3" data-role="emettrice">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/B3.webp" width="380" height="540"
+                 loading="eager" decoding="async" alt="Carte KEZEU, code B3. Attributs : humain augmenté, maille, biotech.">
+            <span class="carte__code">B3</span>
+          </div>
+          <figcaption>
+          <span class="carte__role">Émettrice</span>
+            <span class="carte__nom">KEZEU</span>
+            <ul class="attributs">
+            <li class="attribut">Humain augmenté</li>
+            <li class="attribut est-partage">Maille</li>
+            <li class="attribut">Biotech</li>
+            </ul>
+          </figcaption>
+        </figure>
+        <span class="operateur" aria-hidden="true">+</span>
+        <figure class="carte" data-code="M3" data-role="cable">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/M3.webp" width="380" height="540"
+                 loading="eager" decoding="async" alt="Carte BABADJI, code M3. Attributs : électrique, maille.">
+            <span class="carte__code">M3</span>
+          </div>
+          <figcaption>
+          <span class="carte__role">Câble</span>
+            <span class="carte__nom">BABADJI</span>
+            <ul class="attributs">
+            <li class="attribut">Électrique</li>
+            <li class="attribut est-partage">Maille</li>
+            </ul>
+          </figcaption>
+        </figure>
+        <span class="operateur" aria-hidden="true">=</span>
+        <figure class="carte" data-code="A4" data-role="receptrice">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/A4.webp" width="380" height="540"
+                 loading="eager" decoding="async" alt="Carte BEMA, code A4. Attributs : duo, maille, afro.">
+            <span class="carte__code">A4</span>
+          </div>
+          <figcaption>
+          <span class="carte__role">Réceptrice</span>
+            <span class="carte__nom">BEMA</span>
+            <ul class="attributs">
+            <li class="attribut">Duo</li>
+            <li class="attribut est-partage">Maille</li>
+            <li class="attribut">Afro</li>
+            </ul>
+          </figcaption>
+        </figure>
+      </div>
+
+      <p class="fusion__lecture" id="fusion-lecture">
+        <strong>Maille</strong> traverse les trois cartes. KEZEU la porte,
+        BABADJI la porte, BEMA en hérite.
+      </p>
+
+      <div class="fusion__pilote">
+        <button class="bouton bouton--trait" type="button" id="relancer">
+          Fusion suivante
+        </button>
+        <p class="fusion__legende" id="fusion-legende">
+          Fusion 1 sur 3, trios réels du deck Savane
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= ANATOMIE ========================= -->
+  <section class="anatomie" id="anatomie">
+    <div class="enveloppe duo">
+      <div>
+        <p class="surtitre"><span class="losange" aria-hidden="true"></span> Anatomie</p>
+        <h2>Ce qu'une carte vous dit</h2>
+        <div class="prose">
+          <p>
+            Une carte MIXALGO tient en quatre informations, et pas une de plus.
+            Il n'y a ni points, ni valeur, ni couleur de famille, ni texte de
+            règle : rien qui puisse se compter ou se comparer. Ce qui se joue
+            se regarde.
+          </p>
+        </div>
+        <ol class="legende">
+          <li><span><b>Le portrait.</b> Il occupe les trois quarts de la carte,
+            parce que c'est lui qui porte le jeu. Toute la logique d'une fusion
+            est dans ce qu'on y voit.</span></li>
+          <li><span><b>Le nom.</b> <code>KEZEU</code> ici. Une identité, jamais un
+            rôle : la même carte est émettrice dans une fusion et réceptrice dans
+            une autre.</span></li>
+          <li><span><b>Le code.</b> <code>B3</code>. Il sert au référentiel du jeu
+            et à l'arbitrage, là où prononcer un nom à voix haute donnerait la
+            réponse à toute la table.</span></li>
+          <li><span><b>Les attributs.</b> Deux ou trois mots-clés, ici
+            <em>humain augmenté</em>, <em>maille</em> et <em>biotech</em>. Des
+            repères de lecture, pas des règles. Ils aident à formuler ce que
+            l'œil a déjà vu.</span></li>
+        </ol>
+      </div>
+      <div class="anatomie__carte">
+        <img src="/assets/cartes/B3-detail.webp" width="760" height="1079"
+             loading="lazy" decoding="async"
+             alt="La carte KEZEU en grand : portrait d'une combattante en armure rouge dans une ville nocturne, son nom, le code B3, et ses trois attributs.">
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= LES DISTANCES ========================= -->
+  <section id="distances">
+    <div class="enveloppe">
+      <p class="surtitre"><span class="losange" aria-hidden="true"></span> La progression</p>
+      <h2>Cinq distances, une seule règle</h2>
+      <div class="prose">
+        <p>
+          La difficulté ne vient jamais du chronomètre. Elle vient de la
+          <strong>distance</strong> qui sépare les trois cartes qu'on vous montre.
+          En D1, elles forment une fusion directe. Au-delà, elles sont prélevées
+          le long d'une chaîne : le lien existe toujours, mais il passe par des
+          cartes que vous ne voyez pas.
+        </p>
+      </div>
+
+      <div class="distances">
+        <div class="distance">
+          <span class="distance__cle">D1</span>
+          <span class="distance__nom">
+            <b>La fusion elle-même</b>, les trois cartes se touchent
+            <span class="distance__jauge"><i style="width:2%"></i></span>
+          </span>
+          <span class="distance__valeur">1<small>trio</small></span>
+        </div>
+        <div class="distance">
+          <span class="distance__cle">D2</span>
+          <span class="distance__nom">
+            <b>Un maillon d'écart</b>, une carte intermédiaire reste cachée
+            <span class="distance__jauge"><i style="width:11%"></i></span>
+          </span>
+          <span class="distance__valeur">5<small>trios</small></span>
+        </div>
+        <div class="distance">
+          <span class="distance__cle">D3</span>
+          <span class="distance__nom">
+            <b>Deux maillons</b>, le lien cesse d'être visible d'un coup d'œil
+            <span class="distance__jauge"><i style="width:32%"></i></span>
+          </span>
+          <span class="distance__valeur">14<small>trios</small></span>
+        </div>
+        <div class="distance">
+          <span class="distance__cle">D4</span>
+          <span class="distance__nom">
+            <b>Trois maillons</b>, il faut reconstruire la chaîne de tête
+            <span class="distance__jauge"><i style="width:61%"></i></span>
+          </span>
+          <span class="distance__valeur">27<small>trios</small></span>
+        </div>
+        <div class="distance">
+          <span class="distance__cle">D5</span>
+          <span class="distance__nom">
+            <b>Quatre maillons</b>, la limite du jeu
+            <span class="distance__jauge"><i style="width:100%"></i></span>
+          </span>
+          <span class="distance__valeur">44<small>trios</small></span>
+        </div>
+      </div>
+
+      <p class="formule">
+        Une chaîne de <code>k</code> fusions produit au plus <code>C(2k,2) - 1</code> trios valides.
+        Le trio doit contenir la carte finale, et ne jamais reproduire une fusion déjà connue.
+      </p>
+    </div>
+  </section>
+
+  <!-- ========================= LE DECK ========================= -->
+  <section class="deck" id="deck">
+    <div class="enveloppe">
+      <p class="surtitre"><span class="losange" aria-hidden="true"></span> Extraits du deck</p>
+      <h2>Soixante-seize cartes, aucune légende</h2>
+      <div class="prose">
+        <p>
+          EKAMBI, MAGNE, BABADJI, BIKOKO. Chaque carte est un portrait, et le
+          deck entier tient dans un imaginaire afrofuturiste : villes de nuit,
+          armures de maille, orages électriques et masques d'ancêtres.
+          <strong>Tout ce qui compte est dans l'image.</strong>
+        </p>
+      </div>
+
+      <!-- Les douze emplacements sont dans le HTML, pas fabriques par le
+           script : la section doit etre complete des le premier rendu, y
+           compris pour un robot d indexation ou un visiteur sans
+           JavaScript. -->
+      <!-- Pas de puces d attributs ici : chaque carte porte deja son
+           nom, son code et ses attributs peints dans l image, et a
+           cette taille ils sont lisibles. Les repeter dessous
+           doublait l information et encombrait la grille. Elles ne
+           servent que dans la demonstration de fusion, ou l attribut
+           partage est mis en evidence. -->
+      <div class="grille-deck" id="grille-deck" aria-label="Aperçu de cartes du deck">
+        <figure class="carte" data-code="B3">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/B3.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte KEZEU, code B3. Attributs : humain augmenté, maille, biotech.">
+            <span class="carte__code">B3</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">KEZEU</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="Z8">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/Z8.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte MILLA, code Z8. Attributs : mystique, électrique, biotech.">
+            <span class="carte__code">Z8</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">MILLA</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="L9">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/L9.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte TUEKAM, code L9. Attributs : humain augmenté, électrique, afro.">
+            <span class="carte__code">L9</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">TUEKAM</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="M3">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/M3.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte BABADJI, code M3. Attributs : électrique, maille.">
+            <span class="carte__code">M3</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">BABADJI</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="A4">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/A4.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte BEMA, code A4. Attributs : duo, maille, afro.">
+            <span class="carte__code">A4</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">BEMA</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="C7">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/C7.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte BIKOKO, code C7. Attributs : fantaisiste, chapeau, groupe.">
+            <span class="carte__code">C7</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">BIKOKO</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="N1">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/N1.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte WAKAM, code N1. Attributs : humain augmenté, rouge, ailes.">
+            <span class="carte__code">N1</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">WAKAM</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="D9">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/D9.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte NOTA, code D9. Attributs : visage électrique, robot.">
+            <span class="carte__code">D9</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">NOTA</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="X1">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/X1.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte EKAMBI, code X1. Attributs : duo, électrique, losange.">
+            <span class="carte__code">X1</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">EKAMBI</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="M8">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/M8.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte FEKAM, code M8. Attributs : trio, losange.">
+            <span class="carte__code">M8</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">FEKAM</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="K2">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/K2.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte MAGNE, code K2. Attributs : royal, mystère ancestral, losange.">
+            <span class="carte__code">K2</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">MAGNE</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="Y5">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/Y5.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte ETOO, code Y5. Attributs : électrique, cheveux blancs, humain augmenté.">
+            <span class="carte__code">Y5</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">ETOO</span>
+          </figcaption>
+        </figure>
+      </div>
+      <p class="deck__etat" id="deck-etat">Douze cartes sur les soixante-seize du deck Savane</p>
+    </div>
+  </section>
+
+  <!-- ========================= MODE COLLECTIF ========================= -->
+  <section id="collectif">
+    <div class="enveloppe duo duo--inverse">
+      <div>
+        <p class="surtitre"><span class="losange" aria-hidden="true"></span> Autour d'une table</p>
+        <h2>Le mode collectif</h2>
+        <div class="prose">
+          <p>
+            Les cartes physiques se posent sur la table. L'animateur annonce un
+            numéro de trio à voix haute, et chacun cherche les trois cartes qui
+            le composent. On propose, on défend, on se trompe ensemble.
+          </p>
+          <p>
+            <strong>L'application ne joue pas, elle arbitre.</strong> Elle confirme
+            le trio et nomme les trois cartes. Le reste se passe entre joueurs,
+            sans écran.
+          </p>
+        </div>
+      </div>
+      <div class="table-cartes">
+        <figure class="carte" data-code="B3">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/B3.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte KEZEU, code B3. Attributs : humain augmenté, maille, biotech.">
+            <span class="carte__code">B3</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">KEZEU</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="M3">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/M3.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte BABADJI, code M3. Attributs : électrique, maille.">
+            <span class="carte__code">M3</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">BABADJI</span>
+          </figcaption>
+        </figure>
+        <figure class="carte" data-code="A4">
+          <div class="carte__face est-chargee">
+            <img src="/assets/cartes/A4.webp" width="380" height="540"
+                 loading="lazy" decoding="async" alt="Carte BEMA, code A4. Attributs : duo, maille, afro.">
+            <span class="carte__code">A4</span>
+          </div>
+          <figcaption>
+            <span class="carte__nom">BEMA</span>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= COMMENCER ========================= -->
+  <section id="commencer">
+    <div class="enveloppe">
+      <p class="surtitre"><span class="losange" aria-hidden="true"></span> Première partie</p>
+      <h2>Trois étapes, une seule fois</h2>
+
+      <ol class="etapes">
+        <li class="etape">
+          <h3>Installer l'application</h3>
+          <p>
+            Le fichier APK s'installe directement sur Android. Votre téléphone
+            demandera d'autoriser une installation hors magasin : c'est normal
+            pour une application distribuée de cette manière.
+          </p>
+        </li>
+        <li class="etape">
+          <h3>Activer votre deck</h3>
+          <p>
+            Le code fourni avec votre jeu de cartes ouvre le deck correspondant.
+            Il ne fonctionne que sur un appareil, ce qui garantit qu'un code
+            vendu correspond bien à un joueur.
+          </p>
+        </li>
+        <li class="etape">
+          <h3>Jouer, même sans réseau</h3>
+          <p>
+            Le deck est téléchargé une fois, puis tout se passe sur l'appareil.
+            Les questions sont fabriquées localement, les images restent en
+            mémoire, et une partie entière se joue hors connexion.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ========================= TELECHARGEMENT ========================= -->
+  <section>
+    <div class="enveloppe">
+      <div class="telecharger" id="telecharger">
+        <p class="surtitre" style="justify-content:center"><span class="losange" aria-hidden="true"></span> Disponible maintenant</p>
+        <h2>Prenez le deck en main</h2>
+        <p class="prose" style="text-align:center">
+          L'application est gratuite. C'est le code d'activation, livré avec les
+          cartes, qui ouvre un deck.
+        </p>
+        <div class="telecharger__actions">
+          <a class="bouton bouton--plein" id="bouton-apk"
+             href="/telechargements/mixalgo.apk" download>
+            Télécharger l'APK
+          </a>
+          <a class="bouton bouton--trait" href="#regle">Revoir la règle</a>
+        </div>
+        <p class="telecharger__mentions">
+          Version 1.0.0 &middot; Android &middot; Installation par fichier APK
+        </p>
+
+        <!-- Le pont vers le telephone. Retire par le script sur Android,
+             ou l'appareil sous les yeux est deja le bon. -->
+        <div class="pont" id="pont">
+          <div class="pont__code">
+            <img src="/assets/qr-telechargement.png" width="420" height="420"
+                 loading="lazy" decoding="async"
+                 alt="QR code menant à la page de téléchargement de MIXALGO.">
+          </div>
+          <p class="pont__texte">
+            <b>Vous êtes sur un ordinateur</b>
+            <span>MIXALGO s'installe sur un téléphone Android. Scannez ce code
+            pour ouvrir cette page sur le vôtre, et lancez le téléchargement
+            depuis le bon appareil.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= FAQ ========================= -->
+  <section id="faq">
+    <div class="enveloppe">
+      <p class="surtitre"><span class="losange" aria-hidden="true"></span> Questions fréquentes</p>
+      <h2>Ce qu'on nous demande</h2>
+
+      <div class="faq">
+        <details class="question" open>
+          <summary>Comment commencer une partie de MIXALGO ?</summary>
+          <p>Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil.</p>
+        </details>
+        <details class="question">
+          <summary>Faut-il posséder les cartes physiques pour jouer ?</summary>
+          <p>Non pour le mode solo, qui se joue entièrement dans l'application. Les cartes physiques servent au mode collectif, où un animateur annonce un numéro de trio et où les joueurs cherchent les trois cartes correspondantes sur la table.</p>
+        </details>
+        <details class="question">
+          <summary>Que veulent dire les attributs inscrits sur une carte ?</summary>
+          <p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p>
+        </details>
+        <details class="question">
+          <summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary>
+          <p>Oui. Le deck est téléchargé une seule fois au premier lancement, puis les questions sont fabriquées sur l'appareil. Une partie entière se joue sans réseau.</p>
+        </details>
+        <details class="question">
+          <summary>Que signifient les distances D1 à D5 ?</summary>
+          <p>La distance mesure l'éloignement entre les cartes d'un trio dans le graphe du jeu. En D1 les trois cartes forment une fusion directe. À partir de D2, elles sont prélevées le long d'une chaîne de fusions, ce qui rend le lien de moins en moins visible.</p>
+        </details>
+        <details class="question">
+          <summary>Combien de trios peut-on former dans une partie ?</summary>
+          <p>Une chaîne de k fusions donne au plus C(2k,2) moins 1 trios valides, soit 1 en D1, 5 en D2, 14 en D3, 27 en D4 et 44 en D5. Un deck de 76 cartes dépasse ainsi plusieurs centaines de questions distinctes.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="pied">
+  <div class="pied__interieur">
+    <p style="margin:0">MIXALGO &middot; Jeu d'observation visuelle</p>
+    <nav aria-label="Liens de pied de page">
+      <a href="#regle">La règle</a>
+      <a href="#anatomie">La carte</a>
+      <a href="#distances">Les distances</a>
+      <a href="#faq">Questions fréquentes</a>
+      <a href="https://dashboard.mixalgo.com" rel="noopener">Espace administrateur</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script src="/scripts/vitrine.js" defer></script>
+</body>
+</html>

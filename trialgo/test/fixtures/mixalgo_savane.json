@@ -1,0 +1,725 @@
+{
+ "_source": "mixalgo-savane.yml (version 1)",
+ "cards": [
+  {
+   "id": "A3",
+   "label": "A3"
+  },
+  {
+   "id": "A4",
+   "label": "A4"
+  },
+  {
+   "id": "A6",
+   "label": "A6"
+  },
+  {
+   "id": "A7",
+   "label": "A7"
+  },
+  {
+   "id": "A8",
+   "label": "A8"
+  },
+  {
+   "id": "B3",
+   "label": "B3"
+  },
+  {
+   "id": "B4",
+   "label": "B4"
+  },
+  {
+   "id": "B5",
+   "label": "B5"
+  },
+  {
+   "id": "B9",
+   "label": "B9"
+  },
+  {
+   "id": "C2",
+   "label": "C2"
+  },
+  {
+   "id": "C6",
+   "label": "C6"
+  },
+  {
+   "id": "C7",
+   "label": "C7"
+  },
+  {
+   "id": "C9",
+   "label": "C9"
+  },
+  {
+   "id": "D1",
+   "label": "D1"
+  },
+  {
+   "id": "D7",
+   "label": "D7"
+  },
+  {
+   "id": "D8",
+   "label": "D8"
+  },
+  {
+   "id": "D9",
+   "label": "D9"
+  },
+  {
+   "id": "E4",
+   "label": "E4"
+  },
+  {
+   "id": "E5",
+   "label": "E5"
+  },
+  {
+   "id": "E7",
+   "label": "E7"
+  },
+  {
+   "id": "F1",
+   "label": "F1"
+  },
+  {
+   "id": "F2",
+   "label": "F2"
+  },
+  {
+   "id": "F7",
+   "label": "F7"
+  },
+  {
+   "id": "G1",
+   "label": "G1"
+  },
+  {
+   "id": "G3",
+   "label": "G3"
+  },
+  {
+   "id": "G4",
+   "label": "G4"
+  },
+  {
+   "id": "G5",
+   "label": "G5"
+  },
+  {
+   "id": "G8",
+   "label": "G8"
+  },
+  {
+   "id": "H3",
+   "label": "H3"
+  },
+  {
+   "id": "H4",
+   "label": "H4"
+  },
+  {
+   "id": "H6",
+   "label": "H6"
+  },
+  {
+   "id": "H7",
+   "label": "H7"
+  },
+  {
+   "id": "J5",
+   "label": "J5"
+  },
+  {
+   "id": "J8",
+   "label": "J8"
+  },
+  {
+   "id": "J9",
+   "label": "J9"
+  },
+  {
+   "id": "K3",
+   "label": "K3"
+  },
+  {
+   "id": "K4",
+   "label": "K4"
+  },
+  {
+   "id": "K6",
+   "label": "K6"
+  },
+  {
+   "id": "L2",
+   "label": "L2"
+  },
+  {
+   "id": "L4",
+   "label": "L4"
+  },
+  {
+   "id": "L9",
+   "label": "L9"
+  },
+  {
+   "id": "M1",
+   "label": "M1"
+  },
+  {
+   "id": "M3",
+   "label": "M3"
+  },
+  {
+   "id": "M6",
+   "label": "M6"
+  },
+  {
+   "id": "M7",
+   "label": "M7"
+  },
+  {
+   "id": "M8",
+   "label": "M8"
+  },
+  {
+   "id": "N1",
+   "label": "N1"
+  },
+  {
+   "id": "N7",
+   "label": "N7"
+  },
+  {
+   "id": "N9",
+   "label": "N9"
+  },
+  {
+   "id": "P5",
+   "label": "P5"
+  },
+  {
+   "id": "P6",
+   "label": "P6"
+  },
+  {
+   "id": "P7",
+   "label": "P7"
+  },
+  {
+   "id": "P8",
+   "label": "P8"
+  },
+  {
+   "id": "P9",
+   "label": "P9"
+  },
+  {
+   "id": "Q1",
+   "label": "Q1"
+  },
+  {
+   "id": "Q4",
+   "label": "Q4"
+  },
+  {
+   "id": "Q5",
+   "label": "Q5"
+  },
+  {
+   "id": "R1",
+   "label": "R1"
+  },
+  {
+   "id": "R4",
+   "label": "R4"
+  },
+  {
+   "id": "R5",
+   "label": "R5"
+  },
+  {
+   "id": "R8",
+   "label": "R8"
+  },
+  {
+   "id": "S8",
+   "label": "S8"
+  },
+  {
+   "id": "T1",
+   "label": "T1"
+  },
+  {
+   "id": "T2",
+   "label": "T2"
+  },
+  {
+   "id": "U2",
+   "label": "U2"
+  },
+  {
+   "id": "V6",
+   "label": "V6"
+  },
+  {
+   "id": "V8",
+   "label": "V8"
+  },
+  {
+   "id": "V9",
+   "label": "V9"
+  },
+  {
+   "id": "W3",
+   "label": "W3"
+  },
+  {
+   "id": "W6",
+   "label": "W6"
+  },
+  {
+   "id": "W9",
+   "label": "W9"
+  },
+  {
+   "id": "X3",
+   "label": "X3"
+  },
+  {
+   "id": "X6",
+   "label": "X6"
+  },
+  {
+   "id": "Y7",
+   "label": "Y7"
+  },
+  {
+   "id": "Y9",
+   "label": "Y9"
+  },
+  {
+   "id": "Z8",
+   "label": "Z8"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "n01",
+   "node_index": 1,
+   "emettrice_id": "R4",
+   "parent_node_id": null,
+   "cable_id": "S8",
+   "receptrice_id": "A3",
+   "depth": 1
+  },
+  {
+   "id": "n02",
+   "node_index": 2,
+   "emettrice_id": "J5",
+   "parent_node_id": null,
+   "cable_id": "M8",
+   "receptrice_id": "A6",
+   "depth": 1
+  },
+  {
+   "id": "n03",
+   "node_index": 3,
+   "emettrice_id": "D9",
+   "parent_node_id": null,
+   "cable_id": "Y9",
+   "receptrice_id": "A8",
+   "depth": 1
+  },
+  {
+   "id": "n04",
+   "node_index": 4,
+   "emettrice_id": "A7",
+   "parent_node_id": null,
+   "cable_id": "K4",
+   "receptrice_id": "B3",
+   "depth": 1
+  },
+  {
+   "id": "n05",
+   "node_index": 5,
+   "emettrice_id": "M8",
+   "parent_node_id": null,
+   "cable_id": "E4",
+   "receptrice_id": "B9",
+   "depth": 1
+  },
+  {
+   "id": "n06",
+   "node_index": 6,
+   "emettrice_id": "B4",
+   "parent_node_id": null,
+   "cable_id": "D9",
+   "receptrice_id": "E7",
+   "depth": 1
+  },
+  {
+   "id": "n07",
+   "node_index": 7,
+   "emettrice_id": "D9",
+   "parent_node_id": null,
+   "cable_id": "E5",
+   "receptrice_id": "F1",
+   "depth": 1
+  },
+  {
+   "id": "n08",
+   "node_index": 8,
+   "emettrice_id": "P6",
+   "parent_node_id": null,
+   "cable_id": "D8",
+   "receptrice_id": "F2",
+   "depth": 1
+  },
+  {
+   "id": "n09",
+   "node_index": 9,
+   "emettrice_id": "K4",
+   "parent_node_id": null,
+   "cable_id": "B5",
+   "receptrice_id": "F7",
+   "depth": 1
+  },
+  {
+   "id": "n10",
+   "node_index": 10,
+   "emettrice_id": "Y7",
+   "parent_node_id": null,
+   "cable_id": "W9",
+   "receptrice_id": "G1",
+   "depth": 1
+  },
+  {
+   "id": "n11",
+   "node_index": 11,
+   "emettrice_id": "D8",
+   "parent_node_id": null,
+   "cable_id": "C9",
+   "receptrice_id": "G4",
+   "depth": 1
+  },
+  {
+   "id": "n12",
+   "node_index": 12,
+   "emettrice_id": "H7",
+   "parent_node_id": null,
+   "cable_id": "S8",
+   "receptrice_id": "K3",
+   "depth": 1
+  },
+  {
+   "id": "n13",
+   "node_index": 13,
+   "emettrice_id": "M8",
+   "parent_node_id": null,
+   "cable_id": "G5",
+   "receptrice_id": "K6",
+   "depth": 1
+  },
+  {
+   "id": "n14",
+   "node_index": 14,
+   "emettrice_id": "J9",
+   "parent_node_id": null,
+   "cable_id": "W3",
+   "receptrice_id": "L2",
+   "depth": 1
+  },
+  {
+   "id": "n15",
+   "node_index": 15,
+   "emettrice_id": "Z8",
+   "parent_node_id": null,
+   "cable_id": "B3",
+   "receptrice_id": "L9",
+   "depth": 1
+  },
+  {
+   "id": "n16",
+   "node_index": 16,
+   "emettrice_id": "R5",
+   "parent_node_id": null,
+   "cable_id": "Q1",
+   "receptrice_id": "M7",
+   "depth": 1
+  },
+  {
+   "id": "n17",
+   "node_index": 17,
+   "emettrice_id": "J9",
+   "parent_node_id": null,
+   "cable_id": "V6",
+   "receptrice_id": "N9",
+   "depth": 1
+  },
+  {
+   "id": "n18",
+   "node_index": 18,
+   "emettrice_id": "B4",
+   "parent_node_id": null,
+   "cable_id": "D9",
+   "receptrice_id": "P8",
+   "depth": 1
+  },
+  {
+   "id": "n19",
+   "node_index": 19,
+   "emettrice_id": "X6",
+   "parent_node_id": null,
+   "cable_id": "M3",
+   "receptrice_id": "R1",
+   "depth": 1
+  },
+  {
+   "id": "n20",
+   "node_index": 20,
+   "emettrice_id": "G3",
+   "parent_node_id": null,
+   "cable_id": "J9",
+   "receptrice_id": "T1",
+   "depth": 1
+  },
+  {
+   "id": "n21",
+   "node_index": 21,
+   "emettrice_id": "D8",
+   "parent_node_id": null,
+   "cable_id": "M7",
+   "receptrice_id": "V9",
+   "depth": 1
+  },
+  {
+   "id": "n22",
+   "node_index": 22,
+   "emettrice_id": "K4",
+   "parent_node_id": null,
+   "cable_id": "B4",
+   "receptrice_id": "W3",
+   "depth": 1
+  },
+  {
+   "id": "n23",
+   "node_index": 23,
+   "emettrice_id": "M1",
+   "parent_node_id": null,
+   "cable_id": "N7",
+   "receptrice_id": "W6",
+   "depth": 1
+  },
+  {
+   "id": "n24",
+   "node_index": 24,
+   "emettrice_id": "H4",
+   "parent_node_id": null,
+   "cable_id": "G8",
+   "receptrice_id": "W9",
+   "depth": 1
+  },
+  {
+   "id": "n25",
+   "node_index": 25,
+   "emettrice_id": null,
+   "parent_node_id": "n04",
+   "cable_id": "M3",
+   "receptrice_id": "A4",
+   "depth": 2
+  },
+  {
+   "id": "n26",
+   "node_index": 26,
+   "emettrice_id": null,
+   "parent_node_id": "n04",
+   "cable_id": "M8",
+   "receptrice_id": "C2",
+   "depth": 2
+  },
+  {
+   "id": "n27",
+   "node_index": 27,
+   "emettrice_id": null,
+   "parent_node_id": "n22",
+   "cable_id": "V6",
+   "receptrice_id": "D1",
+   "depth": 2
+  },
+  {
+   "id": "n28",
+   "node_index": 28,
+   "emettrice_id": null,
+   "parent_node_id": "n01",
+   "cable_id": "P9",
+   "receptrice_id": "D7",
+   "depth": 2
+  },
+  {
+   "id": "n29",
+   "node_index": 29,
+   "emettrice_id": null,
+   "parent_node_id": "n05",
+   "cable_id": "M8",
+   "receptrice_id": "E4",
+   "depth": 2
+  },
+  {
+   "id": "n30",
+   "node_index": 30,
+   "emettrice_id": null,
+   "parent_node_id": "n13",
+   "cable_id": "Q1",
+   "receptrice_id": "H3",
+   "depth": 2
+  },
+  {
+   "id": "n31",
+   "node_index": 31,
+   "emettrice_id": null,
+   "parent_node_id": "n09",
+   "cable_id": "Q1",
+   "receptrice_id": "H6",
+   "depth": 2
+  },
+  {
+   "id": "n32",
+   "node_index": 32,
+   "emettrice_id": null,
+   "parent_node_id": "n13",
+   "cable_id": "W3",
+   "receptrice_id": "J8",
+   "depth": 2
+  },
+  {
+   "id": "n33",
+   "node_index": 33,
+   "emettrice_id": null,
+   "parent_node_id": "n20",
+   "cable_id": "K6",
+   "receptrice_id": "L4",
+   "depth": 2
+  },
+  {
+   "id": "n34",
+   "node_index": 34,
+   "emettrice_id": null,
+   "parent_node_id": "n13",
+   "cable_id": "H4",
+   "receptrice_id": "M6",
+   "depth": 2
+  },
+  {
+   "id": "n35",
+   "node_index": 35,
+   "emettrice_id": null,
+   "parent_node_id": "n04",
+   "cable_id": "C7",
+   "receptrice_id": "N1",
+   "depth": 2
+  },
+  {
+   "id": "n36",
+   "node_index": 36,
+   "emettrice_id": null,
+   "parent_node_id": "n21",
+   "cable_id": "B3",
+   "receptrice_id": "P5",
+   "depth": 2
+  },
+  {
+   "id": "n37",
+   "node_index": 37,
+   "emettrice_id": null,
+   "parent_node_id": "n24",
+   "cable_id": "V6",
+   "receptrice_id": "Q1",
+   "depth": 2
+  },
+  {
+   "id": "n38",
+   "node_index": 38,
+   "emettrice_id": null,
+   "parent_node_id": "n08",
+   "cable_id": "M8",
+   "receptrice_id": "Q4",
+   "depth": 2
+  },
+  {
+   "id": "n39",
+   "node_index": 39,
+   "emettrice_id": null,
+   "parent_node_id": "n07",
+   "cable_id": "M8",
+   "receptrice_id": "T2",
+   "depth": 2
+  },
+  {
+   "id": "n40",
+   "node_index": 40,
+   "emettrice_id": null,
+   "parent_node_id": "n23",
+   "cable_id": "M8",
+   "receptrice_id": "X3",
+   "depth": 2
+  },
+  {
+   "id": "n41",
+   "node_index": 41,
+   "emettrice_id": null,
+   "parent_node_id": "n29",
+   "cable_id": "W3",
+   "receptrice_id": "C6",
+   "depth": 3
+  },
+  {
+   "id": "n42",
+   "node_index": 42,
+   "emettrice_id": null,
+   "parent_node_id": "n26",
+   "cable_id": "D9",
+   "receptrice_id": "P7",
+   "depth": 3
+  },
+  {
+   "id": "n43",
+   "node_index": 43,
+   "emettrice_id": null,
+   "parent_node_id": "n40",
+   "cable_id": "P9",
+   "receptrice_id": "Q5",
+   "depth": 3
+  },
+  {
+   "id": "n44",
+   "node_index": 44,
+   "emettrice_id": null,
+   "parent_node_id": "n38",
+   "cable_id": "B3",
+   "receptrice_id": "R8",
+   "depth": 3
+  },
+  {
+   "id": "n45",
+   "node_index": 45,
+   "emettrice_id": null,
+   "parent_node_id": "n33",
+   "cable_id": "F2",
+   "receptrice_id": "U2",
+   "depth": 3
+  },
+  {
+   "id": "n46",
+   "node_index": 46,
+   "emettrice_id": null,
+   "parent_node_id": "n29",
+   "cable_id": "J9",
+   "receptrice_id": "V8",
+   "depth": 3
+  }
+ ]
+}

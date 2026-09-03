@@ -33,6 +33,16 @@ class LocalCardStorage(CardStorage):
             await f.write(content)
         return key
 
+    async def read(self, object_key: str) -> bytes:
+        # Meme garde que serve_card_file : une cle est fabriquee par
+        # save(), mais rien n'empeche un appelant de passer autre
+        # chose. On refuse tout ce qui sortirait de la racine.
+        path = (self.root / object_key).resolve()
+        if not path.is_relative_to(self.root.resolve()):
+            raise ValueError(f"Cle hors du stockage : {object_key}")
+        async with aiofiles.open(path, "rb") as f:
+            return await f.read()
+
     async def delete(self, object_key: str) -> None:
         path = self.root / object_key
         try:

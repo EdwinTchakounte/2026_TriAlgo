@@ -58,6 +58,17 @@ class S3CardStorage(CardStorage):
             )
         return key
 
+    async def read(self, object_key: str) -> bytes:
+        async with self._client() as s3:
+            reponse = await s3.get_object(
+                Bucket=settings.S3_BUCKET, Key=object_key
+            )
+            # Le corps est un flux : il faut le lire ET le fermer
+            # avant de sortir du client, sinon la connexion reste
+            # retenue jusqu'au ramasse-miettes.
+            async with reponse["Body"] as flux:
+                return await flux.read()
+
     async def delete(self, object_key: str) -> None:
         async with self._client() as s3:
             await s3.delete_object(Bucket=settings.S3_BUCKET, Key=object_key)
