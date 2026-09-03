@@ -7,11 +7,14 @@ gestionnaire de paquets : ce dossier se recopie tel quel sur le serveur.
 vitrine/
 ├── index.html          la page, autonome (HTML + CSS + donnees structurees)
 ├── scripts/vitrine.js  la scene 3D, la demonstration de fusion, l'appel a l'API
-├── assets/             logo detoure, image de partage, favicon
+├── assets/             logo detoure, cartes, QR, image de partage, favicon
+│   └── cartes/         les douze cartes, tirees de la planche d'impression
 ├── robots.txt
 ├── sitemap.xml
 └── outils/
-    └── detourer_logo.py  regenere tout le contenu de assets/ depuis ok_logo.jpeg
+    ├── detourer_logo.py    logo transparent + favicon + image de partage
+    ├── extraire_cartes.py  les visuels de cartes, depuis le PDF d'impression
+    └── generer_qr.py       le QR code de telechargement
 ```
 
 ---
@@ -27,11 +30,17 @@ vient du mot « Mix », le bleu `#001878` des profondeurs du diamant, et la brai
 `#F01800` de la fleche basse, seule couleur chaude saturee de tout le logo. Elle
 est donc traitee comme telle sur la page : rarissime.
 
-**La page est complete sans JavaScript.** Le hero, la regle, les distances, les
-douze cartes du deck et la FAQ sont dans le HTML. Le script n'ajoute que du
-relief : la scene WebGL, la transition de fusion, et le remplacement des cartes
-de demonstration par les vraies images. Un robot d'indexation, un navigateur sans
-WebGL et une API injoignable voient tous une page correcte.
+**La page est complete sans JavaScript.** Le hero, la regle, la premiere fusion,
+l'anatomie d'une carte, les distances, les douze cartes du deck et la FAQ sont
+dans le HTML, images comprises. Le script n'ajoute que du relief : la scene WebGL,
+la transition entre fusions, l'adaptation au terminal et le chiffre reel du deck.
+Un robot d'indexation, un navigateur sans WebGL et une API injoignable voient tous
+une page correcte.
+
+**Le texte courant est justifie**, au dela de 620 px seulement. Sur une colonne
+etroite, justifier un texte francais creuse des rivieres de blanc entre les mots.
+`hyphens: auto` est indissociable de la justification : il s'appuie sur le
+`lang="fr"` de `<html>` pour couper les mots aux bons endroits.
 
 ---
 
@@ -66,20 +75,60 @@ favicon. Rien n'est retouche a la main, donc rien n'est a refaire si le logo cha
 
 ---
 
-## Les cartes viennent de l'API
+## Les cartes
 
-La grille du deck est remplie par `GET /api/public/games` puis
-`GET /api/public/games/{id}/cards`, deux endpoints **sans authentification**
-concus pour cet usage.
+Les douze visuels de `assets/cartes/` sont extraits de
+**`TRIALGO_15_cartes_A4_63x88mm-1.pdf`**, la planche d'impression au format
+63 x 88 mm. Ce sont les cartes definitives, celles qu'on tient en main.
 
-La page lit `thumb_url` en priorite, et retombe sur `image_url` quand la vignette
-n'existe pas. La grille affiche des cartes de 140 px de large : leur envoyer les
-images pleines de 1024 px multiplierait par quarante le poids de la page pour un
-rendu identique a l'oeil.
+```bash
+python3 vitrine/outils/extraire_cartes.py
+```
 
-L'appel est borne a six secondes par un `AbortController`. Si l'API ne repond
-pas, les douze cartes de demonstration du HTML restent affichees et la legende
-sous la grille le dit sans dramatiser.
+La planche contient quinze images pour douze cartes : KEZEU (B3) y figure trois
+fois et MILLA (Z8) deux fois. Ce n'est pas une erreur de mise en page. KEZEU est
+l'emettrice partagee des trois trios que la planche permet de composer, et on ne
+peut pas poser trois trios simultanement sur une table avec un seul exemplaire de
+la carte commune :
+
+```
+B3 + Z8 = L9      KEZEU + MILLA    = TUEKAM
+B3 + M3 = A4      KEZEU + BABADJI  = BEMA
+B3 + C7 = N1      KEZEU + BIKOKO   = WAKAM
+```
+
+Ce sont exactement les trois trios de la demonstration de fusion, et les seuls du
+referentiel MIXALGO Savane entierement illustres par cette planche.
+
+> **Le PDF n'est pas versionne** : il pese 47 Mo, et git garderait chaque revision
+> pour toujours. Ce sont les WebP produits, environ 480 Ko en tout, qui sont dans
+> le depot. Regenerer les visuels demande donc d'avoir la planche sous la main.
+
+Le script associe chaque image a son code par une **table ecrite a la main**
+(`ORDRE`), parce que les cartes ne portent aucune metadonnee : le code est peint
+dans le pixel. Si la planche change, cette table doit changer avec elle, sinon les
+codes seront attribues aux mauvais dessins. Le script refuse de tourner si le
+nombre d'images ne correspond plus.
+
+---
+
+## Ce que la vitrine demande a l'API
+
+`GET /api/public/games` puis `GET /api/public/games/{id}/cards`, deux endpoints
+**sans authentification** concus pour cet usage.
+
+Ce qu'ils servent : le **nom** et la **taille reelle** du deck en ligne, deux
+informations vivantes qu'une page statique ne peut pas connaitre.
+
+Ce qu'ils ne servent pas : les visuels. Les douze cartes affichees viennent de la
+planche d'impression. Les ecraser par ce que le catalogue contient a un instant
+donne serait un pari sur l'etat du serveur, et un pari perdant tant que le
+catalogue n'est pas complet. Une carte **sans** visuel local, elle, se laisse
+remplir par l'API : c'est ce qui rendra la grille extensible sans toucher au code.
+
+Quand l'API repond, la page lit `thumb_url` en priorite et retombe sur
+`image_url`. L'appel est borne a six secondes par un `AbortController` ; sans
+reponse, la legende du HTML reste affichee, et elle reste vraie.
 
 **Pour pointer ailleurs qu'en production**, changer la constante en tete de
 `scripts/vitrine.js` :
@@ -111,7 +160,27 @@ sudo certbot --nginx -d mixalgo.com -d www.mixalgo.com
 serveur avant de lancer certbot, qui refuse d'emettre un certificat pour un
 domaine qui ne le designe pas encore.
 
-### L'APK
+### L'APK et le QR code
+
+Le telechargement vise un **telephone Android**, alors qu'une bonne part des
+visiteurs arrivent sur un ordinateur. Le QR code de `assets/qr-telechargement.png`
+resout ce decalage : il ouvre la page sur le telephone, et le telechargement part
+du bon appareil.
+
+Il est **visible par defaut dans le HTML** et retire par le script quand l'agent
+utilisateur annonce Android. Ce sens est important : un visiteur sans JavaScript
+voit un QR de trop, ce qui ne coute rien, plutot qu'un pont manquant, ce qui lui
+coute le parcours.
+
+```bash
+python3 vitrine/outils/generer_qr.py
+```
+
+Le QR est noir sur blanc, sur une pastille blanche. L'habiller aux couleurs de la
+page serait plus joli et moins fiable : un code inverse reste lisible par beaucoup
+de scanners, mais pas par tous.
+
+### Le fichier APK
 
 Le bouton de telechargement pointe vers `/telechargements/mixalgo.apk`. **Ce
 fichier n'est pas dans le depot** et doit etre depose a la main :

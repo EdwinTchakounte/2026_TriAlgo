@@ -3,25 +3,24 @@
 // ROLE    : Le relief de la vitrine MIXALGO
 // =============================================================
 //
-// Trois choses, dans cet ordre de priorite :
+// Quatre choses, dans cet ordre de priorite :
 //
 //   1. LE CIEL      une scene WebGL derriere le hero
 //   2. LA FUSION    la demonstration E + C = R, pilotable
-//   3. LE DECK      les vraies cartes, lues sur l'API publique
+//   3. L'APPAREIL   adapter le telechargement au terminal
+//   4. LE DECK      le nom et la taille du deck, lus sur l'API
 //
 // PRINCIPE QUI GOUVERNE TOUT LE FICHIER
 // -------------------------------------
-// La page doit etre COMPLETE sans ce script. Le hero, la regle,
-// les distances, les cartes de demonstration et la FAQ sont tous
-// dans le HTML. Ce fichier n'ajoute que du relief : une scene
-// animee, une transition, et le remplacement des cartes de
-// demonstration par les vraies images du deck.
+// La page doit etre COMPLETE sans ce script. Le hero, la regle, la
+// premiere fusion, l'anatomie d'une carte, les distances, les douze
+// cartes du deck et la FAQ sont tous dans le HTML, images comprises.
+// Ce fichier n'ajoute que du relief.
 //
-// Consequence pratique : chaque bloc ci dessous commence par
-// verifier que ce dont il a besoin existe, et renonce en silence
-// sinon. Un navigateur sans WebGL, une API injoignable ou un
-// visiteur qui a desactive JavaScript voient une page correcte,
-// jamais une page cassee.
+// Chaque bloc commence donc par verifier que ce dont il a besoin
+// existe, et renonce en silence sinon. Un navigateur sans WebGL,
+// une API injoignable ou un visiteur qui a desactive JavaScript
+// voient une page correcte, jamais une page cassee.
 // =============================================================
 
 (function () {
@@ -36,6 +35,11 @@
   var sobre = window.matchMedia &&
               window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Les cartes servies par la vitrine. Le chemin est construit une
+  // fois pour toutes ici : c'est le seul endroit a changer si les
+  // visuels demenagent.
+  function visuel(code) { return '/assets/cartes/' + code + '.webp'; }
+
   // ===========================================================
   // 1. LE CIEL
   // ===========================================================
@@ -46,11 +50,18 @@
   // en concurrence avec lui.
   //
   // La scene reste donc a la PERIPHERIE : un champ d'etoiles en
-  // profondeur, un diamant filaire assez large pour que le logo
-  // s'inscrive dedans plutot que devant, et quelques cartes qui
-  // derivent sur une orbite lointaine. Le centre de l'image reste
-  // vide, parce que c'est la que le logo est pose.
+  // profondeur, deux diamants filaires assez larges pour que le logo
+  // s'inscrive dedans plutot que devant, et de vraies cartes du jeu
+  // qui derivent sur une orbite lointaine. Le centre de l'image
+  // reste vide, parce que c'est la que le logo est pose.
   // ===========================================================
+
+  // Six cartes reelles, choisies pour leurs dominantes tres
+  // differentes : le jaune d'EKAMBI, le bleu de MILLA, le rouge de
+  // KEZEU, l'or de MAGNE. Vues de loin et a demi transparentes, ce
+  // sont ces masses de couleur qui se lisent, pas les details.
+  var CARTES_ORBITE = ['X1', 'Z8', 'B3', 'K2', 'C7', 'N1'];
+
   function monterLeCiel() {
     var toile = document.getElementById('ciel');
     if (!toile || typeof THREE === 'undefined') return;
@@ -124,47 +135,25 @@
     var diamantFin   = diamant(6.2, AMBRE, 0.13);
 
     // ---- Les cartes en orbite -------------------------------
-    // Texture dessinee au vol : aucun fichier a telecharger, et
-    // le rendu suit la palette de la page sans risque de derive.
-    function textureDeCarte() {
-      var c = document.createElement('canvas');
-      c.width = 128; c.height = 176;
-      var ctx = c.getContext('2d');
+    // De VRAIES cartes du jeu, chargees comme textures. Une carte
+    // dessinee au vol aurait ete plus legere, mais elle aurait
+    // aussi ete un rectangle generique : c'est le deck qui doit
+    // tourner autour du logo, pas un motif.
+    var chargeur = new THREE.TextureLoader();
+    var cartes = [];
+    var nombreCartes = largeur < 700 ? 3 : CARTES_ORBITE.length;
 
-      var fond = ctx.createLinearGradient(0, 0, 0, 176);
-      fond.addColorStop(0, '#141046');
-      fond.addColorStop(1, '#06041A');
-      ctx.fillStyle = fond;
-      ctx.fillRect(0, 0, 128, 176);
-
-      ctx.strokeStyle = 'rgba(0, 216, 240, 0.55)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, 126, 174);
-
-      // Le losange, encore : c'est la signature graphique.
-      ctx.save();
-      ctx.translate(64, 88);
-      ctx.rotate(Math.PI / 4);
-      ctx.strokeStyle = 'rgba(0, 216, 240, 0.32)';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-26, -26, 52, 52);
-      ctx.restore();
-
-      var texture = new THREE.CanvasTexture(c);
-      // Sans cela, la carte vue de biais devient une bouillie de
+    for (var j = 0; j < nombreCartes; j++) {
+      var texture = chargeur.load(visuel(CARTES_ORBITE[j]));
+      // Sans cela, une carte vue de biais devient une bouillie de
       // pixels : le filtrage par defaut n'anticipe pas l'angle.
       texture.anisotropy = rendu.capabilities.getMaxAnisotropy();
-      return texture;
-    }
 
-    var texture = textureDeCarte();
-    var cartes = [];
-    var nombreCartes = largeur < 700 ? 4 : 7;
-    for (var j = 0; j < nombreCartes; j++) {
       var carte = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.5, 2.06),
+        // Le rapport exact des visuels, 380 x 540.
+        new THREE.PlaneGeometry(1.5, 2.13),
         new THREE.MeshBasicMaterial({
-          map: texture, transparent: true, opacity: 0.5,
+          map: texture, transparent: true, opacity: 0.42,
           side: THREE.DoubleSide, depthWrite: false
         })
       );
@@ -237,7 +226,9 @@
 
     if (sobre) {
       // Une seule image fixe : le decor existe, il ne bouge pas.
+      // Les textures arrivent en differe, d'ou un second rendu.
       dessiner();
+      setTimeout(dessiner, 1200);
     } else {
       boucle();
     }
@@ -268,31 +259,109 @@
   // 2. LA FUSION
   // ===========================================================
   //
-  // Les quatre trios ci dessous ne sont pas inventes pour la
-  // demonstration : ce sont les noeuds n01, n06, n10 et n13 du
-  // referentiel MIXALGO Savane. Montrer de fausses fusions sur la
-  // page d'accueil d'un jeu de logique serait un mauvais depart.
+  // Les trois trios ci dessous ne sont pas inventes pour la
+  // demonstration : ce sont les noeuds n25, n15 et n35 du
+  // referentiel MIXALGO Savane, et ce sont les SEULS entierement
+  // illustres par la planche d'impression de quinze cartes.
+  //
+  // Ils partagent tous les trois la meme emettrice, KEZEU. C'est
+  // une coincidence heureuse et c'est aussi la meilleure lecon
+  // possible : une carte identique, trois cables differents, trois
+  // resultats differents. Le role n'est pas dans la carte.
+  //
+  // L'ORDRE EST DELIBERE. Il va du plus lisible au plus troublant :
+  //   1. un attribut traverse les trois cartes
+  //   2. l'enfant prend un attribut a chaque parent
+  //   3. les attributs ne disent rien, tout est dans l'image
+  //
+  // La troisieme est la plus importante. Elle empeche le visiteur
+  // de repartir en croyant que le jeu se resume a apparier des
+  // mots cles, ce qui serait faux.
   // ===========================================================
   var TRIOS = [
-    { emettrice: 'R4', cable: 'S8', receptrice: 'A3' },
-    { emettrice: 'B4', cable: 'D9', receptrice: 'E7' },
-    { emettrice: 'Y7', cable: 'W9', receptrice: 'G1' },
-    { emettrice: 'M8', cable: 'G5', receptrice: 'K6' }
+    {
+      lecture: "<strong>Maille</strong> traverse les trois cartes. KEZEU la porte, " +
+               "BABADJI la porte, BEMA en herite.",
+      cartes: [
+        { role: 'emettrice',  code: 'B3', nom: 'KEZEU',
+          attributs: ['Humain augmenté', 'Maille', 'Biotech'], partages: ['Maille'] },
+        { role: 'cable',      code: 'M3', nom: 'BABADJI',
+          attributs: ['Électrique', 'Maille'], partages: ['Maille'] },
+        { role: 'receptrice', code: 'A4', nom: 'BEMA',
+          attributs: ['Duo', 'Maille', 'Afro'], partages: ['Maille'] }
+      ]
+    },
+    {
+      lecture: "KEZEU donne l'<strong>humain augmenté</strong>, MILLA donne " +
+               "l'<strong>électrique</strong>. TUEKAM hérite des deux.",
+      cartes: [
+        { role: 'emettrice',  code: 'B3', nom: 'KEZEU',
+          attributs: ['Humain augmenté', 'Maille', 'Biotech'], partages: ['Humain augmenté'] },
+        { role: 'cable',      code: 'Z8', nom: 'MILLA',
+          attributs: ['Mystique', 'Électrique', 'Biotech'], partages: ['Électrique'] },
+        { role: 'receptrice', code: 'L9', nom: 'TUEKAM',
+          attributs: ['Humain augmenté', 'Électrique', 'Afro'],
+          partages: ['Humain augmenté', 'Électrique'] }
+      ]
+    },
+    {
+      lecture: "Ici les attributs ne suffisent pas : BIKOKO n'en partage aucun " +
+               "avec WAKAM. Le lien est <strong>dans l'image</strong>, et nulle part ailleurs.",
+      cartes: [
+        { role: 'emettrice',  code: 'B3', nom: 'KEZEU',
+          attributs: ['Humain augmenté', 'Maille', 'Biotech'], partages: ['Humain augmenté'] },
+        { role: 'cable',      code: 'C7', nom: 'BIKOKO',
+          attributs: ['Fantaisiste', 'Chapeau', 'Groupe'], partages: [] },
+        { role: 'receptrice', code: 'N1', nom: 'WAKAM',
+          attributs: ['Humain augmenté', 'Rouge', 'Ailes'], partages: ['Humain augmenté'] }
+      ]
+    }
   ];
 
   var indexTrio = 0;
 
-  // Libelle de carte -> URL de vignette, rempli par monterLeDeck().
-  // La demonstration de fusion en a besoin : quand on passe au trio
-  // suivant, il ne suffit pas de changer les trois codes, il faut
-  // aussi changer les trois images. Sans cet index partage, la carte
-  // afficherait le code de la nouvelle et le visuel de l'ancienne.
-  var INDEX_IMAGES = {};
+  /** Reecrit une figure de carte a partir d'une description. */
+  function poserCarte(figure, donnees) {
+    if (!figure) return;
+
+    figure.setAttribute('data-code', donnees.code);
+
+    var image = figure.querySelector('img');
+    if (image) {
+      image.src = visuel(donnees.code);
+      image.alt = 'Carte ' + donnees.nom + ', code ' + donnees.code +
+                  '. Attributs : ' + donnees.attributs.join(', ').toLowerCase() + '.';
+    }
+
+    var etiquette = figure.querySelector('.carte__code');
+    if (etiquette) etiquette.textContent = donnees.code;
+
+    var nom = figure.querySelector('.carte__nom');
+    if (nom) nom.textContent = donnees.nom;
+
+    var liste = figure.querySelector('.attributs');
+    if (!liste) return;
+    // On reconstruit la liste plutot que de la modifier : le nombre
+    // d'attributs varie d'une carte a l'autre (BABADJI en a deux,
+    // KEZEU en a trois), et un element residuel afficherait un
+    // attribut qui n'appartient pas a la carte affichee.
+    liste.textContent = '';
+    donnees.attributs.forEach(function (attribut) {
+      var puce = document.createElement('li');
+      puce.className = 'attribut';
+      if (donnees.partages.indexOf(attribut) !== -1) {
+        puce.classList.add('est-partage');
+      }
+      puce.textContent = attribut;
+      liste.appendChild(puce);
+    });
+  }
 
   function monterLaFusion() {
     var bloc = document.getElementById('fusion');
     var bouton = document.getElementById('relancer');
     var legende = document.getElementById('fusion-legende');
+    var lecture = document.getElementById('fusion-lecture');
     if (!bloc || !bouton) return;
 
     bouton.addEventListener('click', function () {
@@ -305,15 +374,13 @@
       // pencher. Changer les images avant donnerait l'impression
       // que la fusion se joue apres coup.
       setTimeout(function () {
-        ecrireCarte(bloc.querySelector('[data-role="emettrice"]'),
-                    trio.emettrice, INDEX_IMAGES[trio.emettrice]);
-        ecrireCarte(bloc.querySelector('[data-role="cable"]'),
-                    trio.cable, INDEX_IMAGES[trio.cable]);
-        ecrireCarte(bloc.querySelector('[data-role="receptrice"]'),
-                    trio.receptrice, INDEX_IMAGES[trio.receptrice]);
+        trio.cartes.forEach(function (donnees) {
+          poserCarte(bloc.querySelector('[data-role="' + donnees.role + '"]'), donnees);
+        });
+        if (lecture) lecture.innerHTML = trio.lecture;
         if (legende) {
           legende.textContent = 'Fusion ' + (indexTrio + 1) + ' sur ' +
-                                TRIOS.length + ', extraite du deck Savane';
+                                TRIOS.length + ', trios réels du deck Savane';
         }
       }, 260);
 
@@ -322,17 +389,55 @@
   }
 
   // ===========================================================
-  // 3. LE DECK
+  // 3. L'APPAREIL
   // ===========================================================
   //
-  // L'API publique de MIXALGO existe deja et ne demande aucune
-  // authentification : elle a ete concue pour cet usage. On lui
-  // demande le premier jeu actif, puis ses cartes.
+  // MIXALGO s'installe sur un telephone Android. Une bonne part des
+  // visiteurs decouvrent pourtant le site sur un ordinateur : ils
+  // cliquent, recuperent un APK sur une machine qui ne peut rien en
+  // faire, et le parcours s'arrete la.
   //
-  // On lit thumb_url en priorite. La grille affiche des cartes de
-  // 140 px de large ; leur envoyer les images pleines de 1024 px
-  // multiplierait par quarante le poids de la page pour un rendu
-  // identique a l'oeil.
+  // Le QR code est donc VISIBLE PAR DEFAUT dans le HTML, et retire
+  // ici quand l'appareil est deja le bon. Ce sens est important : un
+  // visiteur sans JavaScript voit un QR de trop, ce qui ne coute
+  // rien, plutot qu'un pont manquant, ce qui lui coute le parcours.
+  // ===========================================================
+  function adapterAuTerminal() {
+    var pont = document.getElementById('pont');
+    var bouton = document.getElementById('bouton-apk');
+
+    // userAgentData quand il existe, chaine d'agent sinon. On ne
+    // cherche pas a etre exhaustif : se tromper ne casse rien, cela
+    // laisse seulement un QR code inutile sur un telephone.
+    var marque = (navigator.userAgentData && navigator.userAgentData.platform) ||
+                 navigator.userAgent || '';
+    if (!/android/i.test(marque)) return;
+
+    if (pont) pont.remove();
+    if (bouton) bouton.textContent = 'Installer sur cet appareil';
+  }
+
+  // ===========================================================
+  // 4. LE DECK
+  // ===========================================================
+  //
+  // L'API publique de MIXALGO ne demande aucune authentification :
+  // elle a ete concue pour cet usage.
+  //
+  // CE QU'ELLE SERT ICI, ET CE QU'ELLE NE SERT PAS
+  // ----------------------------------------------
+  // Elle fournit le NOM et la TAILLE reelle du deck en ligne, deux
+  // informations vivantes qu'une page statique ne peut pas connaitre.
+  //
+  // Elle ne remplace PAS les visuels. Les douze cartes affichees
+  // viennent de la planche d'impression : ce sont les cartes
+  // definitives, celles qu'on tient en main. Les ecraser par ce que
+  // le catalogue contient a un instant donne serait un pari sur
+  // l'etat du serveur, et un pari perdant tant que le catalogue
+  // n'est pas complet.
+  //
+  // Une carte SANS visuel local, elle, se laisse remplir par l'API :
+  // c'est ce qui rendra la grille extensible sans toucher au code.
   // ===========================================================
   var API = 'https://api.mixalgo.com';
   var DELAI_API = 6000;
@@ -351,39 +456,6 @@
       });
   }
 
-  /** Pose une image et un libelle dans une carte deja presente. */
-  function ecrireCarte(figure, code, url) {
-    if (!figure) return;
-    var face = figure.querySelector('.carte__face');
-    var etiquette = figure.querySelector('.carte__code');
-    if (etiquette) etiquette.textContent = code;
-    if (!face) return;
-
-    var image = face.querySelector('img');
-
-    if (!url) {
-      // La carte demandee n'a pas de visuel connu. Laisser l'ancienne
-      // image en place afficherait un code et une illustration qui ne
-      // se correspondent plus : mieux vaut revenir au dos de carte.
-      if (image) image.remove();
-      face.classList.remove('est-chargee');
-      return;
-    }
-
-    if (!image) {
-      image = document.createElement('img');
-      image.loading = 'lazy';
-      image.decoding = 'async';
-      // Le libelle d'une carte est un code interne ; le lire a voix
-      // haute n'apprendrait rien. L'information utile est portee par
-      // le texte de la section.
-      image.alt = '';
-      face.insertBefore(image, face.firstChild);
-    }
-    image.src = url;
-    face.classList.add('est-chargee');
-  }
-
   function monterLeDeck() {
     var grille = document.getElementById('grille-deck');
     var etat = document.getElementById('deck-etat');
@@ -392,7 +464,7 @@
     recuperer('/api/public/games')
       .then(function (jeux) {
         if (!jeux || !jeux.length) throw new Error('aucun jeu actif');
-        return recuperer('/api/public/games/' + jeux[0].id + '/cards?limite=60')
+        return recuperer('/api/public/games/' + jeux[0].id + '/cards?limite=200')
           .then(function (cartes) {
             return { jeu: jeux[0], cartes: cartes || [] };
           });
@@ -400,41 +472,39 @@
       .then(function (donnees) {
         if (!donnees.cartes.length) throw new Error('deck vide');
 
-        // Index par libelle : la demonstration de fusion cite des
-        // cartes precises, il faut pouvoir les retrouver.
+        var parLibelle = {};
         donnees.cartes.forEach(function (c) {
-          INDEX_IMAGES[c.label] = c.thumb_url || c.image_url;
+          parLibelle[c.label] = c.thumb_url || c.image_url;
         });
 
-        // --- La grille -------------------------------------
-        var emplacements = grille.querySelectorAll('.carte');
-        emplacements.forEach(function (figure, rang) {
-          var carte = donnees.cartes[rang % donnees.cartes.length];
-          ecrireCarte(figure, carte.label, carte.thumb_url || carte.image_url);
+        // Ne remplir que les emplacements DEPOURVUS de visuel local.
+        grille.querySelectorAll('.carte').forEach(function (figure) {
+          if (figure.querySelector('img')) return;
+          var code = figure.getAttribute('data-code');
+          var url = parLibelle[code];
+          if (!url) return;
+
+          var face = figure.querySelector('.carte__face');
+          var image = document.createElement('img');
+          image.loading = 'lazy';
+          image.decoding = 'async';
+          image.alt = '';
+          image.src = url;
+          face.insertBefore(image, face.firstChild);
+          face.classList.add('est-chargee');
         });
 
-        // --- La demonstration et la table du mode collectif --
-        document.querySelectorAll('.carte').forEach(function (figure) {
-          var etiquette = figure.querySelector('.carte__code');
-          if (!etiquette) return;
-          var code = etiquette.textContent.trim();
-          if (INDEX_IMAGES[code]) ecrireCarte(figure, code, INDEX_IMAGES[code]);
-        });
-
+        var montrees = grille.querySelectorAll('.carte').length;
         if (etat) {
-          etat.textContent = donnees.cartes.length + ' cartes dans le deck ' +
-                             (donnees.jeu.name || 'actif') +
-                             ', images servies en direct par l’API MIXALGO';
+          etat.textContent = montrees + ' cartes sur les ' + donnees.cartes.length +
+                             ' du deck ' + (donnees.jeu.name || 'actif') +
+                             ', catalogue lu en direct sur l’API MIXALGO';
         }
       })
       .catch(function () {
         // L'API est injoignable, ou aucun jeu n'est encore publie.
-        // Les cartes de demonstration du HTML restent affichees :
-        // la section garde du sens, elle perd seulement les visuels.
-        if (etat) {
-          etat.textContent = 'Apercu du deck. Les visuels s’affichent ' +
-                             'des que le catalogue est en ligne.';
-        }
+        // Le HTML annonce deja "Douze cartes sur les soixante-seize
+        // du deck Savane", ce qui reste vrai : on ne touche a rien.
       });
   }
 
@@ -444,6 +514,7 @@
   function demarrer() {
     monterLeCiel();
     monterLaFusion();
+    adapterAuTerminal();
     monterLeDeck();
   }
 
