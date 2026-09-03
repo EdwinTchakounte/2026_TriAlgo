@@ -38,9 +38,18 @@ router = APIRouter()
 
 
 async def _build_card_out(card: Card, storage: CardStorage) -> CardOut:
-    """Enrichit le DTO avec une image_url calculee selon backend."""
+    """Enrichit le DTO avec image_url et thumb_url calculees."""
     url = await storage.public_url(card.object_key)
-    return CardOut.model_validate({**card.__dict__, "image_url": url})
+    # `thumb_key` est NULL pour les cartes anterieures aux vignettes.
+    # On laisse alors thumb_url a None : le client sait que cela veut
+    # dire "utilise image_url". Fabriquer une URL vers un objet
+    # inexistant donnerait des images cassees, pas un repli.
+    thumb_url = (
+        await storage.public_url(card.thumb_key) if card.thumb_key else None
+    )
+    return CardOut.model_validate(
+        {**card.__dict__, "image_url": url, "thumb_url": thumb_url}
+    )
 
 
 # -------------------------------------------------------------
@@ -109,7 +118,13 @@ async def create_card(
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
 
-    # 3. Upload storage.
+    # 3. Upload storage : le plein format PUIS la vignette.
+    #
+    # Deux fichiers, donc deux facons d'echouer a mi-chemin. Si la
+    # vignette rate, on retire aussi le plein format : mieux vaut
+    # remonter l'erreur a l'administrateur, qui reessaiera, que de
+    # creer une carte a moitie faite dont personne ne saura jamais
+    # qu'il lui manque quelque chose.
     storage = get_storage()
     key = await storage.save(
         str(game_id),
@@ -117,13 +132,24 @@ async def create_card(
         processed.content_type,
         processed.extension,
     )
+    try:
+        thumb_key = await storage.save(
+            str(game_id),
+            processed.thumb_bytes,
+            processed.content_type,
+            processed.extension,
+        )
+    except Exception:
+        await storage.delete(key)
+        raise
 
-    # 4. INSERT DB. Si echec -> rollback fichier (cohérence).
+    # 4. INSERT DB. Si echec -> rollback des DEUX fichiers.
     try:
         card = Card(
             game_id=game_id,
             label=label,
             object_key=key,
+            thumb_key=thumb_key,
             content_type=processed.content_type,
             card_type=card_type,
         )
@@ -133,6 +159,7 @@ async def create_card(
     except Exception:
         await db.rollback()
         await storage.delete(key)
+        await storage.delete(thumb_key)
         raise
 
     return await _build_card_out(card, storage)
@@ -190,11 +217,17 @@ async def delete_card(
     if not card:
         raise HTTPException(404, "Carte introuvable")
     storage = get_storage()
-    # Supprime DB d'abord ; si storage rate on a une URL morte (mieux
-    # qu'une carte fantome dans la DB).
+    # Les cles sont relues AVANT la suppression : la session est en
+    # expire_on_commit=False, donc l'objet reste lisible apres commit,
+    # mais on ne veut pas que ce detail de configuration soit ce qui
+    # tient le code debout.
+    cles = [k for k in (card.object_key, card.thumb_key) if k]
+    # Supprime DB d'abord ; si storage rate on a un fichier orphelin
+    # (mieux qu'une carte fantome dans la DB).
     await db.delete(card)
     await db.commit()
-    await storage.delete(card.object_key)
+    for cle in cles:
+        await storage.delete(cle)
 
 
 # -------------------------------------------------------------

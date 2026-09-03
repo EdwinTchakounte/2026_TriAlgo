@@ -35,6 +35,7 @@ import 'package:trialgo/core/design_system/tokens/motion.dart';
 import 'package:trialgo/core/design_system/tokens/spacing.dart';
 import 'package:trialgo/core/design_system/tokens/typography.dart';
 import 'package:trialgo/core/preferences/onboarding_prefs.dart';
+import 'package:trialgo/data/services/prechauffage_images.dart';
 import 'package:trialgo/presentation/providers/graph_provider.dart';
 import 'package:trialgo/presentation/providers/profile_provider.dart';
 import 'package:trialgo/presentation/widgets/core/app_button.dart';
@@ -82,6 +83,13 @@ class _TGraphLoadingPageState extends ConsumerState<TGraphLoadingPage>
   /// Controller pour l'entree en stagger des 12 cartes en cercle.
   late final AnimationController _cards;
 
+  /// Prechauffage des vignettes, cree au moment du chargement.
+  ///
+  /// Retenu pour pouvoir l'interrompre si le joueur quitte l'ecran
+  /// avant la fin : sans cela, le telechargement continuerait au
+  /// profit d'un ecran qui n'existe plus.
+  PrechauffageImages? _prechauffage;
+
   @override
   void initState() {
     super.initState();
@@ -122,6 +130,7 @@ class _TGraphLoadingPageState extends ConsumerState<TGraphLoadingPage>
   @override
   void dispose() {
     _phaseTimer?.cancel();
+    _prechauffage?.annuler();
     _progress.dispose();
     _pulse.dispose();
     _cards.dispose();
@@ -175,6 +184,27 @@ class _TGraphLoadingPageState extends ConsumerState<TGraphLoadingPage>
       final clesDejaJouees =
           await ref.read(playedNodesTrackerProvider).chargerClesJouees(gameId);
       ref.read(generateQuestionProvider).seedPlayedKeys(clesDejaJouees);
+
+      // ---------------------------------------------------------
+      // PRECHAUFFAGE DES VIGNETTES
+      // ---------------------------------------------------------
+      // Le joueur attend deja devant cette cinematique : c'est le
+      // seul moment de l'application ou telecharger des images ne
+      // coute aucune attente supplementaire.
+      //
+      // On ne precharge que les vignettes -- moins d'un megaoctet
+      // pour un jeu de 76 cartes, contre une quinzaine en plein
+      // format. Cela suffit a rendre la grille de six choix
+      // instantanee pour toute la suite, y compris aux prochains
+      // lancements (le cache est sur disque).
+      //
+      // Comme chargerClesJouees juste au-dessus, cet appel ne peut
+      // pas faire echouer le chargement : PrechauffageImages avale
+      // ses erreurs et se borne dans le temps. Au pire, les images
+      // se chargent a la demande, comme avant.
+      // ---------------------------------------------------------
+      _prechauffage = PrechauffageImages();
+      await _prechauffage!.prechauffer(sync.cards.values);
 
       // On attend au minimum la duree de la cinematique pour laisser
       // le spectacle se jouer meme si la sync a dure 50ms.

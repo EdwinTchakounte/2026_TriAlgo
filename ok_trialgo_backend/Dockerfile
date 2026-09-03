@@ -44,6 +44,10 @@ RUN pip install --no-cache-dir --no-index --find-links=/wheels /wheels/*.whl \
 COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+# Scripts d'exploitation lances via `docker compose exec api`
+# (generation des vignettes, import de referentiel). Ils importent
+# `app`, donc ils ont besoin de l'environnement Python de l'image.
+COPY scripts/ ./scripts/
 
 # Utilisateur non-root (defense en profondeur).
 RUN useradd --create-home --uid 1001 appuser \

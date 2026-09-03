@@ -430,8 +430,15 @@ class GameChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = card['imageUrl'] as String;
+    // VIGNETTE, pas image pleine : dans cette grille, une carte
+    // occupe environ 150 px. Servir du 1024 px ici, c'est envoyer
+    // un ordre de grandeur d'octets de trop -- six fois par
+    // question. 'thumbUrl' vaut deja l'image pleine quand la carte
+    // n'a pas de vignette, d'ou le repli sur 'imageUrl' qui ne
+    // couvre que les appelants n'ayant pas encore la cle.
     final label = card['label'] as String;
+    final imageUrl =
+        (card['thumbUrl'] as String?) ?? card['imageUrl'] as String;
 
     final Color borderColor;
     if (isRevealed) {

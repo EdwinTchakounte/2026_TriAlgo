@@ -47,6 +47,17 @@ dependencies:
   # Essentiel pour TRIALGO car TOUTES les cartes sont des images distantes.
   cached_network_image: ^3.4.1
 
+  # flutter_cache_manager : deja tire par cached_network_image, mais
+  # declare ICI parce qu'on l'importe directement.
+  #
+  # PrechauffageImages appelle downloadFile() sur le DefaultCacheManager
+  # pour remplir le cache avant que le jeu en ait besoin. S'appuyer sur
+  # une dependance transitive marche jusqu'au jour ou
+  # cached_network_image change la sienne : la compilation casse alors
+  # sans que rien n'ait bouge chez nous. La declarer rend le lien
+  # explicite et verrouille sa version.
+  flutter_cache_manager: ^3.4.1
+
   # --- POLICES ---
   # google_fonts : acces a 1000+ polices Google sans les embarquer dans l'app.
   # Utilisee pour la police gaming "Rajdhani" (style sci-fi/futuriste).

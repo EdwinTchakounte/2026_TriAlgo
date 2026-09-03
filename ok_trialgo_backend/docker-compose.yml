@@ -107,6 +107,9 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
+      # Scripts d'exploitation : montes en lecture seule pour
+      # qu'une retouche ne demande pas de reconstruire l'image.
+      - ./scripts:/app/scripts:ro
     # Override de la commande pour dev (uvicorn --reload).
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
