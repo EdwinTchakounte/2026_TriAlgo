@@ -14,9 +14,13 @@
 //
 // 2. Le mode collectif verifiait les trios uniquement contre le
 //    graphe charge en memoire, alors que l'endpoint serveur
-//    existait. CollectiveVerifier traduit desormais la reponse
-//    HTTP, en appliquant la seule regle que le serveur ignore :
-//    le mode collectif s'arrete a la profondeur 3.
+//    existait. CollectiveVerifier traduit desormais la reponse HTTP.
+//
+// 3. Ce service recopiait le `depth` du noeud dans la `distance`
+//    du resultat -- deux notions differentes. Le meme trio etait
+//    alors annonce D2 quand le serveur repondait et D1 quand il
+//    fallait retomber en local, avec deux trackingKeys distinctes
+//    a la cle. Un trio natif est une fusion directe : D1, toujours.
 // =============================================================
 
 import 'package:dio/dio.dart';
@@ -109,25 +113,42 @@ void main() {
       expect(r.errorMessage, 'Trio inexistant pour ce jeu');
     });
 
-    test('un trio trop profond est refuse par le client', () async {
-      // Le serveur ne connait pas la limite du mode collectif : il
-      // renvoie exists=true pour un D4. C'est le client qui tranche.
-      final verifier = CollectiveVerifier(
-        datasource: _FauxCollectiveDatasource({
-          'exists': true,
-          'node_index': 40,
-          'depth': 4,
-          'emettrice_label': 'A',
-          'cable_label': 'B',
-          'receptrice_label': 'C',
-        }),
-      );
+    test('la profondeur du noeud ne change pas la distance annoncee',
+        () async {
+      // `depth` dit ou le noeud se situe dans sa chaine ; il ne dit
+      // rien de la difficulte du trio. Un noeud natif est une fusion
+      // DIRECTE quelle que soit sa place -- donc D1, toujours.
+      //
+      // Ce test verrouille l'accord entre les deux chemins de
+      // verification : le generateur local range tous les noeuds
+      // natifs en table D1 avec distance 1. Tant que ce service
+      // recopiait `depth`, le meme trio recevait deux reponses
+      // differentes selon que le serveur ait repondu ou non -- et
+      // deux trackingKeys differentes, donc un comptage des trios
+      // joues qui se dedoublait.
+      for (final profondeur in const [1, 2, 3, 4, 5]) {
+        final verifier = CollectiveVerifier(
+          datasource: _FauxCollectiveDatasource({
+            'exists': true,
+            'node_index': 40,
+            'depth': profondeur,
+            'emettrice_label': 'A',
+            'cable_label': 'B',
+            'receptrice_label': 'C',
+          }),
+        );
 
-      final r = await verifier.verifier(gameId: 'jeu-1', nodeIndex: 40);
+        final r = await verifier.verifier(gameId: 'jeu-1', nodeIndex: 40);
 
-      expect(r, isNotNull);
-      expect(r!.valid, isFalse);
-      expect(r.errorMessage, contains('hors mode collectif'));
+        expect(r, isNotNull);
+        expect(r!.valid, isTrue,
+            reason: 'un noeud natif a depth $profondeur reste jouable');
+        expect(r.distance, 1,
+            reason: 'depth $profondeur : un trio natif est toujours D1');
+        expect(r.trackingKey, 'D1#N40',
+            reason: 'depth $profondeur : meme cle que le chemin local, '
+                'sinon les trios joues sont comptes deux fois');
+      }
     });
 
     test('sans jeu charge, on ne tranche pas', () async {

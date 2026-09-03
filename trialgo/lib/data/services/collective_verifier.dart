@@ -22,26 +22,58 @@
 // du mode collectif sait deja afficher. Il applique au passage la
 // regle metier que le serveur ne connait pas.
 //
-// LA REGLE QUE LE SERVEUR NE CONNAIT PAS
-// --------------------------------------
-// verify-collective renvoie n'importe quel noeud du jeu, quelle que
-// soit sa profondeur. Or le mode collectif s'arrete a D3 (cf. le
-// bandeau de VerifyTrioCardsUseCase). C'est donc ici qu'on rejette
-// un trio trop profond, en s'appuyant sur le champ 'depth' renvoye
-// par l'API. Le serveur reste l'autorite sur l'EXISTENCE, le client
-// reste l'autorite sur les REGLES DU JEU.
+// DEUX AXES A NE PAS CONFONDRE : `depth` ET `distance`
+// ----------------------------------------------------
+// L'API renvoie le `depth` du noeud : sa POSITION dans sa chaine,
+// de 1 a 5. Le jeu, lui, raisonne en `distance` : la DIFFICULTE du
+// trio a trouver. D1 = un trio direct (les trois cartes d'une meme
+// fusion), D2 = un trio tire d'une chaine de 2 noeuds, etc.
+//
+// Ce sont deux choses differentes, et ce fichier les a longtemps
+// confondues en recopiant `depth` dans `distance`.
+//
+// Le mode collectif par numero designe TOUJOURS un trio natif : un
+// animateur annonce un node_index, et les joueurs cherchent les
+// trois cartes de cette fusion. Peu importe que ce noeud soit le
+// troisieme d'une chaine -- ses trois cartes sont sous les yeux,
+// c'est une fusion directe. Sa distance est donc 1, toujours.
+//
+// LE DEFAUT QUE CELA CORRIGE
+// --------------------------
+// Le generateur local range tous les noeuds natifs dans la table D1
+// avec `distance: 1` (cf. generate_logical_nodes_usecase). Tant que
+// ce fichier recopiait `depth`, le MEME trio recevait deux reponses
+// differentes selon l'etat du reseau :
+//
+//     noeud 25 (depth 2), serveur joignable   -> « Trio D2 valide »
+//     noeud 25 (depth 2), serveur injoignable -> « Trio D1 valide »
+//
+// Et le trackingKey divergeait avec (D2#N25 contre D1#N25), donc les
+// cles persistees dans played-nodes se dedoublaient. Sur un jeu de
+// 2 noeuds le cas ne se presentait pas ; sur les 46 trios du
+// referentiel, 22 sont a depth 2 ou 3 -- pres de la moitie.
+//
+// La profondeur ne sert donc plus a refuser quoi que ce soit : un
+// noeud natif est jouable en collectif quelle que soit sa place
+// dans la chaine. Le serveur reste l'autorite sur l'EXISTENCE, le
+// client sur les REGLES DU JEU -- il se trouve simplement qu'ici la
+// regle ne depend pas de la profondeur.
 // =============================================================
 
 import 'package:trialgo/core/api/api_config.dart';
 import 'package:trialgo/data/datasources/http/http_collective_datasource.dart';
 import 'package:trialgo/domain/entities/verify_trio_result.dart';
 
-/// Profondeur maximale acceptee en mode collectif.
+/// Distance d'un trio natif : toujours 1.
 ///
-/// Au-dela, le trio existe bien dans le jeu mais n'est pas jouable
-/// dans ce mode. Doit rester coherent avec la liste [1, 2, 3]
-/// parcourue par VerifyTrioCardsUseCase.verifyByCardIds.
-const int kProfondeurMaxCollectif = 3;
+/// Le mode collectif par numero designe un noeud du graphe, donc
+/// une fusion directe : ses trois cartes sont sous les yeux du
+/// joueur. Sa profondeur dans la chaine ne change pas la
+/// difficulte du trio, et ne doit donc pas apparaitre ici.
+///
+/// Doit rester aligne sur le `distance: 1` que
+/// GenerateLogicalNodesUseCase pose sur la table D1.
+const int kDistanceTrioNatif = 1;
 
 /// Verifie un trio aupres du backend pour le mode collectif.
 class CollectiveVerifier {
@@ -60,8 +92,8 @@ class CollectiveVerifier {
   //
   // VALEURS DE RETOUR, ET POURQUOI TROIS CAS
   // ----------------------------------------
-  //   VerifyTrioResult  le serveur a tranche (trio valide, trio
-  //                     inexistant, ou trio trop profond)
+  //   VerifyTrioResult  le serveur a tranche (trio valide, ou trio
+  //                     inexistant pour ce jeu)
   //   null              on n'a pas pu demander : mode Supabase, ou
   //                     aucun jeu charge. L'appelant bascule alors
   //                     en verification locale.
@@ -99,19 +131,6 @@ class CollectiveVerifier {
       );
     }
 
-    // ---- Le trio existe : reste a verifier qu'il est jouable ici ----
-    final profondeur = reponse['depth'] as int?;
-    if (profondeur == null) {
-      // Reponse incomplete : on prefere ne pas trancher et laisser
-      // le graphe local repondre.
-      return null;
-    }
-    if (profondeur > kProfondeurMaxCollectif) {
-      return VerifyTrioResult.invalid(
-        'Trio hors mode collectif (D > $kProfondeurMaxCollectif)',
-      );
-    }
-
     // ---- Trio valide : on assemble le resultat ----
     // Les libelles arrivent dans l'ordre metier E, C, R. C'est aussi
     // l'ordre cardA/cardB/cardC d'un noeud logique D1, donc l'UI
@@ -125,16 +144,21 @@ class CollectiveVerifier {
     final index = (reponse['node_index'] as int?) ?? nodeIndex;
 
     return VerifyTrioResult.success(
-      distance: profondeur,
+      // Toujours 1 : un trio natif est une fusion DIRECTE, quelle
+      // que soit la place de son noeud dans la chaine. C'est aussi
+      // ce que renvoie le chemin local, et les deux doivent dire la
+      // meme chose (cf. le bandeau de ce fichier).
+      distance: kDistanceTrioNatif,
       cardLabels: labels,
       // Le serveur ne renvoie pas la chaine de noeuds traversee, il
       // ne connait que le noeud interroge. On expose donc ce seul
       // index plutot qu'une chaine inventee.
       sourceNodeIndices: [index],
-      // Meme convention de nommage que le generateur local
-      // (cf. generate_logical_nodes_usecase : 'D1#N12'), pour que
-      // les cles restent lisibles quelle que soit leur provenance.
-      trackingKey: 'D$profondeur#N$index',
+      // Exactement la cle que le generateur local produit pour ce
+      // meme noeud ('D1#N12'). Sans cette egalite, le suivi des
+      // trios deja joues compterait deux fois le meme trio selon
+      // que le serveur ait repondu ou non.
+      trackingKey: 'D$kDistanceTrioNatif#N$index',
     );
   }
 }

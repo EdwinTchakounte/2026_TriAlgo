@@ -258,9 +258,18 @@ class VerifyTrioCardsUseCase {
       return VerifyTrioResult.invalid('Trio inexistant pour ce jeu');
     }
 
-    if (node.depth > 3) {
-      return VerifyTrioResult.invalid('Trio hors mode collectif (D > 3)');
-    }
+    // NOTE : on ne refuse plus sur `node.depth`.
+    //
+    // La profondeur dit ou le noeud se situe dans sa chaine ; elle ne
+    // dit rien de la difficulte de son trio. Un noeud natif, meme
+    // troisieme de sa chaine, est une fusion DIRECTE : ses trois
+    // cartes sont sous les yeux du joueur. Le refuser au motif de sa
+    // position n'avait pas de sens, et le chemin serveur ne le
+    // refusait pas de la meme facon (cf. CollectiveVerifier).
+    //
+    // La limite du mode collectif porte sur les trios GENERES, et
+    // elle est appliquee la ou elle a un sens : la liste [1, 2, 3]
+    // parcourue par verifyByCardIds.
 
     // Resolution de l'emettrice effective (D1 direct, D2+ via parent).
     final String eId;
