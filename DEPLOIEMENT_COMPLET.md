@@ -87,6 +87,16 @@ systemctl status postgresql --no-pager | head -5
 sudo ss -ltnp
 ```
 
+**`postgresql.service` affiche `Active: active (exited)`, et c'est normal.** Sur Debian et
+Ubuntu, cette unité est une simple enveloppe qui ne fait tourner aucun processus : elle
+démarre les vraies instances puis se termine, d'où `active (exited)` et un temps processeur
+de quelques millisecondes. Le vrai serveur est ailleurs :
+
+```bash
+pg_lsclusters                                    # version, port, état, répertoire
+systemctl status 'postgresql@*-main' --no-pager | head -8
+```
+
 Dans la sortie de `ss`, vérifier que **8000, 9000 et 9001 sont libres**. S'ils sont pris,
 choisir trois autres ports et les reporter dans **deux fichiers seulement** :
 
@@ -111,8 +121,23 @@ adduser mixalgo                      # mot de passe demandé
 usermod -aG sudo mixalgo             # pour les commandes nginx et certbot
 usermod -aG docker mixalgo           # pour lancer docker sans sudo
 
+# Contrôle : les deux groupes doivent apparaître
+id mixalgo
+
 # Clé SSH (depuis VOTRE poste, pas le serveur)
 ssh-copy-id mixalgo@169.58.139.73
+```
+
+⚠️ **`adduser` peut se terminer sans avoir posé de mot de passe.** Si les deux saisies ne
+correspondent pas, il affiche `passwd: password unchanged`, propose `Try again? [y/N]`, et
+**poursuit quand même** la création du compte. L'utilisateur existe alors sans mot de passe,
+et `sudo` lui est inutilisable : il le réclamera indéfiniment sans jamais l'accepter.
+
+Le message passe inaperçu au milieu du reste. Vérifiez, et corrigez si besoin :
+
+```bash
+passwd --status mixalgo    # 2e champ : P = mot de passe défini, L = verrouillé, NP = aucun
+passwd mixalgo             # pour en poser un
 ```
 
 ⚠️ **`usermod -aG docker` est un octroi de privilèges quasi total.** Un membre du groupe
@@ -185,12 +210,41 @@ dig +short mixalgo.com www.mixalgo.com api.mixalgo.com dashboard.mixalgo.com
 
 ## 4. Récupérer le projet
 
+**Toute cette section se fait en tant que `mixalgo`, pas en root.**
+
 ```bash
-sudo mkdir -p /srv/trialgo
-sudo chown mixalgo:mixalgo /srv/trialgo
+# En root : préparer l'emplacement, puis rendre la main
+mkdir -p /srv/trialgo
+chown mixalgo:mixalgo /srv/trialgo
+
+# Basculer sur le compte de déploiement
+su - mixalgo          # ou se reconnecter en ssh mixalgo@169.58.139.73
+
 git clone https://github.com/EdwinTchakounte/2026_TriAlgo.git /srv/trialgo
 cd /srv/trialgo
-git log --oneline -1        # vérifier qu'on a bien la dernière version
+git log --oneline -3        # vérifier qu'on a bien la dernière version
+```
+
+⚠️ **Cloner en root dans un dossier appartenant à `mixalgo` échoue :**
+
+```
+fatal: detected dubious ownership in repository at '/srv/trialgo'
+```
+
+git refuse d'opérer sur un dépôt dont le propriétaire n'est pas l'utilisateur courant. C'est
+une protection réelle : un dépôt écrit par un autre compte peut contenir des `core.hooksPath`
+ou des filtres qui s'exécutent au premier `git status`.
+
+**Ne suivez pas le conseil que git affiche** (`git config --global --add safe.directory`) : il
+fait taire le contrôle sans corriger la cause, et vous laisse un dépôt aux fichiers mélangés
+entre deux propriétaires, que `git pull` ne pourra plus mettre à jour depuis le compte de
+déploiement. Le vrai correctif est de refaire le clone du bon côté :
+
+```bash
+# En root
+rm -rf /srv/trialgo
+mkdir -p /srv/trialgo && chown mixalgo:mixalgo /srv/trialgo
+su - mixalgo -c 'git clone https://github.com/EdwinTchakounte/2026_TriAlgo.git /srv/trialgo'
 ```
 
 > Le dépôt est **public**. C'est aussi pourquoi `.env` ne doit jamais y entrer : un secret
