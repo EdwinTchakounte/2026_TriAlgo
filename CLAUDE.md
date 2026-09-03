@@ -189,6 +189,12 @@ flutter run --dart-define=API_BASE_URL=https://api.trialgo.io
 
 ## 6. Déploiement
 
+**`DEPLOIEMENT_COMPLET.md` (racine) est le guide de référence** : du serveur nu à l'APK
+téléchargeable, en passant par l'utilisateur système, Docker, le pare-feu, le DNS, les
+trois vhosts nginx, le TLS, le contenu du jeu et les trois façades. Les deux documents du
+backend restent utiles : `RESSOURCES_MUTUALISEES.md` argumente ce qu'on partage avec le
+serveur hôte, `DEPLOIEMENT.md` couvre la variante sur machine dédiée.
+
 ### Topologie retenue
 
 Domaine `mixalgo.com` :

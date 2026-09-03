@@ -7,7 +7,8 @@ donc à répondre, service par service, à une seule question :
 > **Est-ce qu'on réutilise ce qui est déjà là, ou est-ce qu'on apporte le nôtre ?**
 
 Ce document tranche cette question et donne ce qu'il faut vérifier avant de commencer.
-La procédure d'installation elle-même est dans [`DEPLOIEMENT.md`](DEPLOIEMENT.md).
+La procédure d'installation complète est dans
+[`../DEPLOIEMENT_COMPLET.md`](../DEPLOIEMENT_COMPLET.md).
 
 ---
 
