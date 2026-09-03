@@ -85,43 +85,52 @@ su - mixalgo -c 'ls /srv/trialgo/vitrine /srv/trialgo/ok_trialgo_backend/referen
 
 **À partir d'ici, tout se fait en tant que `mixalgo`.**
 
-### 5. Le fichier `.env`
+### 5. Fabriquer le `.env`
+
+Un script s'en charge : il copie le gabarit, genere les six secrets avec `openssl` et les
+substitue aux bons endroits, y compris dans `DATABASE_URL` ou le mot de passe apparait une
+seconde fois.
 
 ```bash
 ssh mixalgo@169.58.139.73
 cd /srv/trialgo/ok_trialgo_backend
-cp .env.production.example .env
-chmod 600 .env
+./scripts/preparer_env.sh
 ```
 
-### 6. Générer les secrets, sur le serveur
+Les secrets sont generes **sur la machine** : ils n'apparaissent ni dans l'historique du
+shell, ni dans une sortie de commande.
 
-Ne les faites transiter par aucune messagerie.
+Le script **refuse d'ecraser** un `.env` existant. Ce n'est pas une precaution de principe :
+ses mots de passe sont ceux du volume PostgreSQL deja initialise, et en generer de nouveaux
+rendrait la base inaccessible sans rien effacer, le pire des deux mondes.
+
+- [ ] le script affiche `Ecrit : ... (permissions 600)`
+
+### 6. Renseigner la cle Brevo
+
+C'est la seule valeur que le script ne peut pas deviner.
 
 ```bash
-echo "JWT_SECRET=$(openssl rand -hex 32)"
-echo "POSTGRES_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')"
-echo "MINIO_ROOT_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')"
+nano .env      # BREVO_API_KEY=<xkeysib-...>
 ```
 
-### 7. Renseigner `.env`
+Sans elle, l'API demarre et fonctionne, mais les courriels sont seulement journalises : aucune
+reinitialisation de mot de passe ne part.
 
-```bash
-nano .env
-```
+- [ ] plus aucun `<chevron>` dans le fichier
 
-Les cinq valeurs qui cassent quelque chose **en silence** si elles sont fausses :
+### 7. Relire les quatre valeurs qui cassent en silence
 
-| Variable | Valeur exacte |
+Le script les affiche deja en fin d'execution. Elles doivent valoir exactement :
+
+| Variable | Valeur |
 |---|---|
 | `PUBLIC_BASE_URL` | `https://api.mixalgo.com` |
 | `S3_PUBLIC_ENDPOINT_URL` | `https://api.mixalgo.com/files` **sans barre finale** |
 | `CORS_ALLOWED_ORIGINS` | `https://dashboard.mixalgo.com,https://mixalgo.com` |
 | `TRUST_PROXY_HEADERS` | `true` |
-| `BREVO_API_KEY` | votre clé, sinon les courriels sont seulement journalisés |
 
-- [ ] plus aucun `<chevron>` dans le fichier
-- [ ] `S3_PUBLIC_ENDPOINT_URL` ne se termine pas par `/`
+- [ ] les quatre sont conformes
 
 ---
 
@@ -162,6 +171,11 @@ source ~/.bashrc
 mix up -d --build
 mix ps
 ```
+
+> Si vous voyez `env file ... .env not found` suivi d'une pluie de
+> `The "POSTGRES_USER" variable is not set`, c'est la **phase C** qui a ete sautee. Docker
+> Compose ne s'arrete pas pour autant : il remplace chaque variable absente par une chaine
+> vide et demarre des conteneurs sans mot de passe ni base. Revenez a l'etape 5.
 
 - [ ] `postgres`, `minio` et `api` sont `Up`
 - [ ] `caddy` est **absent** (neutralisé par la surcouche nginx, c'est voulu)
