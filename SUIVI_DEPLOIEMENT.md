@@ -350,9 +350,10 @@ ssh mixalgo@169.58.139.73 \
    sudo chown www-data:www-data /srv/vitrine/telechargements/mixalgo.apk'
 ```
 
-⚠️ **Avant de distribuer le premier APK**, trancher l'`applicationId`. Il vaut aujourd'hui
-`com.trialgo.app` et devient **définitif** dès la première publication : le Play Store ne
-permet jamais de le changer.
+> **L'`applicationId` est arrêté : `com.mixalgo.app`.** Il a été fixé avant toute
+> publication, le seul moment où ce changement est possible : une fois l'application publiée,
+> le Play Store ne permet jamais d'en changer. Le `namespace` a suivi, il valait encore
+> `com.example.trialgo`, le défaut du gabarit Flutter.
 
 ---
 
@@ -443,8 +444,7 @@ sudo chown -R www-data:www-data /srv/vitrine
 |---|---|---|
 | 18 | 64 images de cartes manquantes sur 76 | vous |
 | 22 | aucun keystore Android | vous |
-| 22 | `applicationId` `com.trialgo.app`, à trancher avant publication | vous |
 
-Aucun des trois n'empêche les phases A à H et J. Le serveur, la vitrine et le studio montent
+Aucun des deux n'empêche les phases A à H et J. Le serveur, la vitrine et le studio montent
 sans eux ; le jeu sera sans deck et le bouton de téléchargement en 404 jusqu'à leur
 résolution.

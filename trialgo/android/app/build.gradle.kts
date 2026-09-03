@@ -41,11 +41,12 @@ if (signatureDisponible) {
 
 android {
     // namespace : identifiant du package Kotlin/Java genere.
-    // Il reste sur com.example.trialgo car le changer imposerait de
-    // deplacer MainActivity.kt et tous les fichiers generes. Il est
-    // interne a la compilation et n'est PAS ce que voit le Play
-    // Store : c'est applicationId (ci-dessous) qui identifie l'app.
-    namespace = "com.example.trialgo"
+    // Il valait com.example.trialgo, le defaut du gabarit Flutter
+    // jamais renomme. Le deplacement de MainActivity.kt qu'imposait
+    // son changement a ete fait en meme temps que le passage a
+    // com.mixalgo.app : autant tout aligner d'un seul coup plutot
+    // que laisser un "com.example" dans une application publiee.
+    namespace = "com.mixalgo.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -68,13 +69,20 @@ android {
         // differente, sans mise a jour possible pour les utilisateurs
         // deja installes.
         //
-        // L'ancienne valeur, "com.example.trialgo", venait du gabarit
-        // Flutter. Le Play Store refuse tout identifiant sous
-        // com.example.*, considere comme un espace de noms de test.
+        // Histoire de cette valeur :
+        //   com.example.trialgo  gabarit Flutter, refuse par le Play
+        //                        Store qui traite com.example.* comme
+        //                        un espace de noms de test
+        //   com.trialgo.app      ancien nom du produit
+        //   com.mixalgo.app      le nom reel, arrete AVANT toute
+        //                        publication -- seul moment ou ce
+        //                        changement est encore possible
         //
-        // Aligne avec l'app studio (com.trialgo.trialgo_admin).
+        // Le studio admin garde com.trialgo.trialgo_admin : c'est un
+        // outil interne qui ne passe pas par le Play Store, et le
+        // renommer n'apporterait rien.
         // =====================================================
-        applicationId = "com.trialgo.app"
+        applicationId = "com.mixalgo.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

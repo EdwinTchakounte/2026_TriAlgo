@@ -1,4 +1,4 @@
-package com.example.trialgo
+package com.mixalgo.app
 
 import io.flutter.embedding.android.FlutterActivity
 
