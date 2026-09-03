@@ -73,13 +73,105 @@ class LogicalNodesPool {
   final List<List<LogicalNodeEntity>> tablesD5;
 
   /// Cree un pool de noeuds logiques.
-  const LogicalNodesPool({
+  ///
+  /// Le constructeur n'est plus `const` : le pool porte desormais un
+  /// index paire -> completions, construit paresseusement au premier
+  /// appel de [completionsFor] (cf. plus bas).
+  LogicalNodesPool({
     required this.tablesD1,
     required this.tablesD2,
     required this.tablesD3,
     required this.tablesD4,
     required this.tablesD5,
   });
+
+  // =============================================================
+  // INDEX : paire de cartes visibles -> reponses valides
+  // =============================================================
+  // POURQUOI CET INDEX EXISTE
+  // -------------------------
+  // Une question montre 2 cartes et en masque une 3eme. Le joueur
+  // doit retrouver la manquante. Or, a partir de D2, la question
+  // "quelles 2 cartes + ? forment un trio valide ?" a presque
+  // toujours PLUSIEURS reponses justes.
+  //
+  // Exemple sur une chaine de 2 noeuds, dont les elements sont
+  // {E1, C1, R1, C2, R2} et dont les trios valides sont les
+  // 5 sous-ensembles de 3 elements contenant R2, prive du noeud
+  // natif {R1, C2, R2} :
+  //
+  //     E1 + R2 + ?   ->  C1, C2 OU R1     (3 reponses justes)
+  //     C1 + R2 + ?   ->  E1, C2 OU R1     (3 reponses justes)
+  //     E1 + C1 + ?   ->  R2               (1 seule)
+  //
+  // Autrement dit : masquer R_k (la receptrice finale, config A)
+  // donne toujours une reponse unique ; masquer l'une des deux
+  // autres cartes (configs B et C) est TOUJOURS ambigu, avec
+  // jusqu'a 3 reponses a D2, 5 a D3, 7 a D4 et 9 a D5.
+  //
+  // Sans cet index, les distracteurs etaient tires dans tout le
+  // catalogue en excluant seulement les 3 cartes du trio courant.
+  // Une autre reponse juste pouvait donc apparaitre parmi les 6
+  // choix, et le joueur qui la choisissait etait compte FAUX alors
+  // qu'il avait raison. Silencieux, et frappant d'abord ceux qui
+  // maitrisent le mieux le jeu.
+  //
+  // L'index est global au pool (toutes distances confondues) et non
+  // limite a la chaine courante : deux chaines distinctes peuvent
+  // partager une paire de cartes, et le joueur n'a aucun moyen de
+  // savoir dans quelle table il se trouve.
+  //
+  // COUT
+  // ----
+  // Construit une seule fois, au premier appel, en O(N) sur le
+  // nombre de noeuds logiques. Chaque noeud produit 3 entrees (une
+  // par carte masquable). La lecture est ensuite en O(1).
+  // =============================================================
+
+  /// Index paresseux : "idA|idB" (ordonne) -> ids des 3es cartes valides.
+  Map<String, Set<String>>? _completionsParPaire;
+
+  /// Construit l'index au premier appel, le renvoie ensuite tel quel.
+  Map<String, Set<String>> get _index {
+    final deja = _completionsParPaire;
+    if (deja != null) return deja;
+
+    final index = <String, Set<String>>{};
+    for (final distance in const [1, 2, 3, 4, 5]) {
+      for (final table in tablesForDistance(distance)) {
+        for (final noeud in table) {
+          final ids = [noeud.cardA.id, noeud.cardB.id, noeud.cardC.id];
+          // Pour chacune des 3 cartes : elle est une reponse valide
+          // pour la paire formee par les deux autres.
+          for (var i = 0; i < 3; i++) {
+            final troisieme = ids[i];
+            final paire = [ids[(i + 1) % 3], ids[(i + 2) % 3]];
+            (index[_cle(paire[0], paire[1])] ??= <String>{}).add(troisieme);
+          }
+        }
+      }
+    }
+
+    _completionsParPaire = index;
+    return index;
+  }
+
+  /// Cle canonique d'une paire : triee, donc independante de l'ordre.
+  static String _cle(String a, String b) =>
+      a.compareTo(b) <= 0 ? '$a|$b' : '$b|$a';
+
+  // =============================================================
+  // METHODE : completionsFor
+  // =============================================================
+
+  /// Toutes les cartes qui, ajoutees a [idA] et [idB], forment un
+  /// trio valide quelque part dans le pool.
+  ///
+  /// Retourne un ensemble vide si la paire n'apparait dans aucun
+  /// trio (ne devrait pas arriver pour une question generee par
+  /// le jeu, mais la methode reste sure a appeler).
+  Set<String> completionsFor(String idA, String idB) =>
+      _index[_cle(idA, idB)] ?? const <String>{};
 
   // =============================================================
   // GETTERS UTILITAIRES

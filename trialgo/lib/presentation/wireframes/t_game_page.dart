@@ -134,7 +134,17 @@ class _TGamePageState extends ConsumerState<TGamePage>
   late Map<String, dynamic> _currentEmettrice;
   late Map<String, dynamic> _currentCable;
   late Map<String, dynamic> _currentReceptrice;
+  /// La carte masquee : c'est elle que l'interface revele apres coup.
   late String _correctCardId;
+
+  /// Toutes les cartes qui completent valablement la paire visible.
+  ///
+  /// Contient toujours [_correctCardId]. A partir de D2, masquer
+  /// autre chose que la receptrice finale rend la question
+  /// structurellement ambigue (cf. GameQuestion.validAnswerIds) :
+  /// on accepte donc n'importe laquelle de ces cartes.
+  late Set<String> _validAnswerIds;
+
   late List<Map<String, dynamic>> _choices;
 
   // =============================================================
@@ -536,6 +546,10 @@ class _TGamePageState extends ConsumerState<TGamePage>
       'id': card.id,
       'label': card.label,
       'imageUrl': card.imageUrl,
+      // Vignette 256 px, pour les cartes affichees petites (la
+      // grille de six choix). Vaut l'image pleine si la carte n'a
+      // pas de vignette : l'appelant n'a jamais de null a gerer.
+      'thumbUrl': card.thumbUrl,
       'type': '', // non utilise dans l'affichage
     };
   }
@@ -590,6 +604,7 @@ class _TGamePageState extends ConsumerState<TGamePage>
     _currentCable = _cardToMap(question.visibleCards[1]);
     _currentReceptrice = _cardToMap(question.maskedCard);
     _correctCardId = question.correctCardId;
+    _validAnswerIds = question.validAnswerIds;
 
     // --- Choix : 1 bonne + 5 distracteurs = 6 cartes ---
     // Deja melanges par le usecase.
@@ -694,7 +709,11 @@ class _TGamePageState extends ConsumerState<TGamePage>
     if (_isAnswered) return;
     _timer?.cancel();
 
-    final isCorrect = cardId == _correctCardId;
+    // On accepte TOUTE carte qui complete valablement la paire
+    // visible, pas seulement celle qui avait ete masquee. Les
+    // distracteurs excluent deja ces cartes, donc le cas est rare --
+    // mais quand il se presente, le joueur a raison.
+    final isCorrect = cardId != null && _validAnswerIds.contains(cardId);
 
     // Jouer le son de feedback approprie.
     final audio = ref.read(audioServiceProvider);
@@ -1758,7 +1777,11 @@ class _TGamePageState extends ConsumerState<TGamePage>
     final card = _choices[index];
     final cardId = card['id'] as String;
     final isSelected = _selectedCardId == cardId;
-    final isCorrectCard = cardId == _correctCardId;
+    // Meme regle qu'a la validation : une carte acceptee ne doit
+    // jamais s'afficher en rouge. Les distracteurs excluant les
+    // autres reponses justes, une seule carte est concernee en
+    // pratique -- donc un seul reveal.
+    final isCorrectCard = _validAnswerIds.contains(cardId);
     final isWrong = isSelected && _isAnswered && !isCorrectCard;
     final isRevealed = isCorrectCard && _isAnswered;
 
