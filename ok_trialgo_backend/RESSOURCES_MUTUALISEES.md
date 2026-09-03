@@ -126,17 +126,42 @@ docker compose -f docker-compose.prod.yml \
                -f docker-compose.pg-hote.yml up -d --build
 ```
 
-### 3.2 Côté hôte
+### 3.2 Le piège du réseau
 
-Postgres n'écoute par défaut que sur `localhost`, ce qui **exclut** le bridge Docker.
+**`172.17.0.1` ne suffit pas.** C'est la passerelle du bridge Docker *par défaut*, celui
+qu'utilisent les conteneurs lancés sans Compose. Or Compose crée pour chaque projet **son
+propre réseau**, avec une passerelle différente (`172.18.0.1`, `172.19.0.1`, selon ce qui est
+libre au moment de la création). Un PostgreSQL qui n'écoute que sur `172.17.0.1` reste donc
+injoignable depuis la stack, avec une connexion refusée qui ne dit rien de sa cause.
+
+Pire, cette passerelle **change** si le réseau est recréé : une configuration qui marche
+aujourd'hui casse au prochain `docker compose down`.
+
+La réponse est de figer le sous-réseau du projet plutôt que de le subir :
+
+```yaml
+# à ajouter dans docker-compose.pg-hote.yml
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16      # passerelle : 172.28.0.1
+```
+
+### 3.3 Côté hôte
+
+Postgres n'écoute par défaut que sur `localhost`.
 
 ```bash
-# postgresql.conf
-listen_addresses = 'localhost,172.17.0.1'
+# postgresql.conf -- ajouter la passerelle figée ci-dessus
+listen_addresses = 'localhost,172.17.0.1,172.28.0.1'
 
-# pg_hba.conf -- autoriser le sous-réseau Docker, et lui seul
-host    trialgo    trialgo    172.16.0.0/12    scram-sha-256
+# pg_hba.conf -- autoriser ce sous-réseau, et lui seul
+host    trialgo    trialgo    172.28.0.0/16    scram-sha-256
 ```
+
+**Ne pas écrire `listen_addresses = '*'`** : PostgreSQL écouterait alors aussi sur
+l'interface publique, et seul le pare-feu vous séparerait d'Internet.
 
 ```sql
 CREATE USER trialgo WITH PASSWORD '<...>';
@@ -147,7 +172,7 @@ CREATE DATABASE trialgo OWNER trialgo;
 `sudo ss -ltnp | grep 5432` ne doit montrer que `127.0.0.1` et `172.17.0.1`,
 jamais `0.0.0.0`.
 
-### 3.3 Les sauvegardes
+### 3.4 Les sauvegardes
 
 `backup.sh` et `restore.sh` doivent appeler `pg_dump` / `pg_restore` directement sur
 l'hôte au lieu de passer par `docker compose exec`. Le reste de leur logique — dump
