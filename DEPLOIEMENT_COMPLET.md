@@ -259,39 +259,107 @@ su - mixalgo -c 'git clone https://github.com/EdwinTchakounte/2026_TriAlgo.git /
 
 ## 5. Configurer
 
+Tout tient dans un seul fichier, `ok_trialgo_backend/.env`, qui n'est **jamais** dans le
+dépôt. Il porte les secrets de la stack : le perdre n'efface aucune donnée, mais rend le
+volume Postgres inutilisable (mot de passe) et invalide tous les jetons déjà émis
+(`JWT_SECRET`).
+
+### La façon courte, et la bonne
+
 ```bash
 cd /srv/trialgo/ok_trialgo_backend
-cp .env.production.example .env
-chmod 600 .env               # personne d'autre que vous n'a à le lire
+./scripts/preparer_env.sh
 ```
 
-### Générer les secrets
+Le script copie le gabarit, tire cinq secrets avec `openssl` **sur la machine**, les
+substitue, écrit `.env` en permissions 600, et **vérifie chaque substitution** — un motif
+manquant s'entend immédiatement plutôt qu'au démarrage de la stack. Il termine en listant
+ce qui reste à renseigner à la main.
 
-**Sur le serveur, jamais ailleurs.** Ne les faites transiter par aucune messagerie.
+Les secrets générés n'apparaissent nulle part ailleurs : ni dans le dépôt, ni dans votre
+historique de commandes, ni dans la sortie du script. Ne les faites transiter par aucune
+messagerie.
+
+> Recopier ces valeurs à la main est long et se rate en silence : un `<chevron>` oublié
+> dans `DATABASE_URL` et Postgres refuse la connexion avec un message qui ne dit pas
+> lequel des cinq champs est en cause.
+
+### Les 31 variables, et d'où vient chacune
+
+Quatre origines seulement. Rien n'est à inventer.
+
+**① Générées par le script** — vous ne les choisissez pas et n'avez pas à les connaître.
+
+| Variable | Rôle |
+|---|---|
+| `POSTGRES_PASSWORD` | mot de passe du rôle Postgres |
+| `DATABASE_URL` | URL asyncpg de l'API, reprend le mot de passe ci-dessus |
+| `ALEMBIC_DATABASE_URL` | même base, pilote synchrone, pour les migrations |
+| `JWT_SECRET` | signature des jetons de session |
+| `S3_ACCESS_KEY` | identifiant MinIO — **c'est aussi `MINIO_ROOT_USER`** |
+| `S3_SECRET_KEY` | secret MinIO — **c'est aussi `MINIO_ROOT_PASSWORD`** |
+
+⚠️ **MinIO n'a pas de variables à lui.** `docker-compose.prod.yml` lui passe
+`MINIO_ROOT_USER: ${S3_ACCESS_KEY}` et `MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}`. Ajouter un
+`MINIO_ROOT_PASSWORD=` dans le `.env` ne configure **rien** : aucun service ne le lit.
+
+**② À vous de les fournir** — les seules qui demandent une action extérieure.
+
+| Variable | Où l'obtenir | Ce qui se passe sans elle |
+|---|---|---|
+| `BREVO_API_KEY` | Compte Brevo → *SMTP & API* → *Créer une clé API*. Commence par `xkeysib-` | Mode DRY-RUN : les courriels sont **journalisés au lieu d'être envoyés**. La stack démarre, l'inscription fonctionne, mais personne ne reçoit rien |
+| `BREVO_SENDER_EMAIL` | Une adresse **validée** dans Brevo, sinon l'envoi est refusé | Courriels rejetés par Brevo |
+
+**③ Déjà justes dans le gabarit pour `mixalgo.com`** — à ne toucher que si vous changez de
+domaine.
+
+`PUBLIC_BASE_URL` · `S3_PUBLIC_ENDPOINT_URL` · `CORS_ALLOWED_ORIGINS` ·
+`APP_FRONTEND_URL` · `BREVO_SENDER_NAME` · `POSTGRES_USER` · `POSTGRES_DB` ·
+`S3_ENDPOINT_URL` · `S3_BUCKET` · `S3_REGION` · `STORAGE_BACKEND` · `TRUST_PROXY_HEADERS`
+
+**④ Réglages de comportement** — des valeurs par défaut raisonnables, modifiables plus tard.
+
+`JWT_ALGORITHM` · `JWT_EXPIRE_MINUTES` (1440, soit 24 h) ·
+`JWT_REFRESH_EXPIRE_DAYS` (30) · `MAX_UPLOAD_BYTES` (5 Mo) · `ALLOWED_MIME` ·
+`IMAGE_MAX_DIMENSION` (1024) · `IMAGE_JPEG_QUALITY` (85) ·
+`EMAIL_TOKEN_TTL_RESET_MINUTES` (60) · `EMAIL_TOKEN_TTL_CONFIRM_MINUTES` (2880, 48 h) ·
+`RATE_LIMIT_ENABLED` · `LOCAL_STORAGE_DIR` (inutilisé en `STORAGE_BACKEND=s3`)
+
+### Les cinq qui cassent quelque chose si elles sont fausses
+
+| Variable | Valeur attendue | Le symptôme, qui ne désigne jamais la cause |
+|---|---|---|
+| `S3_PUBLIC_ENDPOINT_URL` | `https://api.mixalgo.com/files` | **Toutes les cartes cassées sur mobile**, API en 200 partout, journaux serveur vides |
+| `TRUST_PROXY_HEADERS` | `true` | L'API voit tout venir de `127.0.0.1` : un seul seau de limitation, le premier utilisateur actif bloque tous les autres |
+| `PUBLIC_BASE_URL` | `https://api.mixalgo.com` | Le lien de réinitialisation de mot de passe ne mène nulle part |
+| `CORS_ALLOWED_ORIGINS` | `https://dashboard.mixalgo.com,https://mixalgo.com` | Le studio et la vitrine ne peuvent plus appeler l'API |
+| `DATABASE_URL` | préfixe `postgresql+asyncpg://` | L'API démarre puis échoue sur la première requête |
+
+**`S3_PUBLIC_ENDPOINT_URL` est le piège le plus coûteux du déploiement.** Cette valeur est
+recopiée telle quelle dans chaque `image_url` renvoyée aux clients. Restée sur `localhost`,
+tout paraît fonctionner côté serveur et aucune carte ne s'affiche sur les téléphones.
+**Pas de barre oblique finale** : `public_url()` concatène sans normaliser, et un double
+séparateur donne des images en 404 pendant que le reste marche.
+`startup_checks.py` détecte les deux cas — lisez les journaux du premier démarrage.
+
+### Contrôler avant de lancer
 
 ```bash
-echo "JWT_SECRET=$(openssl rand -hex 32)"
-echo "POSTGRES_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')"
-echo "MINIO_ROOT_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')"
+grep -c '<' .env                    # 0 attendu, hors lignes de commentaire
+ls -l .env                          # -rw------- : personne d'autre ne doit le lire
+grep -E '^(S3_PUBLIC_ENDPOINT_URL|TRUST_PROXY_HEADERS|PUBLIC_BASE_URL)=' .env
 ```
 
-Reportez ces valeurs dans `.env`, puis renseignez les `<chevrons>` restants.
+### Le sauvegarder, dès maintenant
 
-### Les valeurs qui comptent
+`backup.sh` ne le copie pas — c'est un fichier de secrets, il n'a rien à faire à côté d'un
+dump en clair. Faites-en une copie chiffrée hors du serveur :
 
-| Variable | Valeur | Ce qui casse si elle est fausse |
-|---|---|---|
-| `PUBLIC_BASE_URL` | `https://api.mixalgo.com` | Les liens de réinitialisation de mot de passe ne mènent nulle part |
-| `S3_PUBLIC_ENDPOINT_URL` | `https://api.mixalgo.com/files` | **Toutes les images cassées sur mobile**, avec des logs serveur vides |
-| `CORS_ALLOWED_ORIGINS` | `https://dashboard.mixalgo.com,https://mixalgo.com` | Le studio et la vitrine ne peuvent plus appeler l'API |
-| `TRUST_PROXY_HEADERS` | `true` | L'API voit tout venir de `127.0.0.1` : le premier utilisateur actif bloque tous les autres |
-| `BREVO_API_KEY` | votre clé | Les courriels sont seulement journalisés |
+```bash
+gpg -c .env && mv .env.gpg ~/            # puis sortir le .gpg de la machine
+```
 
-**`S3_PUBLIC_ENDPOINT_URL` est le piège le plus coûteux.** Cette valeur est recopiée telle
-quelle dans chaque `image_url` renvoyée aux clients. Restée sur `localhost`, l'API répond
-200 partout, les journaux sont vides, et toutes les cartes s'affichent cassées sur les
-téléphones. **Pas de barre oblique finale** : `public_url()` concatène sans normaliser, et
-un double séparateur donne des images en 404 pendant que tout le reste fonctionne.
+Même règle que le keystore Android : ce qui ne vit qu'à un seul endroit est déjà perdu.
 
 ---
 
