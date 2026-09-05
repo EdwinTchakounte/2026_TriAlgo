@@ -144,8 +144,31 @@ cat <<'TXT'
 
 TXT
 
-read -r -s -p "  Mot de passe          : " MDP; echo
-read -r -s -p "  Confirmez             : " MDP2; echo
+# La saisie se fait sur /dev/tty et non sur l'entree standard.
+# La difference compte : lance depuis un outil qui redirige stdin
+# (un agent, un pipe, une tache planifiee), un `read` classique
+# recoit immediatement une fin de fichier. Avec `set -e` le script
+# s'arrete alors en silence, juste apres avoir affiche l'invite --
+# on croit avoir tape un mot de passe, et rien n'a ete cree.
+# /dev/tty designe toujours le terminal de controle, quelle que
+# soit la redirection.
+# On TENTE l'ouverture plutot que de tester `-r /dev/tty` : sans
+# terminal de controle, le fichier existe et parait lisible, mais
+# l'open echoue avec "No such device or address". Seule une
+# ouverture reelle repond a la question.
+if ! (exec < /dev/tty) 2>/dev/null; then
+  rouge "Aucun terminal disponible pour saisir le mot de passe."
+  echo
+  echo "Ce script doit etre lance depuis un vrai terminal, et non"
+  echo "au travers d'un outil qui redirige l'entree standard."
+  echo
+  echo "Ouvrez un terminal et relancez :"
+  echo "  cd $RACINE && ./scripts/creer_keystore.sh"
+  exit 1
+fi
+
+read -r -s -p "  Mot de passe          : " MDP < /dev/tty; echo
+read -r -s -p "  Confirmez             : " MDP2 < /dev/tty; echo
 
 if [ "$MDP" != "$MDP2" ]; then
   rouge "Les deux saisies different. Rien n'a ete cree."
