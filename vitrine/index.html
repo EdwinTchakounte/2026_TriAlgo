@@ -583,6 +583,19 @@ section{ padding-block:var(--section); position:relative; }
   background:rgba(240,168,0,.07);
 }
 
+/* Sur telephone, la rangee de fusion tient trois cartes de 5rem cote
+   a cote. Or "Humain augmente" est insecable : son white-space:nowrap
+   donne au bloc d'attributs une largeur minimale de 96px, superieure
+   aux 80px de la carte. Le surplus ne rognait pas la carte, il
+   poussait la page entiere : 53px de defilement horizontal sur toute
+   la vitrine, sur le format d'ecran par lequel arrive justement le
+   visiteur qui scanne le QR. On autorise la coupure ici seulement ;
+   au-dessus de 520px le nowrap garde chaque attribut sur une ligne. */
+@media (max-width:520px){
+  .attribut{ white-space:normal; }
+  .attributs{ max-width:100%; }
+}
+
 /* L'instant de fusion : les deux parents se penchent l'un vers
    l'autre, l'enfant pivote pour apparaitre. */
 .fusion.est-active .carte[data-role="emettrice"]{ transform:rotateY(16deg) translateZ(30px); }
@@ -782,7 +795,13 @@ section{ padding-block:var(--section); position:relative; }
 .table-cartes::before{
   content:"";
   position:absolute; left:50%; top:50%;
-  width:min(100%, 26rem); aspect-ratio:1;
+  /* 70% et non 100% : ce carre est pivote de 45 degres, et un carre
+     pivote occupe racine de 2 fois son cote, soit 41% de plus. A
+     100% il debordait donc son conteneur de 20% de chaque cote --
+     invisible sur large ecran ou 26rem plafonne avant, mais sur
+     telephone c'est ce losange, et lui seul, qui ajoutait 53px de
+     defilement horizontal a la page entiere. 70% x 1,414 = 99%. */
+  width:min(70%, 26rem); aspect-ratio:1;
   transform:translate(-50%,-50%) rotate(45deg);
   border:1px solid var(--trait);
   z-index:-1;
@@ -793,6 +812,9 @@ section{ padding-block:var(--section); position:relative; }
   margin-top:3rem;
   display:grid; gap:1.5rem;
   grid-template-columns:repeat(auto-fit, minmax(15rem, 1fr));
+  /* Le compteur est pose par ::before ci-dessous. Sans list-style:none, le
+     marqueur natif du <li> s'affiche EN PLUS, et l'etape se lit "1.01". */
+  list-style:none;
   counter-reset:etape;
 }
 .etape{
