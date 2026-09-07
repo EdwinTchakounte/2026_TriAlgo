@@ -509,13 +509,343 @@
   }
 
   // ===========================================================
+  // 5. LE RELIEF AU POINTEUR
+  // ===========================================================
+  //
+  // Une carte qui s'incline vers le curseur, avec un reflet qui
+  // suit la meme lumiere. C'est le seul effet de la page qui
+  // demande une boucle de rendu par mouvement, donc le seul qui
+  // merite qu'on se preoccupe de son cout.
+  //
+  // TROIS CONDITIONS AVANT D'ARMER QUOI QUE CE SOIT
+  // -----------------------------------------------
+  //   - mouvement reduit demande : on ne monte rien ;
+  //   - pointeur grossier (doigt) : on ne monte rien non plus.
+  //     Sur tactile il n'existe pas d'etat "survole" : la carte
+  //     resterait inclinee apres le doigt, figee de travers,
+  //     jusqu'au prochain toucher ailleurs ;
+  //   - pas de survol reel : meme raison.
+  //
+  // POURQUOI LE CADRE EST MESURE UNE SEULE FOIS
+  // -------------------------------------------
+  // getBoundingClientRect force le navigateur a recalculer la
+  // mise en page. L'appeler a chaque mouvement de souris, alors
+  // qu'on ecrit dans la foulee des styles, provoque le va et
+  // vient lecture/ecriture qui fait tomber le defilement sous les
+  // soixante images par seconde. Le cadre est donc pris a
+  // l'entree du pointeur et garde jusqu'a sa sortie : pendant ce
+  // temps la carte ne bouge pas de place, seule sa surface
+  // s'incline.
+  // ===========================================================
+
+  var POINTEUR_FIN = window.matchMedia &&
+                     window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  /**
+   * Traduit une position de pointeur en angles et en position de
+   * reflet, puis les ecrit comme variables CSS sur la cible.
+   *
+   * Le signe compte : deplacer la souris vers la DROITE doit
+   * faire pivoter la carte de sorte que son bord droit RECULE.
+   * L'inverse donne un objet qui fuit le curseur, et l'oeil le
+   * lit immediatement comme une erreur sans savoir pourquoi.
+   */
+  function poserInclinaison(cible, cadre, x, y, amplitude) {
+    var px = (x - cadre.left) / cadre.width;    // 0 a gauche, 1 a droite
+    var py = (y - cadre.top) / cadre.height;    // 0 en haut,  1 en bas
+    px = Math.max(0, Math.min(1, px));
+    py = Math.max(0, Math.min(1, py));
+
+    var style = cible.style;
+    style.setProperty('--incl-y', ((px - 0.5) * 2 * amplitude).toFixed(2) + 'deg');
+    style.setProperty('--incl-x', ((0.5 - py) * 2 * amplitude).toFixed(2) + 'deg');
+    // Le reflet, lui, va DANS le sens du pointeur : c'est la
+    // source de lumiere qu'on suit, pas la surface.
+    style.setProperty('--lux-x', (px * 100).toFixed(1) + '%');
+    style.setProperty('--lux-y', (py * 100).toFixed(1) + '%');
+  }
+
+  function oublierInclinaison(cible) {
+    ['--incl-x', '--incl-y', '--lux-x', '--lux-y'].forEach(function (nom) {
+      cible.style.removeProperty(nom);
+    });
+  }
+
+  /**
+   * Branche l'inclinaison sur un couple hote/cible.
+   * L'hote recoit les evenements et la classe d'etat ; la cible
+   * porte les variables. Les deux different parce que la zone
+   * sensible est souvent plus large que la surface qui bouge.
+   */
+  function brancherInclinaison(hote, cible, amplitude) {
+    if (!hote || !cible) return;
+
+    var cadre = null;
+    var enAttente = false;
+    var dernierX = 0, dernierY = 0;
+
+    hote.addEventListener('pointerenter', function (evenement) {
+      // Un stylet ou un doigt qui declenche pointerenter ne doit
+      // pas armer le suivi : il n'y aura pas de pointerleave
+      // fiable pour le desarmer.
+      if (evenement.pointerType !== 'mouse') return;
+      cadre = cible.getBoundingClientRect();
+      hote.classList.add('incline');
+    });
+
+    hote.addEventListener('pointermove', function (evenement) {
+      if (!cadre) return;
+      dernierX = evenement.clientX;
+      dernierY = evenement.clientY;
+      // Une seule ecriture par image affichee, quelle que soit la
+      // cadence d'evenements de la souris -- qui peut monter a
+      // plusieurs centaines par seconde sur un pointeur rapide.
+      if (enAttente) return;
+      enAttente = true;
+      requestAnimationFrame(function () {
+        enAttente = false;
+        if (!cadre) return;
+        poserInclinaison(cible, cadre, dernierX, dernierY, amplitude);
+      });
+    }, { passive: true });
+
+    hote.addEventListener('pointerleave', function () {
+      cadre = null;
+      hote.classList.remove('incline');
+      oublierInclinaison(cible);
+    });
+  }
+
+  function monterLeRelief() {
+    if (sobre || !POINTEUR_FIN) return;
+
+    // Les cartes. L'hote est la figure entiere -- nom et attributs
+    // compris -- pour que l'inclinaison ne se coupe pas quand le
+    // curseur descend sur le libelle.
+    document.querySelectorAll('.carte').forEach(function (figure) {
+      brancherInclinaison(figure, figure.querySelector('.carte__face'), 10);
+    });
+
+    // La grande carte de la section Anatomie. Amplitude plus
+    // faible : elle est deja inclinee au repos, et la somme des
+    // deux angles depasserait vite le vraisemblable.
+    var anatomie = document.querySelector('.anatomie__carte');
+    if (anatomie) brancherInclinaison(anatomie, anatomie.querySelector('img'), 6);
+  }
+
+  // ===========================================================
+  // 6. LES ARRIVEES AU DEFILEMENT
+  // ===========================================================
+  //
+  // Les blocs visuels montent de quelques pixels en apparaissant.
+  // Le CSS decrit les deux etats ; ce bloc ne fait que poser la
+  // classe au bon moment, et surtout DESARMER proprement quand
+  // les conditions ne sont pas reunies.
+  //
+  // Le desarmement est la partie importante. La classe `anime`
+  // est posee tres tot, dans le <head>, avant de savoir si on
+  // saura l'honorer. Si IntersectionObserver manque, ou si le
+  // visiteur a demande moins de mouvement, il faut la retirer :
+  // la laisser laisserait une page dont la moitie du contenu est
+  // a opacite zero, pour toujours.
+  // ===========================================================
+
+  var MARGE_OBSERVATION = '0px 0px -12% 0px';
+
+  function monterLesRevelations() {
+    var racine = document.documentElement;
+    var blocs = document.querySelectorAll('.montee');
+
+    if (sobre || !('IntersectionObserver' in window)) {
+      racine.classList.remove('anime');
+      // Les compteurs ne sont pas perdus pour autant : les
+      // valeurs finales sont deja ecrites dans le HTML.
+      return;
+    }
+
+    // Signale au garde-fou du <head> que la releve est assuree.
+    // Sans cela il desarmerait tout au bout de 2,5 secondes.
+    racine.classList.add('revele-actif');
+
+    // La cascade dans les grilles. Le retard est plafonne : sur
+    // douze cartes, un pas regulier ferait arriver la derniere
+    // presque une seconde apres la premiere, et le visiteur
+    // aurait deja fini de lire.
+    document.querySelectorAll('.grille-deck .carte, .etapes .etape')
+      .forEach(function (element, rang) {
+        element.style.setProperty('--retard', Math.min(rang * 45, 400) + 'ms');
+      });
+
+    document.querySelectorAll('.distances .distance').forEach(function (ligne, rang) {
+      var jauge = ligne.querySelector('.distance__jauge i');
+      if (jauge) jauge.style.setProperty('--retard', (rang * 90) + 'ms');
+    });
+
+    var observateur = new IntersectionObserver(function (entrees) {
+      entrees.forEach(function (entree) {
+        if (entree.isIntersecting) reveler(entree.target);
+      });
+    }, { threshold: 0.12, rootMargin: MARGE_OBSERVATION });
+
+    function reveler(bloc) {
+      if (bloc.classList.contains('est-vue')) return;
+      bloc.classList.add('est-vue');
+      // Une arrivee ne se joue qu'une fois. La rejouer a chaque
+      // passage transformerait la page en manege.
+      observateur.unobserve(bloc);
+      compterDans(bloc);
+    }
+
+    blocs.forEach(function (bloc) { observateur.observe(bloc); });
+
+    // -------------------------------------------------------
+    // LE FILET
+    // -------------------------------------------------------
+    // IntersectionObserver ne signale que les CHANGEMENTS d'etat
+    // d'intersection. Un bloc traverse entierement entre deux
+    // images affichees passe de "sous la fenetre" a "au dessus de
+    // la fenetre" sans jamais avoir ete "dedans" : l'intersection
+    // vaut zero avant et zero apres, elle n'a donc pas change, et
+    // AUCUNE entree n'est emise.
+    //
+    // Ce n'est pas un cas d'ecole. Il suffit d'une molette lancee,
+    // d'un clic sur un lien d'ancrage, d'une recherche dans la
+    // page ou d'un retour a une position memorisee. Le bloc reste
+    // alors a opacite zero pour toujours, a moins que le visiteur
+    // ne remonte -- ce qu'il n'a aucune raison de faire, puisqu'il
+    // ne sait pas qu'il a rate quelque chose.
+    //
+    // Ce controle rattrape le cas : tout bloc dont le haut est
+    // deja passe sous la limite de la fenetre est revele, qu'il
+    // ait ete signale ou non. Il coute une lecture de position par
+    // image au plus, uniquement pendant le defilement, et il se
+    // DEBRANCHE des que le dernier bloc est arrive.
+    // -------------------------------------------------------
+    var restants = [].slice.call(blocs);
+    var enAttente = false;
+
+    function rattraper() {
+      restants = restants.filter(function (bloc) {
+        if (bloc.classList.contains('est-vue')) return false;
+        if (bloc.getBoundingClientRect().top > window.innerHeight) return true;
+        reveler(bloc);
+        return false;
+      });
+      if (!restants.length) {
+        window.removeEventListener('scroll', auDefilement);
+      }
+    }
+
+    function auDefilement() {
+      if (enAttente) return;
+      enAttente = true;
+      requestAnimationFrame(function () { enAttente = false; rattraper(); });
+    }
+
+    window.addEventListener('scroll', auDefilement, { passive: true });
+    rattraper();   // et pour une page ouverte deja defilee, des maintenant
+  }
+
+  // ===========================================================
+  // 7. LES COMPTEURS
+  // ===========================================================
+  //
+  // Les nombres de la page montent de zero a leur valeur quand
+  // leur bloc arrive. C'est le seul endroit ou une animation
+  // porte une information : elle dit que ces chiffres ont ete
+  // COMPTES, pas choisis.
+  //
+  // La valeur cible est LUE DANS LA PAGE, jamais dupliquee dans
+  // un attribut. Deux sources pour un meme nombre finissent
+  // toujours par diverger, et c'est alors la vitrine qui ment.
+  // Un contenu non numerique -- "D1 a D5" -- n'est simplement pas
+  // reconnu et reste tel quel.
+  // ===========================================================
+
+  var DUREE_COMPTE = 1100;
+
+  function animerNombre(element) {
+    // Le premier enfant est le noeud de texte : "76", suivi du
+    // <small> qui porte la legende. On ne touche qu'a lui, sans
+    // quoi la legende disparaitrait a la premiere image.
+    var noeud = element.firstChild;
+    if (!noeud || noeud.nodeType !== 3) return;
+
+    var brut = noeud.nodeValue.trim();
+    if (!/^\d+$/.test(brut)) return;
+    var cible = parseInt(brut, 10);
+    if (cible < 2) return;              // compter jusqu'a 1 ne montre rien
+
+    var depart = null;
+    function pas(instant) {
+      if (depart === null) depart = instant;
+      var avance = Math.min((instant - depart) / DUREE_COMPTE, 1);
+      // Sortie cubique : le nombre part vite et se pose. Une
+      // progression lineaire donne un compteur de station service.
+      var lisse = 1 - Math.pow(1 - avance, 3);
+      noeud.nodeValue = String(Math.round(cible * lisse));
+      if (avance < 1) requestAnimationFrame(pas);
+      else noeud.nodeValue = brut;      // la valeur exacte, au caractere pres
+    }
+    requestAnimationFrame(pas);
+  }
+
+  function compterDans(bloc) {
+    if (sobre) return;
+    bloc.querySelectorAll('.chiffre dd, .distance__valeur').forEach(animerNombre);
+  }
+
+  // ===========================================================
+  // 8. L'ENTETE QUI SE DETACHE
+  // ===========================================================
+  //
+  // Tant que la page est en haut, la barre fait partie du decor.
+  // Des que du contenu passe dessous, elle doit s'en detacher,
+  // sinon le texte semble traverser le verre.
+  //
+  // L'ecoute est passive et ne fait qu'une comparaison ; on
+  // n'ecrit dans le DOM que lorsque l'etat CHANGE reellement,
+  // pas a chaque pixel de defilement.
+  // ===========================================================
+  function monterLEntete() {
+    var entete = document.querySelector('.entete');
+    if (!entete) return;
+    var detachee = false;
+
+    function verifier() {
+      var doit = window.scrollY > 8;
+      if (doit === detachee) return;
+      detachee = doit;
+      entete.classList.toggle('est-defilee', doit);
+    }
+
+    window.addEventListener('scroll', verifier, { passive: true });
+    verifier();     // au cas ou la page s'ouvre deja defilee (ancre, retour)
+  }
+
+  // ===========================================================
   // DEMARRAGE
   // ===========================================================
   function demarrer() {
+    // monterLesRevelations() PASSE EN PREMIER, et ce n'est pas un
+    // detail de style. C'est la seule fonction capable de retirer
+    // la classe `anime` posee dans le <head> : tant qu'elle n'a
+    // pas tranche, une partie de la page est a opacite zero.
+    // Placee apres monterLeCiel(), une exception inattendue dans
+    // la scene WebGL -- un pilote graphique capricieux, une
+    // texture refusee -- interromprait demarrer() avant elle et
+    // laisserait la vitrine a moitie vide pendant deux secondes
+    // et demie, le temps que le minuteur de secours agisse.
+    // On ne se repose pas sur un filet quand on peut ne pas
+    // tomber.
+    monterLesRevelations();
+    monterLEntete();
+
     monterLeCiel();
     monterLaFusion();
     adapterAuTerminal();
     monterLeDeck();
+    monterLeRelief();
   }
 
   if (document.readyState === 'loading') {
