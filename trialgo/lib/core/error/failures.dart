@@ -70,13 +70,13 @@ class ServerFailure extends Failure {
 
   /// Constructeur pour les erreurs de connexion (pas d'internet).
   factory ServerFailure.noConnection() => const ServerFailure(
-        message: 'Pas de connexion internet. Verifiez votre reseau.',
+        message: 'Pas de connexion internet. Verifiez votre réseau.',
         code: 'no_connection',
       );
 
   /// Constructeur pour les timeouts (serveur trop lent).
   factory ServerFailure.timeout() => const ServerFailure(
-        message: 'Le serveur met trop de temps a repondre. Reessayez.',
+        message: 'Le serveur met trop de temps à répondre. Réessayez.',
         code: 'timeout',
       );
 }
@@ -106,26 +106,26 @@ class AuthFailure extends Failure {
 
   /// L'email est deja associe a un compte existant.
   factory AuthFailure.emailAlreadyUsed() => const AuthFailure(
-        message: 'Cet email est deja associe a un compte. Connectez-vous.',
+        message: 'Cet email est déjà associe à un compte. Connectez-vous.',
         code: 'user_already_exists',
       );
 
   /// L'email n'a pas encore ete verifie (lien non clique).
   factory AuthFailure.emailNotConfirmed() => const AuthFailure(
-        message: 'Email non confirme. Un nouveau lien a ete envoye.',
+        message: 'Email non confirmé. Un nouveau lien a été envoyé.',
         code: 'email_not_confirmed',
       );
 
   /// Le mot de passe est trop faible (< 8 caracteres).
   factory AuthFailure.weakPassword() => const AuthFailure(
-        message: 'Minimum 8 caracteres requis.',
+        message: 'Minimum 8 caractères requis.',
         code: 'weak_password',
       );
 
   /// Le token JWT a expire et le refresh token est invalide.
   /// Le joueur doit se reconnecter.
   factory AuthFailure.sessionExpired() => const AuthFailure(
-        message: 'Session expiree. Veuillez vous reconnecter.',
+        message: 'Session expirée. Veuillez vous reconnecter.',
         code: 'session_expired',
       );
 }
@@ -148,19 +148,19 @@ class ActivationFailure extends Failure {
 
   /// Le code saisi n'existe pas dans la base de donnees.
   factory ActivationFailure.notFound() => const ActivationFailure(
-        message: 'Code introuvable. Verifiez le code inscrit dans votre boite.',
+        message: 'Code introuvable. Verifiez le code inscrit dans votre boîte.',
         code: 'not_found',
       );
 
   /// Le code a deja ete active sur un autre appareil.
   factory ActivationFailure.deviceConflict() => const ActivationFailure(
-        message: 'Ce code a deja ete active sur un autre appareil.',
+        message: 'Ce code a déjà été activé sur un autre appareil.',
         code: 'device_conflict',
       );
 
   /// Le format du code est incorrect (pas 16 caracteres alphanumeriques).
   factory ActivationFailure.invalidFormat() => const ActivationFailure(
-        message: 'Format incorrect. Le code contient 16 caracteres.',
+        message: 'Format incorrect. Le code contient 16 caractères.',
         code: 'invalid_format',
       );
 }

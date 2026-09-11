@@ -154,7 +154,7 @@ class _TSettingsPageState extends ConsumerState<TSettingsPage> {
 
               // Version + marque.
               Text(
-                'TRIALGO · v1.0.0',
+                'MIXALGO · v1.0.0',
                 textAlign: TextAlign.center,
                 style: TTypography.labelSm(color: colors.textTertiary),
               ),

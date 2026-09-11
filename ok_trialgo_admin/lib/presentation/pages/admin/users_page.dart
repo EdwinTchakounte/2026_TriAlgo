@@ -208,7 +208,7 @@ class _CarteDeCompte extends ConsumerWidget {
                     ),
                     if (!compte.emailConfirme)
                       _BadgeCompte(
-                        texte: 'Adresse non confirmee',
+                        texte: 'Adresse non confirmée',
                         couleur: AppColors.warning,
                       ),
                   ],
@@ -308,8 +308,8 @@ class _MenuDeCompte extends ConsumerWidget {
               ? 'Retirer les droits de ${compte.email} ?'
               : 'Promouvoir ${compte.email} ?',
           corps: compte.isAdmin
-              ? 'Ce compte perdra l\'acces au studio d\'administration.'
-              : 'Ce compte pourra creer et modifier les jeux, les '
+              ? 'Ce compte perdra l\'accès au studio d\'administration.'
+              : 'Ce compte pourra créer et modifier les jeux, les '
                   'cartes et les trios. Un courriel l\'en informera.',
           libelleConfirmation: compte.isAdmin ? 'Retirer' : 'Promouvoir',
           destructif: compte.isAdmin,

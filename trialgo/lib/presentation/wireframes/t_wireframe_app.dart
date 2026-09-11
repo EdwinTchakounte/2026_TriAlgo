@@ -84,7 +84,7 @@ class _TWireframeAppState extends State<TWireframeApp> {
         return TLocale(
           language: appState.language,
           child: MaterialApp(
-            title: 'TRIALGO',
+            title: 'MIXALGO',
             debugShowCheckedModeBanner: false,
 
             // --- Themes dark + light ---

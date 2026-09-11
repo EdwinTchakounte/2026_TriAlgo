@@ -101,7 +101,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Chainage automatique : parent = fusion #${candidate.nodeIndex} (D${candidate.depth})',
+          'Chaînage automatique : parent = fusion #${candidate.nodeIndex} (D${candidate.depth})',
         ),
         duration: const Duration(seconds: 3),
       ),
@@ -167,7 +167,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
         _reset();
         if (!mounted) return;
         messenger.showSnackBar(
-          SnackBar(content: Text('Fusion creee (D$depth, n=$nodeIndex)')),
+          SnackBar(content: Text('Fusion créée (D$depth, n=$nodeIndex)')),
         );
       case Err(failure: final f):
         messenger.showSnackBar(SnackBar(content: Text(f.message)));
@@ -183,7 +183,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
       builder: (_) => AlertDialog(
         title: const Text('Supprimer cette fusion ?'),
         content: Text(
-          'La fusion #${node.nodeIndex} (D${node.depth}) sera supprimee, '
+          'La fusion #${node.nodeIndex} (D${node.depth}) sera supprimée, '
           'ainsi que tous ses descendants. Action irreversible.',
         ),
         actions: [
@@ -272,7 +272,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                   _SectionHeader(
                     title: 'Ingredient A',
                     hint:
-                        'Premier ingredient de la fusion. Si c\'est aussi le produit d\'une fusion existante, le chainage sera automatique.',
+                        'Premier ingredient de la fusion. Si c\'est aussi le produit d\'une fusion existante, le chaînage sera automatique.',
                   ),
                   const SizedBox(height: 8),
                   _CardPickerStrip(
@@ -289,7 +289,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                   _SectionHeader(
                     title: 'Ingredient A (deduit du parent)',
                     hint:
-                        'C\'est automatiquement le produit du noeud parent.',
+                        'C\'est automatiquement le produit du nœud parent.',
                   ),
                   const SizedBox(height: 8),
                   _DeducedEmettrice(parent: _parent!, cards: cards),
@@ -341,8 +341,8 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                         onPressed: _validate,
                         icon: const Icon(Icons.check),
                         label: Text(_parent == null
-                            ? 'Creer fusion (D1)'
-                            : 'Creer fusion enfant (D${(_parent!.depth) + 1})'),
+                            ? 'Créer fusion (D1)'
+                            : 'Créer fusion enfant (D${(_parent!.depth) + 1})'),
                       ),
                     ),
                   ],
@@ -354,7 +354,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                 // LISTE DES TRIOS DEJA CREES
                 // -------------------------------------------
                 if (nodes.isNotEmpty) ...[
-                  _SectionHeader(title: 'Deja composees (${nodes.length})'),
+                  _SectionHeader(title: 'Déjà composees (${nodes.length})'),
                   const SizedBox(height: 8),
                   for (final n in nodes)
                     _TrioRow(
@@ -377,7 +377,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
           continueLabel: 'Continuer : voir l\'arbre',
           missingHint: canContinue
               ? null
-              : 'Composez au moins une fusion pour passer a l\'apercu.',
+              : 'Composez au moins une fusion pour passer à l\'aperçu.',
           onBack: () => ref.read(wizardProvider.notifier).back(),
           onNext: () => ref.read(wizardProvider.notifier).next(),
         ),
@@ -435,7 +435,7 @@ class _CardPickerStrip extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         child: Text(
-          'Aucune carte de ce type. Revenez a l\'etape Cartes pour en ajouter.',
+          'Aucune carte de ce type. Revenez à l\'étape Cartes pour en ajouter.',
           style: AppTextStyles.caption(),
           textAlign: TextAlign.center,
         ),
@@ -492,7 +492,7 @@ class _DeducedEmettrice extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          'Produit du parent introuvable. La carte a peut-etre ete supprimee.',
+          'Produit du parent introuvable. La carte a peut-être été supprimée.',
           style: AppTextStyles.caption()
               .copyWith(color: AppColors.danger),
           textAlign: TextAlign.center,
@@ -558,7 +558,7 @@ class _ParentPicker extends StatelessWidget {
     return DropdownButtonFormField<GameNode?>(
       initialValue: value,
       decoration: const InputDecoration(
-        labelText: 'Noeud parent',
+        labelText: 'Nœud parent',
         prefixIcon: Icon(Icons.account_tree),
       ),
       items: [

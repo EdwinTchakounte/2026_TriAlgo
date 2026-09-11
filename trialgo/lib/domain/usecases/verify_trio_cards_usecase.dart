@@ -149,7 +149,7 @@ class VerifyTrioCardsUseCase {
 
     // Aucun noeud ne matche.
     return VerifyTrioResult.invalid(
-      'Ces 3 cartes ne forment pas un trio valide',
+      'Ces 3 cartes ne forment pas un trio validé',
     );
   }
 
@@ -219,7 +219,7 @@ class VerifyTrioCardsUseCase {
   /// fraiche), puis retombe sur le graphe local en cas de panne.
   Future<VerifyTrioResult> verifyByNodeIndex(int nodeIndex) async {
     if (nodeIndex < 1) {
-      return VerifyTrioResult.invalid('Numero de trio invalide');
+      return VerifyTrioResult.invalid('Numéro de trio invalide');
     }
 
     // ---- Tentative serveur ----
@@ -276,7 +276,7 @@ class VerifyTrioCardsUseCase {
     try {
       eId = node.effectiveEmettriceId;
     } catch (_) {
-      return VerifyTrioResult.invalid('Donnees du trio incompletes');
+      return VerifyTrioResult.invalid('Données du trio incompletes');
     }
 
     // On delegue a verifyByCardIds pour garder UNE SEULE logique de

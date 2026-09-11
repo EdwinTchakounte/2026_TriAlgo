@@ -79,8 +79,8 @@ class FakeStore {
     store.games.add(
       Game(
         id: gameId,
-        name: 'TRIALGO Savane (démo)',
-        description: 'Jeu de demo en memoire pour valider les flows.',
+        name: 'MIXALGO Savane (démo)',
+        description: 'Jeu de démo en mémoire pour valider les flows.',
         theme: 'savane',
         coverImage: null,
         isActive: true,
@@ -257,7 +257,7 @@ class FakeCardRepository implements CardRepository {
       return Ok(Uri.file(file.path).toString());
     } catch (e) {
       return Err(StorageFailure(
-        'Echec ecriture locale : $e',
+        'Échec ecriture locale : $e',
       ));
     }
   }

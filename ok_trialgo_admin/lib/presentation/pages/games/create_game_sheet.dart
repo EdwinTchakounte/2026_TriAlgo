@@ -79,7 +79,7 @@ class _CreateGameSheetState extends ConsumerState<CreateGameSheet> {
     if (game == null) {
       // Erreur cote serveur : on affiche un snackbar.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Creation impossible. Reessayez.')),
+        const SnackBar(content: Text('Création impossible. Réessayez.')),
       );
       return;
     }
@@ -130,13 +130,13 @@ class _CreateGameSheetState extends ConsumerState<CreateGameSheet> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
                   labelText: 'Nom du jeu',
-                  hintText: 'TRIALGO Savane',
+                  hintText: 'MIXALGO Savane',
                   prefixIcon: Icon(Icons.gamepad_outlined),
                 ),
                 validator: (v) {
                   final s = (v ?? '').trim();
                   if (s.isEmpty) return 'Nom requis';
-                  if (s.length < 3) return 'Au moins 3 caracteres';
+                  if (s.length < 3) return 'Au moins 3 caractères';
                   return null;
                 },
               ),
@@ -178,7 +178,7 @@ class _CreateGameSheetState extends ConsumerState<CreateGameSheet> {
                         ),
                       )
                     : const Icon(Icons.add),
-                label: const Text('Creer le jeu'),
+                label: const Text('Créer le jeu'),
               ),
               const SizedBox(height: 8),
               TextButton(

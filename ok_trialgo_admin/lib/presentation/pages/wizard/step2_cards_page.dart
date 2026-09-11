@@ -240,7 +240,7 @@ class _Step2CardsPageState extends ConsumerState<Step2CardsPage> {
                       ? 'Aucune carte pour l\'instant'
                       : 'Aucune ${_filter!.label.toLowerCase()}',
                   description:
-                      'Tapez sur le + ci-dessus pour importer votre premiere image.',
+                      'Tapez sur le + ci-dessus pour importer votre première image.',
                   actionLabel: 'Ajouter une carte',
                   onAction: _openCreateSheet,
                 );
@@ -419,7 +419,7 @@ class _CreateCardSheetState extends ConsumerState<_CreateCardSheet> {
       return;
     }
     if (_labelCtrl.text.trim().isEmpty) {
-      setState(() => _errorMsg = 'Donnez un label a la carte');
+      setState(() => _errorMsg = 'Donnez un label à la carte');
       return;
     }
     final game = ref.read(selectedGameProvider);
@@ -443,7 +443,7 @@ class _CreateCardSheetState extends ConsumerState<_CreateCardSheet> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _errorMsg = upRes.failureOrNull?.message ?? 'Upload echoue';
+        _errorMsg = upRes.failureOrNull?.message ?? 'Upload échoué';
       });
       return;
     }
@@ -673,7 +673,7 @@ class _EditCardSheetState extends ConsumerState<_EditCardSheet> {
       builder: (_) => AlertDialog(
         title: const Text('Supprimer la carte ?'),
         content: const Text(
-          'L\'image sera supprimee du bucket Storage. Cette action est irreversible.',
+          'L\'image sera supprimée du bucket Storage. Cette action est irreversible.',
         ),
         actions: [
           TextButton(
@@ -968,7 +968,7 @@ class _ImportLotSheetState extends ConsumerState<_ImportLotSheet> {
     // Tout est passe : on ferme et la grille se rafraichit.
     if (_echecs.isEmpty) {
       Navigator.of(context).pop(true);
-      _annoncer('$reussies carte(s) importee(s).', succes: true);
+      _annoncer('$reussies carte(s) importée(s).', succes: true);
       return;
     }
 
@@ -977,7 +977,7 @@ class _ImportLotSheetState extends ConsumerState<_ImportLotSheet> {
     // fermeture manuelle).
     setState(() => _enCours = false);
     _annoncer(
-      '$reussies importee(s), ${_echecs.length} en echec.',
+      '$reussies importée(s), ${_echecs.length} en échec.',
     );
   }
 
@@ -1170,7 +1170,7 @@ class _BlocDEchecs extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${echecs.length} image(s) non importee(s)',
+            '${echecs.length} image(s) non importée(s)',
             style: AppTextStyles.caption()
                 .copyWith(color: AppColors.danger),
           ),

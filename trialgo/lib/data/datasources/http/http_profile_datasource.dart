@@ -50,7 +50,7 @@ class HttpProfileDatasource {
       '/api/me/profile',
       data: body,
     );
-    _ensure(res, 'Mise a jour profil impossible');
+    _ensure(res, 'Mise à jour profil impossible');
     return res.data!;
   }
 

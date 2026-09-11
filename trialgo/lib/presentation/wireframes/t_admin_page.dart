@@ -116,9 +116,9 @@ class _TAdminPageState extends State<TAdminPage>
       // ce mode et l'atteindre leverait une StateError.
       setState(() {
         _loading = false;
-        _error = 'Ecran indisponible avec le backend FastAPI.\n\n'
-            'La creation des cartes et des fusions se fait desormais '
-            'dans l\'application studio TRIALGO Admin.';
+        _error = 'Écran indisponible avec le backend FastAPI.\n\n'
+            'La création des cartes et des fusions se fait désormais '
+            'dans l\'application studio MIXALGO Admin.';
       });
       return;
     }
@@ -337,7 +337,7 @@ class _TAdminPageState extends State<TAdminPage>
         _nodes.isEmpty
             ? Center(
                 child: Text(
-                  'Aucun noeud.\nUtilisez le + pour en ajouter.',
+                  'Aucun nœud.\nUtilisez le + pour en ajouter.',
                   style: GoogleFonts.exo2(color: Colors.white38),
                   textAlign: TextAlign.center,
                 ),
@@ -349,7 +349,7 @@ class _TAdminPageState extends State<TAdminPage>
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
-                      '${_nodes.length} noeuds',
+                      '${_nodes.length} nœuds',
                       style: GoogleFonts.rajdhani(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -614,7 +614,7 @@ class _TAdminPageState extends State<TAdminPage>
     if (_cards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ajoutez des cartes avant de creer des noeuds.'),
+          content: Text('Ajoutez des cartes avant de créer des nœuds.'),
         ),
       );
       return;
@@ -653,7 +653,7 @@ class _TAdminPageState extends State<TAdminPage>
           return AlertDialog(
             backgroundColor: TSurfaceColors.darkBgRaised,
             title: Text(
-              'Ajouter un noeud',
+              'Ajouter un nœud',
               style: GoogleFonts.rajdhani(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -710,7 +710,7 @@ class _TAdminPageState extends State<TAdminPage>
                   // Emettrice (si profondeur 1).
                   if (selectedDepth == 1) ...[
                     _dropdownField(
-                      label: 'Emettrice (E)',
+                      label: 'Émettrice (E)',
                       value: selectedEmettriceId,
                       items: cardItems,
                       onChanged: (v) =>
@@ -731,7 +731,7 @@ class _TAdminPageState extends State<TAdminPage>
 
                   // Receptrice (toujours).
                   _dropdownField(
-                    label: 'Receptrice (R)',
+                    label: 'Réceptrice (R)',
                     value: selectedReceptriceId,
                     items: cardItems,
                     onChanged: (v) =>
@@ -848,7 +848,7 @@ class _TAdminPageState extends State<TAdminPage>
           ),
         ),
         content: Text(
-          'Les noeuds enfants seront aussi supprimes (cascade).',
+          'Les nœuds enfants seront aussi supprimés (cascade).',
           style: GoogleFonts.exo2(color: Colors.white54),
         ),
         actions: [

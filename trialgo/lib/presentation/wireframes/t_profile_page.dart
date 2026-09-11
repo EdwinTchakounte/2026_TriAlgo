@@ -187,7 +187,7 @@ class TProfilePage extends ConsumerWidget {
             Text(
               profile.streak > 0
                   ? '${profile.streak} jour${profile.streak > 1 ? "s" : ""}'
-                  : 'Pas de serie',
+                  : 'Pas de série',
               style: TTypography.labelLg(
                 color: profile.streak > 0
                     ? TColors.primaryVariant

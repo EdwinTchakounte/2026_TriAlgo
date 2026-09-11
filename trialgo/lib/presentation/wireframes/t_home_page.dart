@@ -822,7 +822,7 @@ class _THomePageState extends ConsumerState<THomePage>
   String _formatRelativeDate(DateTime played) {
     final now = DateTime.now();
     final diff = now.difference(played);
-    if (diff.inMinutes < 1) return 'a l\'instant';
+    if (diff.inMinutes < 1) return 'à l\'instant';
     if (diff.inHours < 1) return 'il y a ${diff.inMinutes} min';
     if (diff.inDays < 1) return 'il y a ${diff.inHours} h';
     if (diff.inDays == 1) return 'hier';

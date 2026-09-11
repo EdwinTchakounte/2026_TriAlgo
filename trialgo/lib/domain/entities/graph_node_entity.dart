@@ -186,8 +186,8 @@ class GraphNodeEntity {
     final id = emettriceId ?? resolvedEmettriceId;
     if (id == null) {
       throw StateError(
-        'Noeud N$nodeIndex : emettrice non resolue. '
-        'Appeler resolveEmettrice() apres construction du graphe.',
+        'Nœud N$nodeIndex : émettrice non résolue. '
+        'Appeler resolveEmettrice() après construction du graphe.',
       );
     }
     return id;

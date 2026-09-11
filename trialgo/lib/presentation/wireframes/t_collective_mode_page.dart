@@ -166,7 +166,7 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
     final raw = _manualNodeController.text.trim();
     final idx = int.tryParse(raw);
     if (idx == null) {
-      _applyResult(VerifyTrioResult.invalid('Numero invalide'));
+      _applyResult(VerifyTrioResult.invalid('Numéro invalide'));
       return;
     }
 
@@ -322,9 +322,9 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
           ),
           const SizedBox(height: TSpacing.sm),
           Text(
-            "Joue avec tes cartes physiques TRIALGO.\n"
-            "Scanne 3 cartes a chaque tour pour verifier\n"
-            "si ton trio est valide.",
+            "Joue avec tes cartes physiques MIXALGO.\n"
+            "Scanne 3 cartes a chaque tour pour vérifier\n"
+            "si ton trio est validé.",
             textAlign: TextAlign.center,
             style: TTypography.bodyMd(color: colors.textSecondary),
           ),
@@ -495,7 +495,7 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: TSpacing.md),
               child: Text(
-                'OU NUMERO DE NOEUD',
+                'OU NUMÉRO DE NOEUD',
                 style: TTypography.labelSm(color: colors.textTertiary),
               ),
             ),
@@ -578,7 +578,7 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
               const SizedBox(height: TSpacing.md),
               Text(
                 result.valid
-                    ? 'Trio D${result.distance} valide !'
+                    ? 'Trio D${result.distance} validé !'
                     : 'Trio invalide',
                 textAlign: TextAlign.center,
                 style: TTypography.headlineMd(color: colors.textPrimary),
@@ -715,7 +715,7 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
           ),
           const SizedBox(height: TSpacing.sm),
           Text(
-            'Partie terminee',
+            'Partie terminée',
             textAlign: TextAlign.center,
             style: TTypography.bodyMd(color: colors.textSecondary),
           ),
@@ -769,7 +769,7 @@ class _TCollectiveModePageState extends ConsumerState<TCollectiveModePage> {
           ),
           const SizedBox(height: TSpacing.sm),
           AppButton.ghost(
-            label: "Retour a l'accueil",
+            label: "Retour à l'accueil",
             icon: Icons.home_rounded,
             fullWidth: true,
             onPressed: () => Navigator.of(context).pop(),

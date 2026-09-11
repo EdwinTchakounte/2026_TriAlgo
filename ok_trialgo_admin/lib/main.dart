@@ -71,7 +71,7 @@ class TrialgoAdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TRIALGO Admin',
+      title: 'MIXALGO Admin',
       theme: buildAppTheme(),
       // Retire le ruban DEBUG en debug build : encombre le coin
       // superieur droit pendant les screenshots.
@@ -161,10 +161,10 @@ class _SplashScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('TRIALGO Admin', style: AppTextStyles.hero()),
+            Text('MIXALGO Admin', style: AppTextStyles.hero()),
             const SizedBox(height: 6),
             Text(
-              'Studio de creation de jeux',
+              'Studio de création de jeux',
               style: AppTextStyles.caption(),
             ),
             const SizedBox(height: 36),

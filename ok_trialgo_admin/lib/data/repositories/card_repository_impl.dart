@@ -74,7 +74,7 @@ class CardRepositoryImpl implements CardRepository {
           .single();
       return Ok(CardModel.fromJson(row));
     } catch (e) {
-      return Err(DataFailure('Creation carte impossible : $e'));
+      return Err(DataFailure('Création carte impossible : $e'));
     }
   }
 
@@ -89,7 +89,7 @@ class CardRepositoryImpl implements CardRepository {
   }) async {
     final patch = CardModel.toUpdate(label: label, type: type);
     if (patch.isEmpty) {
-      return const Err(ValidationFailure('Aucun champ a modifier'));
+      return const Err(ValidationFailure('Aucun champ à modifier'));
     }
     try {
       final row = await _client
@@ -191,7 +191,7 @@ class CardRepositoryImpl implements CardRepository {
 
       return Ok(publicUrl);
     } catch (e) {
-      return Err(StorageFailure('Upload echoue : $e'));
+      return Err(StorageFailure('Upload échoué : $e'));
     }
   }
 }

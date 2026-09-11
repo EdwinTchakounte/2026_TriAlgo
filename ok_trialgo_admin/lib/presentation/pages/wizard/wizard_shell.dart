@@ -46,7 +46,7 @@ class WizardShell extends ConsumerWidget {
         appBar: AppBar(title: const Text('Erreur')),
         body: Center(
           child: Text(
-            'Aucun jeu selectionne. Retournez au hub.',
+            'Aucun jeu sélectionné. Retournez au hub.',
             style: AppTextStyles.body(),
           ),
         ),
