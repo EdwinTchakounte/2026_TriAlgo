@@ -407,9 +407,13 @@ section{ padding-block:var(--section); position:relative; }
    liens debordaient l'en-tete par la droite -- « Le deck » sortait
    de 26 px hors de la fenetre a 1280. Il faut donc lever les deux :
    l'affichage ET le calcul de taille. */
-.menu::details-content{ content-visibility:visible; }
 .menu__liste{ display:flex; align-items:center; gap:1.75rem; }
 .menu__liste a{ display:inline-flex; align-items:center; min-height:44px; }
+
+/* content-visibility rend la liste mesurable par le moteur de mise
+   en page malgre le <details> ferme -- sans quoi, sur grand ecran,
+   elle serait large de 0 px et ses liens deborderaient la barre. */
+.menu::details-content{ content-visibility:visible; }
 
 /* Masquage VISUEL seulement : le mot reste dans l'arbre
    d'accessibilite. Un summary reduit a trois barres n'a plus de
@@ -425,7 +429,19 @@ section{ padding-block:var(--section); position:relative; }
 @media (max-width:860px){
   .menu__bascule{ display:flex; }
   .menu{ position:static; }
-  .menu__liste{
+
+  /* ON NE S'EN REMET PAS au masquage natif du <details>.
+     Poser un `display` sur cet enfant le neutralise, quelle que
+     soit la valeur : la liste restait affichee en permanence par
+     dessus la page, panneau ouvert sans que personne ne l'ait
+     ouvert. Et aucune mesure de debordement ne le signalait --
+     elle est en position absolue, donc elle ne pousse rien. Seul
+     un regard sur la capture l'a montre.
+     L'affichage est donc pilote explicitement sur [open]. Ce qui
+     est deterministe se lit, et se teste. */
+  .menu__liste{ display:none; }
+  .menu[open] .menu__liste{
+    display:flex;
     position:absolute; top:calc(100% + .6rem); right:0;
     flex-direction:column; align-items:stretch; gap:.1rem;
     min-width:12.5rem; padding:.4rem;
@@ -1592,6 +1608,130 @@ section{ padding-block:var(--section); position:relative; }
 }
 
 /* =============================================================
+   LES FINITIONS
+   -------------------------------------------------------------
+   Rien ici ne change la mise en page. Ce sont les details qu'on
+   ne remarque que lorsqu'ils manquent : la couleur de selection,
+   l'ascenseur, le comportement des ancres, et ce que devient la
+   page quand le systeme du visiteur demande autre chose.
+   ============================================================= */
+
+:root{
+  /* Dit au navigateur que la page est sombre. Il en tire tout ce
+     qu'il dessine LUI-MEME et que le CSS ne peut pas atteindre :
+     l'ascenseur, le fond des menus natifs, le surlignage du
+     correcteur orthographique, la couleur par defaut d'un champ.
+     Sans cette ligne, un ascenseur blanc borde une page noire. */
+  color-scheme:dark;
+
+  /* Et pour les navigateurs qui acceptent qu'on precise. */
+  scrollbar-color:var(--trait-fort) transparent;
+  scrollbar-width:thin;
+}
+
+/* Le bleu de selection par defaut du systeme sur une page cyan et
+   ambre : la seule couleur de toute la page qui ne vienne pas du
+   logo. */
+::selection{ background:var(--cyan); color:var(--nuit); }
+
+/* -------------------------------------------------------------
+   LES ANCRES SOUS L'EN-TETE COLLANTE
+   -------------------------------------------------------------
+   Un saut vers #distances amene le haut de la section a y=0 --
+   c'est a dire SOUS la barre, qui fait 68 px et cache donc les 68
+   premiers pixels de la section. Le surtitre y perdait 9 px, et
+   le panneau de telechargement, qui n'a pas le meme rembourrage,
+   voyait son titre ampute de 14.
+
+   scroll-margin-top decale la cible d'exactement la hauteur de la
+   barre. L'arrivee reproduit alors ce qu'on voit en defilant a la
+   main jusqu'a cette section -- ce qui est precisement ce qu'on
+   attend d'un lien d'ancrage.
+   ------------------------------------------------------------- */
+[id]{ scroll-margin-top:4.25rem; }
+
+/* -------------------------------------------------------------
+   CONTRASTE RENFORCE
+   -------------------------------------------------------------
+   Un reglage systeme, comme le mouvement reduit : il existe pour
+   des yeux qui en ont besoin, pas pour une preference. On ne
+   touche qu'aux teintes discretes et aux filets -- les titres et
+   le corps de texte sont deja tres au dessus des seuils.
+   ------------------------------------------------------------- */
+@media (prefers-contrast:more){
+  :root{
+    --brume:#C6CFEE;
+    --brume-sourde:#A8B2DA;
+    --trait:rgba(0,216,240,.34);
+    --trait-fort:rgba(0,216,240,.64);
+  }
+  .carte__face::before{ display:none; }   /* le reflet voile le visuel */
+}
+
+/* Le flou de l'en-tete est un effet, pas une information. Certains
+   systemes le desactivent pour des raisons de lisibilite ou de
+   performance ; on remplace alors le voile par un fond plein,
+   sans quoi le texte defile visiblement sous la barre. */
+@media (prefers-reduced-transparency:reduce){
+  .entete{ background:var(--nuit); backdrop-filter:none; }
+  .menu__liste{ background:var(--nuit); }
+}
+
+/* -------------------------------------------------------------
+   L'IMPRESSION
+   -------------------------------------------------------------
+   Les navigateurs n'impriment pas les fonds. Une page peinte en
+   clair sur du noir sort donc en clair sur du BLANC : une feuille
+   vierge, sans le moindre message d'erreur. C'est le defaut
+   d'impression le plus courant des sites sombres, et le plus
+   silencieux.
+
+   On inverse donc les jetons plutot que de reecrire des regles :
+   la cascade fait le reste toute seule.
+   ------------------------------------------------------------- */
+@media print{
+  :root{
+    --nuit:#FFFFFF; --voile:#FFFFFF; --voile-clair:#FFFFFF;
+    --craie:#101018; --brume:#3A3A4A; --brume-sourde:#5A5A6C;
+    --cyan:#164E63; --cyan-doux:#164E63; --ambre:#7A4B00;
+    --trait:#D4D4DE; --trait-fort:#9A9AAA;
+    --ombre-nette:none; --relief-1:none; --relief-2:none; --relief-3:none;
+    --halo-cyan:none;
+  }
+  body{ background:#fff; color:#101018; }
+
+  /* Decors, commandes et navigation : rien a faire sur du papier. */
+  body::before, #ciel, .hero__voile, .entete, .saut-lien,
+  .fusion__pilote, .bouton, .table-cartes::before,
+  .table-cartes::after{ display:none !important; }
+
+  .carte__face{ border:1px solid #BBB; box-shadow:none; }
+  .carte__face::before{ display:none; }
+  .telecharger, .etape, .chiffres, .distances{
+    border:1px solid #BBB; box-shadow:none;
+  }
+
+  /* Une reponse repliee ne s'imprime pas. Sur papier il n'y a
+     personne pour cliquer : la FAQ doit sortir entiere. */
+  .question::details-content{ content-visibility:visible; }
+  .question p{ display:block !important; }
+  .question summary::after{ display:none; }
+
+  /* Un lien imprime ne mene nulle part si son adresse reste
+     cachee. Seuls les liens EXTERNES la meritent : « #regle »
+     n'apprendrait rien a personne. */
+  a[href^="http"]::after{
+    content:" (" attr(href) ")";
+    font-size:.82em; color:#5A5A6C; word-break:break-all;
+  }
+
+  /* Ne pas couper un bloc au milieu d'une page. */
+  .etape, .question, .chiffre, .distance, .carte{ break-inside:avoid; }
+  h1, h2, h3{ break-after:avoid; }
+  section{ padding-block:1.5rem; }
+}
+
+/* =============================================================
    ACCESSIBILITE : le mouvement est une option, pas un du
    ============================================================= */
 @media (prefers-reduced-motion:reduce){
@@ -1834,7 +1974,7 @@ section{ padding-block:var(--section); position:relative; }
           <p>
             Une carte MIXALGO tient en quatre informations, et pas une de plus.
             Il n'y a ni points, ni valeur, ni couleur de famille, ni texte de
-            règle : rien qui puisse se compter ou se comparer. Ce qui se joue
+            règle : rien qui puisse se compter ou se comparer. Ce qui se joue
             se regarde.
           </p>
         </div>
@@ -1843,7 +1983,7 @@ section{ padding-block:var(--section); position:relative; }
             parce que c'est lui qui porte le jeu. Toute la logique d'une fusion
             est dans ce qu'on y voit.</span></li>
           <li><span><b>Le nom.</b> <code>KEZEU</code> ici. Une identité, jamais un
-            rôle : la même carte est émettrice dans une fusion et réceptrice dans
+            rôle : la même carte est émettrice dans une fusion et réceptrice dans
             une autre.</span></li>
           <li><span><b>Le code.</b> <code>B3</code>. Il sert au référentiel du jeu
             et à l'arbitrage, là où prononcer un nom à voix haute donnerait la
@@ -1872,7 +2012,7 @@ section{ padding-block:var(--section); position:relative; }
           La difficulté ne vient jamais du chronomètre. Elle vient de la
           <strong>distance</strong> qui sépare les trois cartes qu'on vous montre.
           En D1, elles forment une fusion directe. Au-delà, elles sont prélevées
-          le long d'une chaîne : le lien existe toujours, mais il passe par des
+          le long d'une chaîne : le lien existe toujours, mais il passe par des
           cartes que vous ne voyez pas.
         </p>
       </div>
@@ -1935,7 +2075,7 @@ section{ padding-block:var(--section); position:relative; }
       <div class="prose">
         <p>
           EKAMBI, MAGNE, BABADJI, BIKOKO. Chaque carte est un portrait, et le
-          deck entier tient dans un imaginaire afrofuturiste : villes de nuit,
+          deck entier tient dans un imaginaire afrofuturiste : villes de nuit,
           armures de maille, orages électriques et masques d'ancêtres.
           <strong>Tout ce qui compte est dans l'image.</strong>
         </p>
@@ -2142,7 +2282,7 @@ section{ padding-block:var(--section); position:relative; }
           <h3>Installer l'application</h3>
           <p>
             Le fichier APK s'installe directement sur Android. Votre téléphone
-            demandera d'autoriser une installation hors magasin : c'est normal
+            demandera d'autoriser une installation hors magasin : c'est normal
             pour une application distribuée de cette manière.
           </p>
         </li>
@@ -2214,27 +2354,27 @@ section{ padding-block:var(--section); position:relative; }
 
       <div class="faq montee">
         <details class="question" open>
-          <summary>Comment commencer une partie de MIXALGO ?</summary>
+          <summary>Comment commencer une partie de MIXALGO ?</summary>
           <p>Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil.</p>
         </details>
         <details class="question">
-          <summary>Faut-il posséder les cartes physiques pour jouer ?</summary>
+          <summary>Faut-il posséder les cartes physiques pour jouer ?</summary>
           <p>Non pour le mode solo, qui se joue entièrement dans l'application. Les cartes physiques servent au mode collectif, où un animateur annonce un numéro de trio et où les joueurs cherchent les trois cartes correspondantes sur la table.</p>
         </details>
         <details class="question">
-          <summary>Que veulent dire les attributs inscrits sur une carte ?</summary>
-          <p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p>
+          <summary>Que veulent dire les attributs inscrits sur une carte ?</summary>
+          <p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p>
         </details>
         <details class="question">
-          <summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary>
+          <summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary>
           <p>Oui. Le deck est téléchargé une seule fois au premier lancement, puis les questions sont fabriquées sur l'appareil. Une partie entière se joue sans réseau.</p>
         </details>
         <details class="question">
-          <summary>Que signifient les distances D1 à D5 ?</summary>
+          <summary>Que signifient les distances D1 à D5 ?</summary>
           <p>La distance mesure l'éloignement entre les cartes d'un trio dans le graphe du jeu. En D1 les trois cartes forment une fusion directe. À partir de D2, elles sont prélevées le long d'une chaîne de fusions, ce qui rend le lien de moins en moins visible.</p>
         </details>
         <details class="question">
-          <summary>Combien de trios peut-on former dans une partie ?</summary>
+          <summary>Combien de trios peut-on former dans une partie ?</summary>
           <p>Une chaîne de k fusions donne au plus C(2k,2) moins 1 trios valides, soit 1 en D1, 5 en D2, 14 en D3, 27 en D4 et 44 en D5. Un deck de 76 cartes dépasse ainsi plusieurs centaines de questions distinctes.</p>
         </details>
       </div>
