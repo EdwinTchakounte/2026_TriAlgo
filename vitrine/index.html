@@ -698,12 +698,11 @@ section{ padding-block:var(--section); position:relative; }
 @media (min-width:560px){ .grille-deck{ grid-template-columns:repeat(4, 1fr); } }
 @media (min-width:900px){ .grille-deck{ grid-template-columns:repeat(6, 1fr); } }
 .grille-deck .carte{ width:100%; perspective:800px; }
-.grille-deck .carte:hover .carte__face,
-.grille-deck .carte:focus-within .carte__face{
-  transform:translateY(-8px) rotateX(7deg) rotateY(-7deg);
-  box-shadow:0 26px 60px rgba(0,6,40,.8), 0 0 0 1px var(--trait-fort),
-             0 0 34px rgba(0,216,240,.28);
-}
+/* Le survol des cartes de la grille est desormais decrit dans le
+   bloc RELIEF, plus bas. Il y etait obligatoire : pose ici, il
+   fixait `transform` avec une specificite de quatre classes que
+   rien dans .carte__face ne pouvait battre, et l'inclinaison
+   suivie au pointeur n'aurait jamais pu s'appliquer. */
 .deck__etat{
   margin-top:1.5rem;
   font-family:var(--mono); font-size:.78rem;
@@ -933,6 +932,513 @@ section{ padding-block:var(--section); position:relative; }
 .pied a:hover{ color:var(--craie); }
 
 /* =============================================================
+   LE RELIEF
+   -------------------------------------------------------------
+   Tout ce qui donne du volume a la page est ici, et rien d'autre.
+   La regle est la meme que pour le script : si ce bloc disparait,
+   la vitrine reste complete et lisible. Elle redevient seulement
+   plate.
+
+   TROIS MOYENS, ET TROIS SEULEMENT
+   --------------------------------
+     1. L'ELEVATION    des ombres en deux couches, plus un lisere
+                       de lumiere sur l'arete haute
+     2. L'INCLINAISON  l'objet pivote vers le pointeur, avec sa
+                       propre perspective
+     3. LE REFLET      une tache de lumiere qui suit le pointeur
+
+   POURQUOI DEUX COUCHES D'OMBRE
+   -----------------------------
+   Une ombre unique et large donne un objet qui FLOTTE, sans
+   poids ni point de contact. L'oeil lit la profondeur dans le
+   rapport entre une ombre courte et dense -- le contact -- et une
+   ombre longue et diffuse -- l'occlusion ambiante. Les deux
+   ensemble donnent un objet POSE.
+
+   Et le lisere interieur clair n'est pas un detail : c'est lui,
+   plus que l'ombre, qui fait lire une surface comme un MATERIAU
+   plutot que comme un aplat de couleur. Une arete superieure
+   accroche toujours la lumiere.
+
+   CE QUI N'Y EST PAS, DELIBEREMENT
+   --------------------------------
+   Aucune ombre portee sur du texte, aucun degrade sur un titre,
+   aucune entree qui deplace le contenu horizontalement. Le
+   mouvement est vertical et court, parce qu'un contenu qui arrive
+   de cote se lit comme une publicite.
+   ============================================================= */
+
+:root{
+  --relief-1:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 2px 6px rgba(0,4,26,.55),
+    0 10px 26px rgba(0,4,26,.42);
+  --relief-2:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    0 6px 16px rgba(0,4,26,.6),
+    0 24px 54px rgba(0,4,26,.52);
+  --relief-3:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    0 12px 28px rgba(0,4,26,.7),
+    0 40px 88px rgba(0,4,26,.62);
+  --halo-cyan: 0 0 34px rgba(0,216,240,.26);
+  --elan: cubic-bezier(.22,.9,.28,1);
+}
+
+/* -------------------------------------------------------------
+   1. LES CARTES
+   -------------------------------------------------------------
+   La carte est l'objet du jeu. C'est donc elle, et pas les
+   panneaux autour, qui merite le vrai traitement en volume.
+
+   La perspective est posee sur .carte, pas sur la grille qui la
+   contient. Une perspective de conteneur donne a toutes ses
+   cartes le MEME point de fuite : celles du bord se tordent vers
+   le centre alors qu'on les incline pareil que les autres. Une
+   perspective par carte donne a chacune son point de fuite
+   centre sur elle, et l'inclinaison redevient honnete.
+
+   transform-style repasse a "flat" pour la meme raison : en
+   preserve-3d, la face heriterait de l'espace 3D du parent et
+   court-circuiterait la perspective qu'on vient de lui donner.
+   La choregraphie de fusion, elle, transforme .carte elle meme
+   et continue de s'appuyer sur la perspective de .fusion.
+   ------------------------------------------------------------- */
+.carte{
+  perspective:760px;
+  transform-style:flat;
+}
+
+.carte__face{
+  /* Les quatre variables pilotees soit par le CSS au survol, soit
+     par le script au pointeur. Les declarer ici avec une valeur
+     neutre evite qu'une transformation partielle laisse la carte
+     dans un etat indefini. */
+  --incl-x:0deg;
+  --incl-y:0deg;
+  --leve:0px;
+  --echelle:1;
+  transform:
+    translate3d(0, var(--leve), 0)
+    rotateX(var(--incl-x))
+    rotateY(var(--incl-y))
+    scale(var(--echelle));
+  box-shadow:var(--relief-2);
+  /* Deux durees, et c'est volontaire : le retour au repos est
+     long et souple, le suivi du pointeur est court et lineaire.
+     Une seule duree donnerait soit un suivi mou et en retard,
+     soit un retour sec. */
+  transition:box-shadow .35s ease, transform .45s var(--elan);
+}
+.carte.incline .carte__face{
+  transition:box-shadow .35s ease, transform .1s linear;
+}
+
+/* Le reflet. Une tache large et douce, jamais un trait net : une
+   carte imprimee sous vernis diffuse la lumiere, elle ne la
+   renvoie pas comme un miroir. Elle est posee au dessus de tout,
+   code compris, parce qu'un reflet passe sur la surface entiere. */
+.carte__face::before{
+  content:"";
+  position:absolute; inset:0; z-index:3;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .35s ease;
+  background:radial-gradient(
+    46% 34% at var(--lux-x,50%) var(--lux-y,10%),
+    rgba(255,255,255,.30) 0%,
+    rgba(150,232,255,.11) 40%,
+    transparent 72%);
+}
+.carte.incline .carte__face::before{ opacity:1; }
+
+/* Le survol dans la grille du deck. Les angles restent en CSS
+   pour que la carte s'incline meme sans le script ; le script ne
+   fait que les remplacer par des valeurs suivies au pointeur. */
+.grille-deck .carte{ perspective:760px; }
+.grille-deck .carte:hover .carte__face,
+.grille-deck .carte:focus-within .carte__face{
+  --leve:-10px;
+  --echelle:1.03;
+  --incl-x:6deg;
+  --incl-y:-6deg;
+  box-shadow:var(--relief-3), 0 0 0 1px var(--trait-fort), var(--halo-cyan);
+}
+
+/* Dans la demonstration de fusion, la receptrice est le resultat :
+   elle est posee un cran plus haut que ses deux parents. */
+.fusion .carte[data-role="receptrice"] .carte__face{
+  box-shadow:var(--relief-3), 0 0 26px rgba(240,168,0,.16);
+}
+
+/* La table du mode collectif : trois cartes en eventail. Au
+   survol, l'eventail s'ouvre au lieu de se soulever -- c'est le
+   geste qu'on fait vraiment sur une table. */
+.table-cartes .carte{
+  transition:transform .45s var(--elan);
+}
+.table-cartes:hover .carte:nth-child(1){ transform:rotate(-11deg) translateY(2px) translateX(-6px); }
+.table-cartes:hover .carte:nth-child(2){ transform:translateY(-8px); }
+.table-cartes:hover .carte:nth-child(3){ transform:rotate(11deg) translateY(2px) translateX(6px); }
+
+/* La grande carte de la section Anatomie. Meme mecanique que les
+   petites, avec une inclinaison de depart plus marquee : isolee au
+   milieu de sa colonne, elle n'a aucun voisin pour donner
+   l'echelle, et c'est son angle qui la pose dans l'espace. */
+.anatomie__carte img{
+  --incl-x:3deg;
+  --incl-y:-9deg;
+  --leve:0px;
+  transform:
+    translate3d(0, var(--leve), 0)
+    rotateX(var(--incl-x))
+    rotateY(var(--incl-y));
+  box-shadow:var(--relief-3), var(--halo-cyan);
+  transition:transform .5s var(--elan), box-shadow .4s ease;
+}
+.anatomie__carte.incline img{ transition:transform .1s linear, box-shadow .4s ease; }
+
+/* -------------------------------------------------------------
+   2. LES SURFACES
+   -------------------------------------------------------------
+   Les panneaux ne s'inclinent pas. Ils recoivent seulement une
+   elevation et un lisere : ce sont des supports, pas des objets
+   qu'on manipule. Les faire bouger autant que les cartes
+   brouillerait la hierarchie au lieu de la creer.
+   ------------------------------------------------------------- */
+
+/* La bande de chiffres. Les filets d'un pixel entre les cellules
+   sont obtenus par un gap sur un fond colore ; overflow:hidden est
+   donc indispensable pour que l'arrondi ne les laisse pas
+   depasser aux quatre coins. */
+.chiffres{
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--relief-2);
+}
+.chiffre{
+  position:relative;
+  transition:background .3s ease;
+}
+.chiffre::before{
+  content:"";
+  position:absolute; left:0; right:0; top:0; height:1px;
+  background:linear-gradient(90deg, transparent, var(--trait-fort), transparent);
+  opacity:0; transition:opacity .3s ease;
+}
+.chiffre:hover{ background:var(--voile); }
+.chiffre:hover::before{ opacity:1; }
+/* Le libelle passe de --brume-sourde a --brume au survol, et ce
+   n'est pas cosmetique. Un fond qui s'eclaircit fait BAISSER le
+   contraste du texte pose dessus : ce libelle, deja le plus faible
+   de la page, tomberait de 3,73 a 3,54 pour 1. En remontant la
+   couleur d'un cran on passe au contraire au dessus de 7 pour 1.
+   Une surface qui s'allume ne doit jamais rendre son texte moins
+   lisible qu'au repos. */
+.chiffre:hover dt{ color:var(--brume); }
+
+/* Le tableau des distances, meme traitement. La jauge recoit un
+   creux : une barre de progression est un SILLON dans lequel une
+   valeur monte, pas une etiquette posee dessus. */
+.distances{
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--relief-2);
+}
+.distance{ transition:background .3s ease; }
+.distance:hover{ background:var(--voile); }
+.distance__jauge{
+  border-radius:99px;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.55);
+}
+.distance__jauge i{
+  border-radius:99px;
+  /* transform-origin a gauche : la jauge se remplit depuis son
+     depart. Par defaut elle grandirait des deux cotes a la fois. */
+  transform-origin:left center;
+}
+
+/* Les trois etapes deviennent de vraies fiches. Elles etaient
+   separees par un simple filet haut, ce qui les faisait lire comme
+   trois paragraphes d'un meme texte plutot que comme trois gestes
+   distincts. */
+.etape{
+  border:1px solid var(--trait);
+  border-top-color:var(--trait-fort);
+  border-radius:12px;
+  padding:1.4rem 1.35rem 1.5rem;
+  background:linear-gradient(180deg, rgba(20,16,70,.5), rgba(12,9,48,.28));
+  box-shadow:var(--relief-1);
+  transition:transform .3s var(--elan), box-shadow .3s ease, border-color .3s ease;
+}
+.etape:hover{
+  transform:translateY(-5px);
+  box-shadow:var(--relief-2);
+  border-color:var(--trait-fort);
+}
+
+/* Le panneau de telechargement est la destination de la page :
+   c'est le seul element qui a droit a l'elevation maximale. */
+.telecharger{
+  border-radius:20px;
+  box-shadow:var(--relief-3);
+}
+
+/* Le QR est un carre blanc sur du noir. Sans elevation il se lit
+   comme un trou dans la page ; avec, comme une etiquette posee
+   dessus. */
+.pont__code{
+  box-shadow:var(--relief-2);
+  transition:transform .35s var(--elan), box-shadow .35s ease;
+}
+.pont__code:hover{
+  transform:translateY(-4px) scale(1.03);
+  box-shadow:var(--relief-3);
+}
+
+/* La FAQ. Fermee, elle reste une simple liste. Ouverte, la
+   question devient un panneau : c'est ce changement d'etat, et non
+   une bordure permanente, qui montre ou on en est. */
+.question{
+  border-radius:10px;
+  padding-inline:1rem;
+  transition:background .3s ease, box-shadow .3s ease;
+}
+.question:hover{ background:rgba(0,216,240,.045); }
+.question[open]{
+  background:linear-gradient(180deg, rgba(20,16,70,.55), rgba(12,9,48,.3));
+  box-shadow:var(--relief-1);
+  border-bottom-color:transparent;
+}
+.question summary::after{ transition:transform .25s var(--elan), color .25s ease; }
+.question[open] summary::after{ color:var(--ambre); }
+
+/* -------------------------------------------------------------
+   3. LES BOUTONS
+   -------------------------------------------------------------
+   Un bouton est la seule chose de la page qu'on ENFONCE. Il lui
+   faut donc les trois etats du volume : pose, souleve au survol,
+   ecrase au clic. Sans le troisieme, le clic ne rend rien et
+   l'element ne se lit plus comme un bouton.
+   ------------------------------------------------------------- */
+.bouton{
+  border-radius:8px;
+  transition:transform .18s var(--elan), box-shadow .18s ease,
+             background .18s ease, border-color .18s ease;
+}
+.bouton--plein{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.45),
+    0 2px 5px rgba(90,60,0,.4),
+    0 12px 28px rgba(240,168,0,.26);
+}
+.bouton--plein:hover{
+  transform:translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.6),
+    0 4px 10px rgba(90,60,0,.45),
+    0 20px 42px rgba(240,168,0,.38);
+}
+.bouton--trait{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 6px 18px rgba(0,4,26,.4);
+}
+.bouton--trait:hover{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 12px 30px rgba(0,4,26,.5),
+             0 0 24px rgba(0,216,240,.18);
+}
+/* Le retour au sol. translateY(-1px) et non 0 : l'oeil lit mieux
+   une descente vers un niveau intermediaire qu'un retour brutal
+   au repos, qui donne l'impression que le bouton a saute. */
+.bouton:active{
+  transform:translateY(-1px) scale(.985);
+  transition-duration:.06s;
+}
+
+/* -------------------------------------------------------------
+   4. L'ENTETE
+   -------------------------------------------------------------
+   Immobile en haut de page, elle ne doit rien peser. Des que le
+   contenu passe dessous, elle doit au contraire s'en detacher :
+   sans ombre, le texte qui defile semble traverser la barre.
+   La classe est posee par le script.
+   ------------------------------------------------------------- */
+.entete{
+  transition:background .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+.entete.est-defilee{
+  background:rgba(6,4,26,.92);
+  border-bottom-color:var(--trait-fort);
+  box-shadow:0 10px 30px rgba(0,4,26,.55);
+}
+
+/* -------------------------------------------------------------
+   5. L'ARRIVEE AU DEFILEMENT
+   -------------------------------------------------------------
+   Seuls les BLOCS VISUELS montent : grilles, panneaux, tableaux.
+   Jamais les titres ni les paragraphes. Un texte qui apparait par
+   morceaux se lit mal, et retarder le titre principal degraderait
+   la mesure de vitesse percue du navigateur pour rien.
+
+   On anime la propriete `translate` et non `transform` : les deux
+   sont independantes en CSS moderne. Ainsi l'arrivee n'entre
+   jamais en conflit avec les transformations de survol et
+   d'inclinaison, qui gardent `transform` pour elles seules.
+
+   Le masquage est conditionne a la classe `anime`, posee dans le
+   <head> et retiree par un minuteur de securite si le script
+   principal ne repond pas. Sans JavaScript, sans cette classe, ou
+   en mouvement reduit, rien n'est jamais masque.
+   ------------------------------------------------------------- */
+.anime .montee{
+  opacity:0;
+  translate:0 26px;
+  transition:opacity .75s ease, translate .75s var(--elan);
+}
+.anime .montee.est-vue{
+  opacity:1;
+  translate:none;
+}
+
+/* Les enfants des grilles arrivent en cascade. Le retard est pose
+   par le script, cellule par cellule ; a defaut il vaut zero et
+   tout arrive ensemble, ce qui reste correct. */
+.anime .grille-deck .carte,
+.anime .etapes .etape{
+  opacity:0;
+  translate:0 18px;
+  transition:opacity .55s ease var(--retard,0s),
+             translate .55s var(--elan) var(--retard,0s);
+}
+.anime .grille-deck.est-vue .carte,
+.anime .etapes.est-vue .etape{
+  opacity:1;
+  translate:none;
+}
+
+/* Les jauges se remplissent a l'arrivee du tableau. On anime
+   scaleX et non la largeur : la largeur reste ecrite en clair dans
+   le HTML, ou elle est la source de verite. Si rien ne se declenche
+   -- script absent, mouvement reduit -- aucune transformation n'est
+   posee et la jauge s'affiche a sa valeur exacte. */
+.anime .distances .distance__jauge i{
+  transform:scaleX(0);
+  transition:transform 1.1s var(--elan) var(--retard,0s);
+}
+.anime .distances.est-vue .distance__jauge i{
+  transform:scaleX(1);
+}
+
+/* -------------------------------------------------------------
+   6. L'EQUILIBRE DE LA COLONNE
+   -------------------------------------------------------------
+   LE PROBLEME, MESURE
+   -------------------
+   La colonne fait 1120 px sur un ecran large, mais un paragraphe
+   est borne a 62 caracteres, soit 528 a 604 px. La moitie droite
+   de l'ecran restait donc vide, six sections de suite. La page se
+   lisait comme une mise en page telephone etiree, alors que rien
+   n'y etait faux.
+
+   CE QU'ON NE FAIT PAS
+   --------------------
+   Elargir le texte. Les 62 caracteres ne sont pas un caprice :
+   au dela, l'oeil perd la ligne en revenant a la marge. Le
+   confort de lecture ne se sacrifie pas pour remplir un vide.
+
+   CE QU'ON FAIT
+   -------------
+   On met le TITRE et le TEXTE cote a cote. Les deux existaient
+   deja, ils etaient simplement empiles. La largeur se remplit
+   sans une ligne de contenu supplementaire, et l'enchainement
+   -- surtitre, titre, texte, bloc -- cesse d'etre identique dans
+   toutes les sections.
+
+   Le partage n'est pas 50/50 mais 0,85 contre 1,15 : ainsi la
+   colonne de texte retombe a 607 px, c'est a dire exactement sa
+   mesure naturelle de 62 caracteres. Un partage egal l'aurait
+   comprimee a 52 caracteres, et on aurait remplace un defaut par
+   un autre.
+
+   Le seuil est a 1000 px. En dessous, deux colonnes donneraient
+   des lignes trop courtes : l'empilement redevient le bon choix,
+   et la regle ne s'applique tout simplement pas.
+   ------------------------------------------------------------- */
+@media (min-width:1000px){
+  .intro-large{
+    display:grid;
+    grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
+    column-gap:clamp(2.5rem,4vw,4rem);
+    align-items:start;
+  }
+  .intro-large > .surtitre{ grid-column:1 / -1; grid-row:1; }
+  .intro-large > h2{
+    grid-column:1; grid-row:2;
+    /* La marge basse du titre n'a plus lieu d'etre : il n'a plus
+       rien sous lui, il a quelque chose A COTE. */
+    margin-bottom:0;
+  }
+  .intro-large > .prose{
+    grid-column:2; grid-row:2;
+    /* Alignement OPTIQUE, pas geometrique. Les deux colonnes
+       demarrent au meme pixel, mais un titre de 46 px et un texte
+       de 17 px n'ont pas la meme premiere ligne de base : sans ce
+       decalage, le texte parait monter plus haut que le titre. */
+    padding-top:.55rem;
+  }
+  /* Tout le reste -- la demonstration, le tableau, la grille --
+     reprend la largeur entiere, en dessous. */
+  .intro-large > :not(.surtitre):not(h2):not(.prose){ grid-column:1 / -1; }
+}
+
+/* -------------------------------------------------------------
+   7. LA TABLE DU MODE COLLECTIF
+   -------------------------------------------------------------
+   C'etait la section la plus faible de la page : 307 px de
+   contenu dans 499 px de hauteur, trois cartes minuscules et un
+   losange d'un pixel qu'on ne voyait pas. Elle ne paraissait pas
+   inachevee par hasard -- elle etait la seule dont le visuel ne
+   pesait pas autant que son texte.
+
+   Elle ne recoit pas un mot de plus. Ce qui manquait n'etait pas
+   du contenu, c'etait de la PRESENCE : des cartes a la bonne
+   taille, un eventail qui se lit comme un eventail, et une
+   surface sous elles.
+
+   La largeur du losange ne bouge PAS. C'est le correctif
+   documente plus haut : pivote a 45 degres, il occupe racine de
+   deux fois son cote, et repasser au dessus de 70 % rendrait a la
+   page les 53 px de defilement horizontal qu'on lui a retires.
+   On l'appuie donc en couleur et en matiere, jamais en taille.
+   ------------------------------------------------------------- */
+.table-cartes .carte{ width:clamp(5rem, 13vw, 9rem); }
+
+/* L'arc. La carte du milieu monte, les deux autres descendent et
+   s'inclinent : c'est la forme que prend un eventail pose, et
+   trois cartes alignees a plat ne la donnaient pas. */
+.table-cartes .carte:nth-child(1){ transform:rotate(-9deg) translateY(10px); }
+.table-cartes .carte:nth-child(2){ transform:translateY(-6px); }
+.table-cartes .carte:nth-child(3){ transform:rotate(9deg)  translateY(10px); }
+.table-cartes:hover .carte:nth-child(2){ transform:translateY(-14px); }
+
+.table-cartes::before{
+  border-color:var(--trait-fort);
+  background:radial-gradient(closest-side, rgba(0,24,120,.38), transparent 76%);
+}
+
+/* La surface sous les cartes. Une ellipse de lumiere basse, pas
+   une ombre : sur un fond deja noir une ombre ne se voit pas, et
+   c'est la lueur qui fait exister le plan sur lequel les cartes
+   reposent. */
+.table-cartes::after{
+  content:"";
+  position:absolute; z-index:-1; pointer-events:none;
+  left:50%; bottom:clamp(.75rem, 2.5vw, 2rem);
+  width:min(78%, 22rem); height:2.75rem;
+  transform:translateX(-50%);
+  background:radial-gradient(closest-side, rgba(0,216,240,.17), transparent 74%);
+}
+
+/* =============================================================
    ACCESSIBILITE : le mouvement est une option, pas un du
    ============================================================= */
 @media (prefers-reduced-motion:reduce){
@@ -943,6 +1449,46 @@ section{ padding-block:var(--section); position:relative; }
   }
 }
 </style>
+
+<script>
+/* =============================================================
+   L'ARMEMENT DES ARRIVEES AU DEFILEMENT
+   -------------------------------------------------------------
+   Cette classe conditionne le masquage initial des blocs qui
+   montent a l'ecran. Elle est posee ICI, dans le <head>, et non
+   dans le script differe : posee apres le rendu, elle ferait
+   apparaitre les blocs puis les effacerait, soit un clignotement
+   sur toute la page.
+
+   Masquer du contenu en JavaScript est un pari, et le prix d'un
+   pari perdu est une page vide. D'ou trois garde-fous :
+
+     1. SANS JAVASCRIPT   cette ligne ne s'execute pas, la classe
+                          n'existe pas, rien n'est masque.
+     2. MOUVEMENT REDUIT  on n'arme rien du tout.
+     3. SCRIPT ABSENT     si vitrine.js ne repond pas au bout de
+                          deux secondes et demie, le minuteur
+                          desarme et tout redevient visible.
+
+   Le troisieme cas est le seul vraiment dangereux : le script
+   principal peut manquer (reseau coupe en cours de chargement,
+   cache corrompu) alors que JavaScript, lui, fonctionne. C'est
+   exactement la situation ou la page se viderait sans le minuteur.
+   ============================================================= */
+(function () {
+  try {
+    var racine = document.documentElement;
+    if (window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    racine.className += ' anime';
+    setTimeout(function () {
+      if (!racine.classList.contains('revele-actif')) {
+        racine.classList.remove('anime');
+      }
+    }, 2500);
+  } catch (e) { /* Un navigateur qui trebuche ici garde une page complete. */ }
+})();
+</script>
 </head>
 
 <body>
@@ -1002,7 +1548,7 @@ section{ padding-block:var(--section); position:relative; }
 
       <p class="hero__note">Application Android &middot; Deck activé par code &middot; Jouable hors connexion</p>
 
-      <dl class="chiffres">
+      <dl class="chiffres montee">
         <div class="chiffre">
           <dt>Cartes du deck Savane</dt>
           <dd>76<small>Toutes neutres, aucune n'a de rôle fixe</small></dd>
@@ -1025,7 +1571,7 @@ section{ padding-block:var(--section); position:relative; }
 
   <!-- ========================= LA REGLE ========================= -->
   <section class="regle" id="regle">
-    <div class="enveloppe">
+    <div class="enveloppe intro-large">
       <p class="surtitre"><span class="losange" aria-hidden="true"></span> La relation atomique</p>
       <h2>Émettrice, câble, réceptrice</h2>
       <div class="prose">
@@ -1041,7 +1587,7 @@ section{ padding-block:var(--section); position:relative; }
         </p>
       </div>
 
-      <div class="fusion" id="fusion">
+      <div class="fusion montee" id="fusion">
         <figure class="carte" data-code="B3" data-role="emettrice">
           <div class="carte__face est-chargee">
             <img src="/assets/cartes/B3.webp" width="380" height="540"
@@ -1139,7 +1685,7 @@ section{ padding-block:var(--section); position:relative; }
             l'œil a déjà vu.</span></li>
         </ol>
       </div>
-      <div class="anatomie__carte">
+      <div class="anatomie__carte montee">
         <img src="/assets/cartes/B3-detail.webp" width="760" height="1079"
              loading="lazy" decoding="async"
              alt="La carte KEZEU en grand : portrait d'une combattante en armure rouge dans une ville nocturne, son nom, le code B3, et ses trois attributs.">
@@ -1149,7 +1695,7 @@ section{ padding-block:var(--section); position:relative; }
 
   <!-- ========================= LES DISTANCES ========================= -->
   <section id="distances">
-    <div class="enveloppe">
+    <div class="enveloppe intro-large">
       <p class="surtitre"><span class="losange" aria-hidden="true"></span> La progression</p>
       <h2>Cinq distances, une seule règle</h2>
       <div class="prose">
@@ -1162,7 +1708,7 @@ section{ padding-block:var(--section); position:relative; }
         </p>
       </div>
 
-      <div class="distances">
+      <div class="distances montee">
         <div class="distance">
           <span class="distance__cle">D1</span>
           <span class="distance__nom">
@@ -1214,7 +1760,7 @@ section{ padding-block:var(--section); position:relative; }
 
   <!-- ========================= LE DECK ========================= -->
   <section class="deck" id="deck">
-    <div class="enveloppe">
+    <div class="enveloppe intro-large">
       <p class="surtitre"><span class="losange" aria-hidden="true"></span> Extraits du deck</p>
       <h2>Soixante-seize cartes, aucune légende</h2>
       <div class="prose">
@@ -1236,7 +1782,7 @@ section{ padding-block:var(--section); position:relative; }
            doublait l information et encombrait la grille. Elles ne
            servent que dans la demonstration de fusion, ou l attribut
            partage est mis en evidence. -->
-      <div class="grille-deck" id="grille-deck" aria-label="Aperçu de cartes du deck">
+      <div class="grille-deck montee" id="grille-deck" aria-label="Aperçu de cartes du deck">
         <figure class="carte" data-code="B3">
           <div class="carte__face est-chargee">
             <img src="/assets/cartes/B3.webp" width="380" height="540"
@@ -1381,7 +1927,7 @@ section{ padding-block:var(--section); position:relative; }
           </p>
         </div>
       </div>
-      <div class="table-cartes">
+      <div class="table-cartes montee">
         <figure class="carte" data-code="B3">
           <div class="carte__face est-chargee">
             <img src="/assets/cartes/B3.webp" width="380" height="540"
@@ -1422,7 +1968,7 @@ section{ padding-block:var(--section); position:relative; }
       <p class="surtitre"><span class="losange" aria-hidden="true"></span> Première partie</p>
       <h2>Trois étapes, une seule fois</h2>
 
-      <ol class="etapes">
+      <ol class="etapes montee">
         <li class="etape">
           <h3>Installer l'application</h3>
           <p>
@@ -1454,7 +2000,7 @@ section{ padding-block:var(--section); position:relative; }
   <!-- ========================= TELECHARGEMENT ========================= -->
   <section>
     <div class="enveloppe">
-      <div class="telecharger" id="telecharger">
+      <div class="telecharger montee" id="telecharger">
         <p class="surtitre" style="justify-content:center"><span class="losange" aria-hidden="true"></span> Disponible maintenant</p>
         <h2>Prenez le deck en main</h2>
         <p class="prose" style="text-align:center">
@@ -1497,7 +2043,7 @@ section{ padding-block:var(--section); position:relative; }
       <p class="surtitre"><span class="losange" aria-hidden="true"></span> Questions fréquentes</p>
       <h2>Ce qu'on nous demande</h2>
 
-      <div class="faq">
+      <div class="faq montee">
         <details class="question" open>
           <summary>Comment commencer une partie de MIXALGO ?</summary>
           <p>Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil.</p>
