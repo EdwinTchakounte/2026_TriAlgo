@@ -47,7 +47,7 @@ class Step4PreviewPage extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: GuidanceBanner(
             icon: Icons.account_tree_outlined,
-            title: 'Apercu de l\'arbre',
+            title: 'Aperçu de l\'arbre',
             description:
                 'Le graphe des fusions du jeu. Pincez/molette pour zoomer, glissez pour naviguer. Tapez une fusion pour voir ses cartes.',
           ),
@@ -120,7 +120,7 @@ class _EmptyTree extends StatelessWidget {
                 style: AppTextStyles.sectionTitle()),
             const SizedBox(height: 6),
             Text(
-              'Revenez a l\'etape precedente pour composer vos premieres fusions.',
+              'Revenez à l\'étape précédente pour composer vos premières fusions.',
               style: AppTextStyles.caption(),
               textAlign: TextAlign.center,
             ),

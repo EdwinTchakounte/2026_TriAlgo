@@ -78,7 +78,7 @@ class HttpCardRepository implements CardRepository {
         res.data!.cast<Map<String, dynamic>>().map(_parseCard).toList(),
       );
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -127,7 +127,7 @@ class HttpCardRepository implements CardRepository {
     if (pending.gameId != gameId) {
       return Err(DataFailure(
         'Incoherence interne : image bufferisee pour le jeu '
-        '${pending.gameId}, creation demandee pour $gameId',
+        '${pending.gameId}, création demandée pour $gameId',
       ));
     }
     try {
@@ -146,11 +146,11 @@ class HttpCardRepository implements CardRepository {
         options: Options(contentType: 'multipart/form-data'),
       );
       if (res.statusCode != 201 || res.data == null) {
-        return _err(res, 'Upload carte echoue');
+        return _err(res, 'Upload carte échoué');
       }
       return Ok(_parseCard(res.data!));
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -169,11 +169,11 @@ class HttpCardRepository implements CardRepository {
         data: body,
       );
       if (res.statusCode != 200 || res.data == null) {
-        return _err(res, 'Update carte echoue');
+        return _err(res, 'Update carte échoué');
       }
       return Ok(_parseCard(res.data!));
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -185,11 +185,11 @@ class HttpCardRepository implements CardRepository {
     try {
       final res = await _dio.delete('/api/cards/$id');
       if (res.statusCode != 204) {
-        return _err(res, 'Suppression carte echouee');
+        return _err(res, 'Suppression carte échouée');
       }
       return const Ok<void>(null);
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 }

@@ -86,7 +86,7 @@ class FusionAnalyzer {
       return const FusionAnalysisResult(
         kind: FusionAnalysisKind.noLink,
         involvedNodes: [],
-        summary: 'Les cartes doivent etre distinctes',
+        summary: 'Les cartes doivent être distinctes',
       );
     }
 
@@ -113,7 +113,7 @@ class FusionAnalyzer {
         kind: FusionAnalysisKind.chainedLink,
         involvedNodes: [parent, child],
         summary:
-            'Chainage trouve : #${parent.nodeIndex} (D${parent.depth}) -> #${child.nodeIndex} (D${child.depth})',
+            'Chaînage trouve : #${parent.nodeIndex} (D${parent.depth}) -> #${child.nodeIndex} (D${child.depth})',
         detail: detail,
       );
     }
@@ -124,7 +124,7 @@ class FusionAnalyzer {
       involvedNodes: [],
       summary: 'Ces 3 cartes ne sont pas liees dans cet arbre',
       detail:
-          'Aucune fusion ne contient ces 3 cartes, et aucun chainage parent-enfant ne les couvre toutes les 3.',
+          'Aucune fusion ne contient ces 3 cartes, et aucun chaînage parent-enfant ne les couvre toutes les 3.',
     );
   }
 

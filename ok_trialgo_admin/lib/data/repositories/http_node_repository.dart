@@ -45,7 +45,7 @@ class HttpNodeRepository implements NodeRepository {
       }
       return Ok(res.data!.cast<Map<String, dynamic>>().map(_parseNode).toList());
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -59,7 +59,7 @@ class HttpNodeRepository implements NodeRepository {
       }
       return Ok(res.data!['next_index'] as int);
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -88,11 +88,11 @@ class HttpNodeRepository implements NodeRepository {
         },
       );
       if (res.statusCode != 201 || res.data == null) {
-        return _err(res, 'Creation node echouee');
+        return _err(res, 'Création node échouée');
       }
       return Ok(_parseNode(res.data!));
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -101,11 +101,11 @@ class HttpNodeRepository implements NodeRepository {
     try {
       final res = await _dio.delete('/api/nodes/$nodeId');
       if (res.statusCode != 204) {
-        return _err(res, 'Suppression echouee');
+        return _err(res, 'Suppression échouée');
       }
       return const Ok<void>(null);
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 }

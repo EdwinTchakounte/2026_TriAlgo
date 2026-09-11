@@ -39,7 +39,7 @@ class NotAdminFailure extends Failure {
   const NotAdminFailure()
       : super(
           'Ce compte n\'a pas les droits administrateur. '
-          'Contactez le responsable du jeu pour obtenir l\'acces.',
+          'Contactez le responsable du jeu pour obtenir l\'accès.',
         );
 }
 

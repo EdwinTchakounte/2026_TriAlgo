@@ -67,7 +67,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final user = res.user;
       if (user == null) {
-        return const Err(AuthFailure('Connexion echouee'));
+        return const Err(AuthFailure('Connexion échouée'));
       }
 
       // On a une session : on FETCH le profil pour verifier

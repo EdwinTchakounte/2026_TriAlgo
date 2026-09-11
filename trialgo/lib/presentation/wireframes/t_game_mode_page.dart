@@ -368,7 +368,7 @@ class _TGameModePageState extends State<TGameModePage>
                       // TEXTE INFORMATIF (theme-aware : tertiary lisible
                       // sur clair comme sur sombre).
                       Text(
-                        'Vous pourrez changer de mode a tout moment',
+                        'Vous pourrez changer de mode à tout moment',
                         style: GoogleFonts.exo2(
                           fontSize: 11,
                           color: TColors.of(context).textTertiary,
@@ -669,7 +669,7 @@ class _TGameModePageState extends State<TGameModePage>
                     title: 'SOLO',
                     subtitle: 'Mode Individuel',
                     description:
-                        'L\'appli genere des questions a partir de votre deck',
+                        'L\'appli généré des questions à partir de votre deck',
                     icon: Icons.person_rounded,
                     // Icone "personne" pour le mode solo.
                     accentColor: TTheme.orange,

@@ -55,7 +55,7 @@ class HttpGameRepository implements GameRepository {
           .toList();
       return Ok(list);
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -75,11 +75,11 @@ class HttpGameRepository implements GameRepository {
         },
       );
       if (res.statusCode != 201 || res.data == null) {
-        return _err(res, 'Creation echouee');
+        return _err(res, 'Création échouée');
       }
       return Ok(_parseGame(res.data!));
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 
@@ -103,11 +103,11 @@ class HttpGameRepository implements GameRepository {
         data: body,
       );
       if (res.statusCode != 200 || res.data == null) {
-        return _err(res, 'Update echoue');
+        return _err(res, 'Update échoué');
       }
       return Ok(_parseGame(res.data!));
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     }
   }
 }

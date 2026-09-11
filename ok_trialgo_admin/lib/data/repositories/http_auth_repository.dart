@@ -57,7 +57,7 @@ class HttpAuthRepository implements AuthRepository {
       // 401 / autre -> pas de session valide.
       return const Ok<UserProfile?>(null);
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     } catch (e) {
       // Meme raison que dans signIn : le bootstrap laisse l'etat en
       // `loading` tant que cette methode n'a pas rendu la main.
@@ -89,7 +89,7 @@ class HttpAuthRepository implements AuthRepository {
       final meRes = await _dio.get<Map<String, dynamic>>('/api/auth/me');
       if (meRes.statusCode != 200 || meRes.data == null) {
         await DioClient.storage.clear();
-        return const Err(AuthFailure('Profil indisponible apres login'));
+        return const Err(AuthFailure('Profil indisponible après login'));
       }
       final profile = _parseUser(meRes.data!);
 
@@ -100,7 +100,7 @@ class HttpAuthRepository implements AuthRepository {
       }
       return Ok(profile);
     } on DioException catch (e) {
-      return Err(DataFailure('Erreur reseau : ${e.message}'));
+      return Err(DataFailure('Erreur réseau : ${e.message}'));
     } catch (e) {
       // FILET DE SECURITE, ET POURQUOI IL EST INDISPENSABLE
       // ---------------------------------------------------

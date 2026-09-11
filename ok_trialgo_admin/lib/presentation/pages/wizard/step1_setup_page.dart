@@ -60,7 +60,7 @@ class Step1SetupPage extends ConsumerWidget {
             icon: Icons.flag_outlined,
             title: 'Configuration du jeu',
             description:
-                'Verifions ensemble ce qui est deja en place pour "${game.name}". On va ensuite enrichir les cartes, puis composer les fusions.',
+                'Verifions ensemble ce qui est déjà en place pour "${game.name}". On va ensuite enrichir les cartes, puis composer les fusions.',
           ),
 
           const SizedBox(height: 20),
@@ -68,7 +68,7 @@ class Step1SetupPage extends ConsumerWidget {
           // ---------------------------------------------------
           // RECAP : compteurs
           // ---------------------------------------------------
-          Text('Etat actuel', style: AppTextStyles.sectionTitle()),
+          Text('État actuel', style: AppTextStyles.sectionTitle()),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -120,21 +120,21 @@ class Step1SetupPage extends ConsumerWidget {
             n: '1',
             title: 'Une fusion = A + B => Produit',
             description:
-                'Deux ingredients (A et B) fusionnent pour produire une carte resultat. C\'est la brique de base du jeu.',
+                'Deux ingredients (A et B) fusionnent pour produire une carte résultat. C\'est la brique de base du jeu.',
           ),
           const SizedBox(height: 8),
           _RuleBlock(
             n: '2',
             title: 'Les fusions s\'enchainent',
             description:
-                'Le produit d\'une fusion peut devenir l\'ingredient A d\'une fusion suivante. C\'est le chainage : D1 (racine), D2 (enfant), ... jusqu\'a D5.',
+                'Le produit d\'une fusion peut devenir l\'ingredient A d\'une fusion suivante. C\'est le chaînage : D1 (racine), D2 (enfant), ... jusqu\'a D5.',
           ),
           const SizedBox(height: 8),
           _RuleBlock(
             n: '3',
             title: 'Indice unique par fusion',
             description:
-                'Chaque fusion recoit un numero unique dans le jeu (1, 2, 3...). Il sert au mode collectif pour valider une reponse au clavier.',
+                'Chaque fusion recoit un numéro unique dans le jeu (1, 2, 3...). Il sert au mode collectif pour valider une réponse au clavier.',
           ),
 
           const SizedBox(height: 28),

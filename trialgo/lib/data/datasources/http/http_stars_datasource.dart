@@ -39,7 +39,7 @@ class HttpStarsDatasource {
       '/api/me/stars/exchange-for-life',
       data: {if (gameId != null) 'game_id': gameId},
     );
-    _ensure(res, 'Echange impossible');
+    _ensure(res, 'Échange impossible');
     return res.data!;
   }
 

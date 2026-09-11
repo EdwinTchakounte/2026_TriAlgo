@@ -117,9 +117,9 @@ SupabaseClient get supabase {
   if (!_supabaseInitialise) {
     throw StateError(
       'Client Supabase indisponible : ApiConfig.mode vaut '
-      '${ApiConfig.mode.name}, donc Supabase n\'a pas ete initialise au '
-      'demarrage. Le code appelant doit passer par les datasources HTTP '
-      '(lib/data/datasources/http/) ou etre place derriere un test '
+      '${ApiConfig.mode.name}, donc Supabase n\'a pas été initialisé au '
+      'démarrage. Le code appelant doit passer par les datasources HTTP '
+      '(lib/data/datasources/http/) ou être place derriere un test '
       'ApiConfig.isSupabase.',
     );
   }

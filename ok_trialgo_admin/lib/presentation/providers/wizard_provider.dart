@@ -48,7 +48,7 @@ extension WizardStepX on WizardStep {
       case WizardStep.trios:
         return 'Composer les fusions';
       case WizardStep.preview:
-        return 'Apercu de l\'arbre';
+        return 'Aperçu de l\'arbre';
     }
   }
 }

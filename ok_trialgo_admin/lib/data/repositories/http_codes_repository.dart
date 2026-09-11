@@ -79,7 +79,7 @@ class HttpCodesRepository implements CodesRepository {
   Result<T> _erreurDio<T>(DioException e, String fallback) {
     final reponse = e.response;
     if (reponse != null) return _err(reponse, fallback);
-    return Err(DataFailure('Erreur reseau : ${e.message}'));
+    return Err(DataFailure('Erreur réseau : ${e.message}'));
   }
 
   // -----------------------------------------------------------
@@ -142,11 +142,11 @@ class HttpCodesRepository implements CodesRepository {
         },
       );
       if (res.statusCode != 201 || res.data == null) {
-        return _err(res, 'Creation du code echouee');
+        return _err(res, 'Création du code échouée');
       }
       return Ok(_parse(res.data!));
     } on DioException catch (e) {
-      return _erreurDio(e, 'Creation du code echouee');
+      return _erreurDio(e, 'Création du code échouée');
     }
   }
 
@@ -159,7 +159,7 @@ class HttpCodesRepository implements CodesRepository {
     required String code,
     required bool isActive,
   }) async {
-    return _patch(code, {'is_active': isActive}, 'Mise a jour echouee');
+    return _patch(code, {'is_active': isActive}, 'Mise à jour échouée');
   }
 
   // -----------------------------------------------------------
@@ -168,7 +168,7 @@ class HttpCodesRepository implements CodesRepository {
 
   @override
   Future<Result<ActivationCode>> resetAssignment(String code) async {
-    return _patch(code, {'reset_assignment': true}, 'Reinitialisation echouee');
+    return _patch(code, {'reset_assignment': true}, 'Réinitialisation échouée');
   }
 
   Future<Result<ActivationCode>> _patch(
@@ -199,14 +199,14 @@ class HttpCodesRepository implements CodesRepository {
     try {
       final res = await _dio.delete<dynamic>('/api/admin/codes/$code');
       if (res.statusCode != 204) {
-        return _err(res, 'Suppression echouee');
+        return _err(res, 'Suppression échouée');
       }
       return const Ok(null);
     } on DioException catch (e) {
       // Cas frequent : 409 ou 500 parce qu'un user_games reference
       // encore ce code (contrainte RESTRICT). Le detail du serveur
       // est plus parlant que n'importe quel message generique.
-      return _erreurDio(e, 'Suppression echouee');
+      return _erreurDio(e, 'Suppression échouée');
     }
   }
 }

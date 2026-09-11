@@ -200,7 +200,7 @@ class ProfileService {
     }
 
     final user = supabase.auth.currentUser;
-    if (user == null) throw StateError('Aucun utilisateur connecte');
+    if (user == null) throw StateError('Aucun utilisateur connecté');
 
     // Upsert : insert ou update selon si la ligne existe.
     await supabase.from('user_profiles').upsert({
@@ -283,7 +283,7 @@ class ProfileService {
     } catch (e) {
       return ActivationResult(
         success: false,
-        message: 'Erreur reseau : ${e.toString().replaceFirst('Exception: ', '')}',
+        message: 'Erreur réseau : ${e.toString().replaceFirst('Exception: ', '')}',
       );
     }
   }
@@ -299,7 +299,7 @@ class ProfileService {
     if (user == null) {
       return const ActivationResult(
         success: false,
-        message: 'Aucun utilisateur connecte',
+        message: 'Aucun utilisateur connecté',
       );
     }
 
@@ -338,7 +338,7 @@ class ProfileService {
     } catch (e) {
       return ActivationResult(
         success: false,
-        message: 'Erreur reseau : $e',
+        message: 'Erreur réseau : $e',
       );
     }
   }

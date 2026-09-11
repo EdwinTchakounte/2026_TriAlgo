@@ -81,7 +81,7 @@ class _THomeTourState extends State<THomeTour> {
       icon: Icons.play_arrow_rounded,
       color: TColors.primary,
       title: 'La carte de JEU',
-      body: "Le bouton JOUER au milieu te fait demarrer la partie\n"
+      body: "Le bouton JOUER au milieu te fait démarrer la partie\n"
           "de ton niveau actuel.",
     ),
     _TourStep(
@@ -89,14 +89,14 @@ class _THomeTourState extends State<THomeTour> {
       color: TColors.primaryVariant,
       title: 'Tes stats',
       body: "En haut, retrouve ton niveau, tes points,\n"
-          "tes vies et ta serie de jours.",
+          "tes vies et ta série de jours.",
     ),
     _TourStep(
       icon: Icons.explore_rounded,
       color: TColors.info,
       title: 'Decouvre',
       body: "Consulte ta collection de cartes,\n"
-          "le classement et les defis a venir.",
+          "le classement et les défis à venir.",
     ),
   ];
 

@@ -94,7 +94,7 @@ class NodeRepositoryImpl implements NodeRepository {
           .single();
       return Ok(NodeModel.fromJson(row));
     } catch (e) {
-      return Err(DataFailure('Creation trio impossible : $e'));
+      return Err(DataFailure('Création trio impossible : $e'));
     }
   }
 

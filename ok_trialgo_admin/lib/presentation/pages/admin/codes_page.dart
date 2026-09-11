@@ -90,7 +90,7 @@ class CodesPage extends ConsumerWidget {
                     title: 'Aucun code',
                     description:
                         'Creez des codes pour que les joueurs puissent '
-                        'debloquer ce jeu depuis leur boite.',
+                        'débloquer ce jeu depuis leur boîte.',
                   );
                 }
                 return _ListeDesCodes(etat: etat, jeux: jeux);
@@ -307,7 +307,7 @@ class _CarteDeCode extends ConsumerWidget {
                       ? 'Appareil : ${code.deviceChangesCount}/'
                           '${code.maxDeviceChanges} changement(s) '
                           '- ${code.changementsRestants} restant(s)'
-                      : 'Jamais active - quota '
+                      : 'Jamais activé - quota '
                           '${code.maxDeviceChanges} changement(s)',
                   style: AppTextStyles.caption(),
                 ),
@@ -389,7 +389,7 @@ class _MenuDActions extends ConsumerWidget {
             value: _Action.reinitialiser,
             child: ListTile(
               leading: Icon(Icons.restart_alt),
-              title: Text('Reinitialiser (SAV)'),
+              title: Text('Réinitialiser (SAV)'),
               contentPadding: EdgeInsets.zero,
             ),
           ),
@@ -428,15 +428,15 @@ class _MenuDActions extends ConsumerWidget {
         _annoncer(
           messenger,
           erreur,
-          code.isActive ? 'Code desactive' : 'Code reactive',
+          code.isActive ? 'Code désactivé' : 'Code reactive',
         );
 
       case _Action.reinitialiser:
         final confirme = await _confirmer(
           context,
-          titre: 'Reinitialiser ${code.code} ?',
-          corps: 'Le code sera detache de son proprietaire et de son '
-              'appareil, le compteur repart a zero et le blocage est '
+          titre: 'Réinitialiser ${code.code} ?',
+          corps: 'Le code sera detache de son propriétaire et de son '
+              'appareil, le compteur repart à zéro et le blocage est '
               'leve.\n\nA n\'utiliser que pour un joueur ayant '
               'reellement perdu son telephone : le code redevient '
               'utilisable par quiconque le connait.',
@@ -454,7 +454,7 @@ class _MenuDActions extends ConsumerWidget {
           context,
           titre: 'Supprimer ${code.code} ?',
           corps: 'Suppression definitive.\n\nElle echouera si un joueur '
-              'est encore rattache a ce code : dans ce cas, '
+              'est encore rattaché à ce code : dans ce cas, '
               'reinitialisez-le d\'abord.',
           libelleConfirmation: 'Supprimer',
           destructif: true,
@@ -463,7 +463,7 @@ class _MenuDActions extends ConsumerWidget {
         _annoncer(
           messenger,
           await notifier.supprimer(code.code),
-          'Code supprime',
+          'Code supprimé',
         );
     }
   }
@@ -654,11 +654,11 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
     // Bornes alignees sur ce que le serveur accepte
     // (max_device_changes entre 1 et 20).
     if (quantite < 1 || quantite > 500) {
-      _afficher('La quantite doit etre comprise entre 1 et 500.');
+      _afficher('La quantite doit être comprise entre 1 et 500.');
       return;
     }
     if (quota < 1 || quota > 20) {
-      _afficher('Le quota doit etre compris entre 1 et 20.');
+      _afficher('Le quota doit être compris entre 1 et 20.');
       return;
     }
 
@@ -688,7 +688,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
           _enCours = false;
           _progression = null;
         });
-        _afficher('Arret apres $crees code(s) cree(s) : $erreur');
+        _afficher('Arrêt après $crees code(s) créé(s) : $erreur');
         return;
       }
 
@@ -699,7 +699,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
 
     if (!mounted) return;
     Navigator.of(context).pop();
-    _afficher('$crees code(s) cree(s).', succes: true);
+    _afficher('$crees code(s) créé(s).', succes: true);
   }
 
   void _afficher(String message, {bool succes = false}) {
@@ -728,7 +728,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
           Text('Nouveaux codes', style: AppTextStyles.sectionTitle()),
           const SizedBox(height: 4),
           Text(
-            'Les codes sont tires au hasard, sans caracteres '
+            'Les codes sont tires au hasard, sans caractères '
             'ambigus (ni 0/O ni 1/I).',
             style: AppTextStyles.caption(),
           ),
@@ -738,7 +738,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
             initialValue: _gameId,
             isExpanded: true,
             decoration: const InputDecoration(
-              labelText: 'Jeu a debloquer',
+              labelText: 'Jeu à débloquer',
               prefixIcon: Icon(Icons.videogame_asset),
             ),
             items: [
@@ -760,7 +760,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
             decoration: const InputDecoration(
               labelText: 'Prefixe (optionnel)',
               hintText: 'Ex : SAVANE',
-              helperText: 'Aide a reconnaitre un lot d\'un coup d\'oeil.',
+              helperText: 'Aidé à reconnaître un lot d\'un coup d\'oeil.',
               prefixIcon: Icon(Icons.label_outline),
             ),
           ),
@@ -775,7 +775,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'Quantite',
-                    helperText: '1 a 500',
+                    helperText: '1 à 500',
                     prefixIcon: Icon(Icons.numbers),
                   ),
                 ),
@@ -788,7 +788,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: 'Changements',
-                    helperText: '1 a 20',
+                    helperText: '1 à 20',
                     prefixIcon: Icon(Icons.phone_android),
                   ),
                 ),
@@ -806,7 +806,7 @@ class _FeuilleDeCreationState extends ConsumerState<_FeuilleDeCreation> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 12),
-                Text('Creation en cours : $_progression',
+                Text('Création en cours : $_progression',
                     style: AppTextStyles.caption()),
               ],
             ),

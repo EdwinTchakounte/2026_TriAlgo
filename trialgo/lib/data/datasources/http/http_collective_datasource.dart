@@ -28,7 +28,7 @@ class HttpCollectiveDatasource {
       '/api/games/$gameId/verify-collective',
       data: {'node_index': nodeIndex},
     );
-    _ensure(res, 'Verification impossible');
+    _ensure(res, 'Vérification impossible');
     return res.data!;
   }
 

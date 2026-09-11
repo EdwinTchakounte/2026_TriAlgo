@@ -60,7 +60,7 @@ class HttpAdminUsersRepository implements AdminUsersRepository {
   Result<T> _erreurDio<T>(DioException e, String fallback) {
     final reponse = e.response;
     if (reponse != null) return _err(reponse, fallback);
-    return Err(DataFailure('Erreur reseau : ${e.message}'));
+    return Err(DataFailure('Erreur réseau : ${e.message}'));
   }
 
   @override
@@ -101,11 +101,11 @@ class HttpAdminUsersRepository implements AdminUsersRepository {
         '/api/admin/users/$userId/promote',
       );
       if (res.statusCode != 200 || res.data == null) {
-        return _err(res, 'Changement de statut echoue');
+        return _err(res, 'Changement de statut échoué');
       }
       return Ok(_parse(res.data!));
     } on DioException catch (e) {
-      return _erreurDio(e, 'Changement de statut echoue');
+      return _erreurDio(e, 'Changement de statut échoué');
     }
   }
 
@@ -120,11 +120,11 @@ class HttpAdminUsersRepository implements AdminUsersRepository {
         data: {'is_active': isActive},
       );
       if (res.statusCode != 200 || res.data == null) {
-        return _err(res, 'Mise a jour du compte echouee');
+        return _err(res, 'Mise à jour du compte échouée');
       }
       return Ok(_parse(res.data!));
     } on DioException catch (e) {
-      return _erreurDio(e, 'Mise a jour du compte echouee');
+      return _erreurDio(e, 'Mise à jour du compte échouée');
     }
   }
 }

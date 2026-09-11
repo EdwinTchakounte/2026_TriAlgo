@@ -139,7 +139,7 @@ class HttpAuthDatasource {
       data: {'token': token},
       options: Options(extra: {'noAuth': true}),
     );
-    _ensureSuccess(res, 'Token de confirmation invalide ou expire');
+    _ensureSuccess(res, 'Token de confirmation invalide ou expiré');
   }
 
   // -----------------------------------------------------------
@@ -183,7 +183,7 @@ class HttpAuthDatasource {
       data: {'token': token, 'new_password': newPassword},
       options: Options(extra: {'noAuth': true}),
     );
-    _ensureSuccess(res, 'Token de reset invalide ou expire');
+    _ensureSuccess(res, 'Token de reset invalide ou expiré');
   }
 
   // -----------------------------------------------------------

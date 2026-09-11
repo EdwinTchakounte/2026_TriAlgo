@@ -65,7 +65,7 @@ class GameRepositoryImpl implements GameRepository {
           .single();
       return Ok(GameModel.fromJson(row));
     } catch (e) {
-      return Err(DataFailure('Creation game impossible : $e'));
+      return Err(DataFailure('Création game impossible : $e'));
     }
   }
 
@@ -89,7 +89,7 @@ class GameRepositoryImpl implements GameRepository {
     );
     if (patch.isEmpty) {
       return const Err(
-        ValidationFailure('Aucun champ a modifier'),
+        ValidationFailure('Aucun champ à modifier'),
       );
     }
     try {

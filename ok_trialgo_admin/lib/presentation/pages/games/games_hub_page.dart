@@ -150,7 +150,7 @@ class GamesHubPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Creez votre premier jeu pour commencer a importer des cartes et composer des fusions.',
+                            'Creez votre premier jeu pour commencer à importer des cartes et composer des fusions.',
                             style: AppTextStyles.caption(),
                             textAlign: TextAlign.center,
                           ),
@@ -160,7 +160,7 @@ class GamesHubPage extends ConsumerWidget {
                             child: ElevatedButton.icon(
                               onPressed: () => _createAndOpen(context, ref),
                               icon: const Icon(Icons.add),
-                              label: const Text('Creer mon premier jeu'),
+                              label: const Text('Créer mon premier jeu'),
                             ),
                           ),
                         ],

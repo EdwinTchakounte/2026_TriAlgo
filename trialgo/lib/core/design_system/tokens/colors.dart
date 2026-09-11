@@ -38,11 +38,14 @@ import 'package:flutter/material.dart';
 class TColors {
 
   // --- Identite orange/dore ---
-  /// Orange principal (boutons primaires, accents marketing).
-  static const Color primary = Color(0xFFFF6B35);
+  /// Ambre du logo -- celui du mot « Mix » -- pour les boutons
+  /// primaires et les accents. Remplace l'orange rouge #FF6B35,
+  /// qui n'appartenait a aucune couleur du produit : la vitrine
+  /// et le logo n'en contiennent pas.
+  static const Color primary = Color(0xFFF0A800);
 
-  /// Dore secondaire (gradient end, etoiles, scores).
-  static const Color primaryVariant = Color(0xFFF7C948);
+  /// Ambre clair : fin de degrade, etoiles, scores.
+  static const Color primaryVariant = Color(0xFFFFC93C);
 
   // --- Couleurs semantiques ---
   /// Vert succes (bonnes reponses, validations, progress).
@@ -54,8 +57,10 @@ class TColors {
   /// Rouge erreur (mauvaises reponses, vies perdues).
   static const Color error = Color(0xFFEF5350);
 
-  /// Bleu informatif (tips, neutre).
-  static const Color info = Color(0xFF42A5F5);
+  /// Cyan du diamant, teinte dominante du logo apres le blanc.
+  /// Il etait ABSENT de l'application : le bleu #42A5F5 utilise
+  /// jusqu'ici etait un bleu Material generique.
+  static const Color info = Color(0xFF00D8F0);
 
   /// Violet douceur (emettrices, badges premium).
   static const Color purple = Color(0xFFAB7CFF);
@@ -201,10 +206,13 @@ class TSurfaceColors extends ThemeExtension<TSurfaceColors> {
   // =============================================================
 
   /// Fond profond du mode dark (#0A0A1A).
-  static const Color darkBgBase = Color(0xFF0A0A1A);
+  // --nuit de la vitrine. L'ecart avec l'ancien #0A0A1A est faible
+  // mais il fait la difference entre « a peu pres la meme chose »
+  // et « la meme chose ».
+  static const Color darkBgBase = Color(0xFF06041A);
 
   /// Fond surelevé du mode dark (#1A1035).
-  static const Color darkBgRaised = Color(0xFF1A1035);
+  static const Color darkBgRaised = Color(0xFF0C0930);   // --voile
 
   /// Fond sunken du mode dark (#0D1B2A).
   static const Color darkBgSunken = Color(0xFF0D1B2A);
@@ -239,7 +247,12 @@ class TSurfaceColors extends ThemeExtension<TSurfaceColors> {
     textSecondary:Color(0xB3FFFFFF), // 70%
     textTertiary: Color(0x73FFFFFF), // 45%
     textDisabled: Color(0x40FFFFFF), // 25%
-    textOnBrand:  Color(0xFFFFFFFF),
+    // PAS du blanc. Ce jeton habille le texte pose sur TOUTES les
+    // couleurs de marque -- primary, success, warning, error, info,
+    // violet -- et le blanc echouait au seuil AA sur les sept, de
+    // 1,74 a 3,49 pour 1. Ce brun tres sombre, celui des boutons de
+    // la vitrine, passe partout : de 5,42 a 10,86 pour 1.
+    textOnBrand:  Color(0xFF1A0F00),
   );
 
   // =============================================================
@@ -267,7 +280,12 @@ class TSurfaceColors extends ThemeExtension<TSurfaceColors> {
     textSecondary:Color(0xFF4A5568),
     textTertiary: Color(0xFF9CA3AF),
     textDisabled: Color(0xFFD1D5DB),
-    textOnBrand:  Color(0xFFFFFFFF),
+    // PAS du blanc. Ce jeton habille le texte pose sur TOUTES les
+    // couleurs de marque -- primary, success, warning, error, info,
+    // violet -- et le blanc echouait au seuil AA sur les sept, de
+    // 1,74 a 3,49 pour 1. Ce brun tres sombre, celui des boutons de
+    // la vitrine, passe partout : de 5,42 a 10,86 pour 1.
+    textOnBrand:  Color(0xFF1A0F00),
   );
 
   // =============================================================

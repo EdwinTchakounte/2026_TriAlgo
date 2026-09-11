@@ -120,7 +120,7 @@ class TIllustrations {
                         children: [
                           ShaderMask(
                             shaderCallback: (b) => TTheme.accentGradient.createShader(b),
-                            child: Text('TRIALGO', style: TTheme.titleStyle(size: 20)),
+                            child: Text('MIXALGO', style: TTheme.titleStyle(size: 20)),
                           ),
                           const SizedBox(height: 4),
                           Text(

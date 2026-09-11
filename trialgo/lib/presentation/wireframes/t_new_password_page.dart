@@ -130,7 +130,7 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
     }
     // En FastAPI on a besoin du token clair (deep-link ou colle).
     if (ApiConfig.isFastApi && _tokenController.text.trim().length < 20) {
-      setState(() => _tokenError = 'Token de recuperation manquant ou invalide');
+      setState(() => _tokenError = 'Token de récupération manquant ou invalide');
       return;
     }
 
@@ -246,8 +246,8 @@ class _TNewPasswordPageState extends State<TNewPasswordPage> {
               if (ApiConfig.isFastApi) ...[
                 AppTextField(
                   controller: _tokenController,
-                  label: 'Code de recuperation',
-                  hint: 'Colle le code recu par email',
+                  label: 'Code de récupération',
+                  hint: 'Colle le code reçu par email',
                   prefixIcon: Icons.vpn_key_outlined,
                   textInputAction: TextInputAction.next,
                   errorText: _tokenError,

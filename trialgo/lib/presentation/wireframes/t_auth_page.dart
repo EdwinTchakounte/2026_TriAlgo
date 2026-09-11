@@ -281,7 +281,7 @@ class _TAuthPageState extends ConsumerState<TAuthPage>
     // Supabase + FastAPI : email deja pris.
     if (raw.contains('already registered') ||
         raw.contains('already in use') ||
-        raw.contains('Email deja utilise')) {
+        raw.contains('Email déjà utilise')) {
       return tr('auth.error_taken');
     }
     // Supabase + FastAPI : credentials invalides.
@@ -294,7 +294,7 @@ class _TAuthPageState extends ConsumerState<TAuthPage>
       return tr('auth.error_unconfirmed');
     }
     // FastAPI : compte desactive.
-    if (raw.contains('Compte desactive')) {
+    if (raw.contains('Compte désactivé')) {
       return tr('auth.error_unconfirmed');
     }
     if (raw.contains('weak') || raw.contains('at least')) {
@@ -430,7 +430,7 @@ class _TAuthPageState extends ConsumerState<TAuthPage>
                     ),
                   ),
                   child: Text(
-                    'Mot de passe oublie ?',
+                    'Mot de passe oublié ?',
                     style: TTypography.labelLg(color: TColors.primary),
                   ),
                 ),

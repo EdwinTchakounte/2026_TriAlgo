@@ -63,17 +63,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final hPad = Breakpoints.horizontalPadding(context);
 
     return Scaffold(
-      // Fond gradient TRES doux : passe de white a un brand
-      // ultra-dilue. Donne de la chaleur sans crier.
+      // Le degrade partait de Colors.white sur une application en
+      // theme SOMBRE : le commentaire d'origine parlait d'aller
+      // « de white a un brand ultra-dilue », ce qui etait ecrit
+      // pour un theme clair et n'a jamais suivi la bascule. Le
+      // resultat etait un fond brun delave, sans rapport ni avec
+      // le produit ni avec le reste de l'application.
+      //
+      // On reprend la profondeur de la vitrine : une lueur bleue
+      // haute, comme le halo du diamant, qui retombe sur la nuit.
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -0.65),
+            radius: 1.1,
             colors: [
-              Colors.white,
-              AppColors.brand.withValues(alpha: 0.04),
+              Color(0xFF141046),   // --voile-clair, au centre
+              AppColors.background, // --nuit, sur les bords
             ],
+            stops: [0.0, 0.85],
           ),
         ),
         child: SafeArea(
@@ -95,14 +103,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       const SizedBox(height: 20),
                       Center(
                         child: Text(
-                          'TRIALGO Admin',
+                          'MIXALGO Admin',
                           style: AppTextStyles.hero(),
                         ),
                       ),
                       const SizedBox(height: 6),
                       Center(
                         child: Text(
-                          'Studio de creation de jeux',
+                          'Studio de création de jeux',
                           style: AppTextStyles.caption(),
                         ),
                       ),
@@ -215,7 +223,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'Acces reserve aux administrateurs',
+                            'Accès réservé aux administrateurs',
                             style: AppTextStyles.caption(),
                           ),
                         ],
