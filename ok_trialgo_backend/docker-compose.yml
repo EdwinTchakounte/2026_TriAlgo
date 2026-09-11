@@ -42,7 +42,17 @@ services:
   # En production tu peux remplacer par AWS S3, R2, Wasabi, etc. :
   # le code backend ne change pas (boto3 / aioboto3 standard).
   minio:
-    image: minio/minio:latest
+    # quay.io et non le Docker Hub : MinIO y a RETIRE ses images.
+    # `docker pull minio/mc` repond desormais « pull access denied
+    # for minio/mc, repository does not exist or may require
+    # 'docker login' » -- un message qui fait chercher un probleme
+    # d'authentification alors que le depot n'existe simplement
+    # plus. quay.io/minio est le registre officiel du projet.
+    #
+    # Version epinglee et non `latest` : une stack de production ne
+    # doit pas changer de binaire au prochain `up --build`, sans
+    # que rien ne l'ait demande.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -66,7 +76,7 @@ services:
   # n'existe pas. Necessaire au 1er demarrage (sinon le backend
   # echoue sur le 1er upload).
   create_bucket:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_healthy
