@@ -498,7 +498,7 @@
         if (etat) {
           etat.textContent = montrees + ' cartes sur les ' + donnees.cartes.length +
                              ' du deck ' + (donnees.jeu.name || 'actif') +
-                             ', catalogue lu en direct sur l’API MIXALGO';
+                             ', catalogue lu en direct sur l\'API MIXALGO';
         }
       })
       .catch(function () {
@@ -824,6 +824,52 @@
   }
 
   // ===========================================================
+  // 9. LA FERMETURE DU MENU
+  // ===========================================================
+  //
+  // <details> ne se referme pas tout seul. Apres un clic sur « Les
+  // distances » le panneau resterait donc ouvert, pose par dessus
+  // la section qu'on vient justement de demander a voir.
+  //
+  // C'est le SEUL comportement du menu qui ne soit pas deja dans le
+  // navigateur, et donc le seul qui justifie du script. Tout le
+  // reste -- ouvrir, fermer, annoncer l'etat a un lecteur d'ecran,
+  // repondre a Entree et a la barre d'espace -- vient du balisage.
+  // Sans ce bloc le menu fonctionne encore, il se referme
+  // simplement d'un second appui.
+  //
+  // On ecoute sur le <details> et non sur chaque lien : un seul
+  // ecouteur, et les liens qu'on ajouterait plus tard sont pris en
+  // charge sans y penser.
+  // ===========================================================
+  function monterLeMenu() {
+    var menu = document.getElementById('menu');
+    if (!menu) return;
+
+    menu.addEventListener('click', function (evenement) {
+      if (evenement.target.closest('.menu__liste a')) menu.open = false;
+    });
+
+    // Echap ferme, comme tout panneau transitoire.
+    //
+    // L'ecoute est posee sur le DOCUMENT, pas sur le <details>. Sur
+    // celui-ci elle ne recevrait que les touches frappees alors que
+    // le focus est a l'interieur du menu -- or on peut tres bien
+    // l'avoir ouvert a la souris, le focus restant sur le corps de
+    // page. Echap ne ferait alors rien, sans que rien n'explique
+    // pourquoi.
+    //
+    // Le focus revient sur le bouton : le laisser sur un lien qui
+    // vient de disparaitre perdrait la navigation au clavier.
+    document.addEventListener('keydown', function (evenement) {
+      if (evenement.key !== 'Escape' || !menu.open) return;
+      menu.open = false;
+      var bascule = menu.querySelector('summary');
+      if (bascule) bascule.focus();
+    });
+  }
+
+  // ===========================================================
   // DEMARRAGE
   // ===========================================================
   function demarrer() {
@@ -840,6 +886,7 @@
     // tomber.
     monterLesRevelations();
     monterLEntete();
+    monterLeMenu();
 
     monterLeCiel();
     monterLaFusion();
