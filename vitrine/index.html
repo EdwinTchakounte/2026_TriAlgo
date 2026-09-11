@@ -167,7 +167,15 @@
   /* --- Texte. Aucun gris pur : tout est biaise vers l'accent - */
   --craie:     #EAF4FA;
   --brume:     #96A2CC;
-  --brume-sourde:#5E679A;
+  /* #5E679A a l'origine, soit 3,73 pour 1 sur --nuit : sous le
+     seuil AA de 4,5 exige pour du petit texte. Or ce jeton porte
+     precisement les mentions les plus petites de la page -- les
+     attributs a 9 px, les libelles des chiffres, la note du hero,
+     le pied. Le contraste y manquait la ou il etait le plus
+     necessaire. Remonte a 5,9 pour 1, il reste nettement en
+     retrait de --brume (8,0) : la hierarchie tient, la lisibilite
+     ne se paie plus. */
+  --brume-sourde:#7E88BE;
 
   /* --- Traits et voiles ------------------------------------- */
   --trait:      rgba(0, 216, 240, .16);
@@ -301,12 +309,22 @@ section{ padding-block:var(--section); position:relative; }
   width:var(--colonne); margin-inline:auto;
   display:flex; align-items:center; gap:1.5rem;
   min-height:4.25rem;
+  /* Bloc conteneur du panneau de menu sur telephone : ancre a la
+     barre, le panneau s'aligne sur le bord de la colonne. Ancre au
+     bouton -- 44 px de large, place aux deux tiers de la barre --
+     un panneau de 200 px debordait de 10 px par la GAUCHE a 320 px.
+     Un debordement a gauche ne cree aucune barre de defilement, il
+     coupe simplement le panneau : invisible aux mesures, visible a
+     l'oeil. */
+  position:relative;
 }
 .marque{
   display:flex; align-items:center; gap:.6rem;
   font-family:var(--titre); font-weight:900;
   font-size:1.05rem; letter-spacing:.04em;
   color:var(--craie); text-decoration:none;
+  /* 29 px de haut auparavant : sous le minimum touchable. */
+  min-height:44px;
 }
 .marque b{ color:var(--ambre); font-weight:inherit; }
 .navigation{
@@ -324,8 +342,147 @@ section{ padding-block:var(--section); position:relative; }
   font-size:.9rem; font-weight:500;
 }
 .navigation a:not(.bouton):hover{ color:var(--craie); }
+
+/* -------------------------------------------------------------
+   LE MENU DE SECTIONS
+   -------------------------------------------------------------
+   Auparavant les quatre liens etaient purement et simplement
+   masques sous 860 px. Or le visiteur arrive majoritairement PAR
+   LE TELEPHONE -- c'est l'appareil que designe le QR code, et le
+   seul sur lequel le jeu s'installe. Il se retrouvait donc sans
+   aucun moyen d'atteindre une section sur une page de onze mille
+   pixels : le seul lien survivant menait au telechargement.
+
+   POURQUOI <details> ET PAS DU JAVASCRIPT
+   ---------------------------------------
+   L'ouverture, la fermeture, l'etat expanded annonce aux lecteurs
+   d'ecran, l'activation a la barre d'espace et a Entree : tout
+   cela est deja dans le navigateur. Un menu ecrit a la main
+   redemanderait ces quatre comportements, et en oublierait au
+   moins un. La page garde en prime sa regle fondatrice -- elle
+   doit etre complete sans le script.
+
+   LE MEME BALISAGE SERT AUX DEUX TAILLES
+   --------------------------------------
+   Sur grand ecran le bouton disparait et la liste est forcee en
+   display:flex, ce qui suffit a surcharger le masquage que le
+   navigateur applique a un <details> ferme. Pas de duplication
+   des liens, donc aucun risque de les voir diverger.
+   ------------------------------------------------------------- */
+.menu{ position:relative; }
+
+.menu__bascule{
+  display:none;                 /* rangee simple par defaut */
+  align-items:center; gap:.55rem;
+  min-height:44px; padding:.45rem .8rem;
+  cursor:pointer; list-style:none;
+  color:var(--brume); font-size:.9rem; font-weight:500;
+  border:1px solid var(--trait); border-radius:8px;
+  transition:border-color .2s ease, color .2s ease;
+}
+.menu__bascule::-webkit-details-marker{ display:none; }
+.menu__bascule:hover{ border-color:var(--trait-fort); color:var(--craie); }
+
+/* Trois barres dessinees en CSS plutot qu'une icone : c'est trois
+   declarations contre une requete reseau, et la couleur suit le
+   texte sans qu'on ait a la redeclarer. */
+.menu__barres{
+  width:1rem; height:2px; flex:none;
+  background:currentColor; position:relative;
+}
+.menu__barres::before,
+.menu__barres::after{
+  content:""; position:absolute; left:0;
+  width:100%; height:2px; background:currentColor;
+}
+.menu__barres::before{ top:-5px; }
+.menu__barres::after{ top:5px; }
+.menu[open] .menu__bascule{ border-color:var(--cyan); color:var(--craie); }
+
+/* display:flex suffit a rendre la liste VISIBLE malgre le <details>
+   ferme, mais pas a la faire COMPTER : les navigateurs recents
+   posent content-visibility:hidden sur ::details-content, et un
+   contenu ainsi saute ne contribue plus a la taille intrinseque de
+   son conteneur. La liste se retrouvait large de 0 px et ses quatre
+   liens debordaient l'en-tete par la droite -- « Le deck » sortait
+   de 26 px hors de la fenetre a 1280. Il faut donc lever les deux :
+   l'affichage ET le calcul de taille. */
+.menu__liste{ display:flex; align-items:center; gap:1.75rem; }
+.menu__liste a{ display:inline-flex; align-items:center; min-height:44px; }
+
+/* content-visibility rend la liste mesurable par le moteur de mise
+   en page malgre le <details> ferme -- sans quoi, sur grand ecran,
+   elle serait large de 0 px et ses liens deborderaient la barre. */
+.menu::details-content{ content-visibility:visible; }
+
+/* Masquage VISUEL seulement : le mot reste dans l'arbre
+   d'accessibilite. Un summary reduit a trois barres n'a plus de
+   nom accessible, et un lecteur d'ecran annoncerait un bouton
+   anonyme. display:none le supprimerait vraiment ; clip-path le
+   retire de l'image sans le retirer du document. */
+.hors-ecran{
+  position:absolute; width:1px; height:1px;
+  padding:0; margin:-1px; overflow:hidden;
+  clip-path:inset(50%); white-space:nowrap; border:0;
+}
+
 @media (max-width:860px){
-  .navigation .repliable{ display:none; }
+  .menu__bascule{ display:flex; }
+  .menu{ position:static; }
+
+  /* ON NE S'EN REMET PAS au masquage natif du <details>.
+     Poser un `display` sur cet enfant le neutralise, quelle que
+     soit la valeur : la liste restait affichee en permanence par
+     dessus la page, panneau ouvert sans que personne ne l'ait
+     ouvert. Et aucune mesure de debordement ne le signalait --
+     elle est en position absolue, donc elle ne pousse rien. Seul
+     un regard sur la capture l'a montre.
+     L'affichage est donc pilote explicitement sur [open]. Ce qui
+     est deterministe se lit, et se teste. */
+  .menu__liste{ display:none; }
+  .menu[open] .menu__liste{
+    display:flex;
+    position:absolute; top:calc(100% + .6rem); right:0;
+    flex-direction:column; align-items:stretch; gap:.1rem;
+    min-width:12.5rem; padding:.4rem;
+    background:var(--voile);
+    border:1px solid var(--trait-fort); border-radius:10px;
+    box-shadow:0 18px 44px rgba(0,4,26,.7);
+    z-index:60;
+  }
+  .menu__liste a{
+    padding:.25rem .85rem; border-radius:6px;
+  }
+  .menu__liste a:hover{ background:rgba(0,216,240,.07); }
+}
+
+/* -------------------------------------------------------------
+   L'EN-TETE SUR ECRAN ETROIT
+   -------------------------------------------------------------
+   Trois elements se partagent la barre : la marque, le menu et le
+   bouton de telechargement. A 320 px la colonne ne fait que
+   280 px, et le bouton « Sections » complet -- icone plus mot --
+   en reclamait 110 a lui seul : l'en-tete debordait de 99 px et
+   poussait la PAGE ENTIERE horizontalement. C'est exactement le
+   defaut qui avait deja ete corrige sur le losange du mode
+   collectif : une barre trop large ne se rogne pas toute seule,
+   elle elargit le document.
+
+   Le mot passe donc hors ecran sous 520 px, les ecarts se
+   resserrent, et le bouton devient un carre de 44 px -- la taille
+   touchable minimale, pas moins.
+   ------------------------------------------------------------- */
+@media (max-width:520px){
+  .entete__interieur{ gap:.7rem; }
+  .navigation{ gap:.6rem; }
+  .menu__mot{
+    position:absolute; width:1px; height:1px;
+    padding:0; margin:-1px; overflow:hidden;
+    clip-path:inset(50%); white-space:nowrap; border:0;
+  }
+  .menu__bascule{ width:44px; padding:0; justify-content:center; }
+  .bouton--menu{ padding:.5rem .8rem; font-size:.8rem; }
+  .marque{ font-size:.95rem; gap:.45rem; }
 }
 
 /* =============================================================
@@ -363,7 +520,10 @@ section{ padding-block:var(--section); position:relative; }
   background:rgba(0,216,240,.06);
   color:var(--craie);
 }
-.bouton--menu{ padding:.55rem 1.05rem; font-size:.85rem; }
+/* min-height : ce bouton faisait 43 px de haut, un pixel sous la
+   cible de 44 recommandee au doigt. Un pixel ne se voit pas et se
+   sent, sur le seul bouton que la barre garde en permanence. */
+.bouton--menu{ padding:.55rem 1.05rem; font-size:.85rem; min-height:44px; }
 
 /* =============================================================
    HERO
@@ -567,8 +727,8 @@ section{ padding-block:var(--section); position:relative; }
   margin:.55rem 0 0; padding:0; list-style:none;
 }
 .attribut{
-  font-family:var(--mono); font-size:.58rem;
-  letter-spacing:.1em; text-transform:uppercase;
+  font-family:var(--mono); font-size:.68rem;
+  letter-spacing:.08em; text-transform:uppercase;
   padding:.18rem .4rem;
   border:1px solid var(--trait);
   color:var(--brume-sourde);
@@ -927,8 +1087,17 @@ section{ padding-block:var(--section); position:relative; }
   display:flex; flex-wrap:wrap; gap:1.5rem 2.5rem;
   align-items:baseline;
 }
-.pied nav{ display:flex; flex-wrap:wrap; gap:1.5rem; margin-left:auto; }
-.pied a{ color:var(--brume); text-decoration:none; }
+/* gap reduit et zone agrandie : ces liens faisaient 24 px de haut,
+   sous le minimum de 24x24 exige par WCAG 2.5.8 et tres loin des
+   44 px confortables au doigt. Le padding vertical les porte a 44
+   sans changer l'apparence -- la zone touchable grandit, pas le
+   texte. Le gap passe de 1,5 a 1 rem pour compenser l'ecart que le
+   padding cree deja. */
+.pied nav{ display:flex; flex-wrap:wrap; gap:0 1rem; margin-left:auto; }
+.pied a{
+  color:var(--brume); text-decoration:none;
+  display:inline-flex; align-items:center; min-height:44px;
+}
 .pied a:hover{ color:var(--craie); }
 
 /* =============================================================
@@ -1439,6 +1608,130 @@ section{ padding-block:var(--section); position:relative; }
 }
 
 /* =============================================================
+   LES FINITIONS
+   -------------------------------------------------------------
+   Rien ici ne change la mise en page. Ce sont les details qu'on
+   ne remarque que lorsqu'ils manquent : la couleur de selection,
+   l'ascenseur, le comportement des ancres, et ce que devient la
+   page quand le systeme du visiteur demande autre chose.
+   ============================================================= */
+
+:root{
+  /* Dit au navigateur que la page est sombre. Il en tire tout ce
+     qu'il dessine LUI-MEME et que le CSS ne peut pas atteindre :
+     l'ascenseur, le fond des menus natifs, le surlignage du
+     correcteur orthographique, la couleur par defaut d'un champ.
+     Sans cette ligne, un ascenseur blanc borde une page noire. */
+  color-scheme:dark;
+
+  /* Et pour les navigateurs qui acceptent qu'on precise. */
+  scrollbar-color:var(--trait-fort) transparent;
+  scrollbar-width:thin;
+}
+
+/* Le bleu de selection par defaut du systeme sur une page cyan et
+   ambre : la seule couleur de toute la page qui ne vienne pas du
+   logo. */
+::selection{ background:var(--cyan); color:var(--nuit); }
+
+/* -------------------------------------------------------------
+   LES ANCRES SOUS L'EN-TETE COLLANTE
+   -------------------------------------------------------------
+   Un saut vers #distances amene le haut de la section a y=0 --
+   c'est a dire SOUS la barre, qui fait 68 px et cache donc les 68
+   premiers pixels de la section. Le surtitre y perdait 9 px, et
+   le panneau de telechargement, qui n'a pas le meme rembourrage,
+   voyait son titre ampute de 14.
+
+   scroll-margin-top decale la cible d'exactement la hauteur de la
+   barre. L'arrivee reproduit alors ce qu'on voit en defilant a la
+   main jusqu'a cette section -- ce qui est precisement ce qu'on
+   attend d'un lien d'ancrage.
+   ------------------------------------------------------------- */
+[id]{ scroll-margin-top:4.25rem; }
+
+/* -------------------------------------------------------------
+   CONTRASTE RENFORCE
+   -------------------------------------------------------------
+   Un reglage systeme, comme le mouvement reduit : il existe pour
+   des yeux qui en ont besoin, pas pour une preference. On ne
+   touche qu'aux teintes discretes et aux filets -- les titres et
+   le corps de texte sont deja tres au dessus des seuils.
+   ------------------------------------------------------------- */
+@media (prefers-contrast:more){
+  :root{
+    --brume:#C6CFEE;
+    --brume-sourde:#A8B2DA;
+    --trait:rgba(0,216,240,.34);
+    --trait-fort:rgba(0,216,240,.64);
+  }
+  .carte__face::before{ display:none; }   /* le reflet voile le visuel */
+}
+
+/* Le flou de l'en-tete est un effet, pas une information. Certains
+   systemes le desactivent pour des raisons de lisibilite ou de
+   performance ; on remplace alors le voile par un fond plein,
+   sans quoi le texte defile visiblement sous la barre. */
+@media (prefers-reduced-transparency:reduce){
+  .entete{ background:var(--nuit); backdrop-filter:none; }
+  .menu__liste{ background:var(--nuit); }
+}
+
+/* -------------------------------------------------------------
+   L'IMPRESSION
+   -------------------------------------------------------------
+   Les navigateurs n'impriment pas les fonds. Une page peinte en
+   clair sur du noir sort donc en clair sur du BLANC : une feuille
+   vierge, sans le moindre message d'erreur. C'est le defaut
+   d'impression le plus courant des sites sombres, et le plus
+   silencieux.
+
+   On inverse donc les jetons plutot que de reecrire des regles :
+   la cascade fait le reste toute seule.
+   ------------------------------------------------------------- */
+@media print{
+  :root{
+    --nuit:#FFFFFF; --voile:#FFFFFF; --voile-clair:#FFFFFF;
+    --craie:#101018; --brume:#3A3A4A; --brume-sourde:#5A5A6C;
+    --cyan:#164E63; --cyan-doux:#164E63; --ambre:#7A4B00;
+    --trait:#D4D4DE; --trait-fort:#9A9AAA;
+    --ombre-nette:none; --relief-1:none; --relief-2:none; --relief-3:none;
+    --halo-cyan:none;
+  }
+  body{ background:#fff; color:#101018; }
+
+  /* Decors, commandes et navigation : rien a faire sur du papier. */
+  body::before, #ciel, .hero__voile, .entete, .saut-lien,
+  .fusion__pilote, .bouton, .table-cartes::before,
+  .table-cartes::after{ display:none !important; }
+
+  .carte__face{ border:1px solid #BBB; box-shadow:none; }
+  .carte__face::before{ display:none; }
+  .telecharger, .etape, .chiffres, .distances{
+    border:1px solid #BBB; box-shadow:none;
+  }
+
+  /* Une reponse repliee ne s'imprime pas. Sur papier il n'y a
+     personne pour cliquer : la FAQ doit sortir entiere. */
+  .question::details-content{ content-visibility:visible; }
+  .question p{ display:block !important; }
+  .question summary::after{ display:none; }
+
+  /* Un lien imprime ne mene nulle part si son adresse reste
+     cachee. Seuls les liens EXTERNES la meritent : « #regle »
+     n'apprendrait rien a personne. */
+  a[href^="http"]::after{
+    content:" (" attr(href) ")";
+    font-size:.82em; color:#5A5A6C; word-break:break-all;
+  }
+
+  /* Ne pas couper un bloc au milieu d'une page. */
+  .etape, .question, .chiffre, .distance, .carte{ break-inside:avoid; }
+  h1, h2, h3{ break-after:avoid; }
+  section{ padding-block:1.5rem; }
+}
+
+/* =============================================================
    ACCESSIBILITE : le mouvement est une option, pas un du
    ============================================================= */
 @media (prefers-reduced-motion:reduce){
@@ -1504,10 +1797,18 @@ section{ padding-block:var(--section); position:relative; }
       <span>MIX<b>ALGO</b></span>
     </a>
     <nav class="navigation" aria-label="Navigation principale">
-      <a class="repliable" href="#regle">La règle</a>
-      <a class="repliable" href="#anatomie">La carte</a>
-      <a class="repliable" href="#distances">Les distances</a>
-      <a class="repliable" href="#deck">Le deck</a>
+      <details class="menu" id="menu">
+        <summary class="menu__bascule">
+          <span class="menu__barres" aria-hidden="true"></span>
+          <span class="menu__mot">Sections</span>
+        </summary>
+        <div class="menu__liste">
+          <a href="#regle">La règle</a>
+          <a href="#anatomie">La carte</a>
+          <a href="#distances">Les distances</a>
+          <a href="#deck">Le deck</a>
+        </div>
+      </details>
       <a class="bouton bouton--plein bouton--menu" href="#telecharger">Télécharger</a>
     </nav>
   </div>
@@ -1523,7 +1824,9 @@ section{ padding-block:var(--section); position:relative; }
     <div class="enveloppe hero__contenu">
       <img class="hero__logo"
            src="/assets/mixalgo-logo.png"
-           srcset="/assets/mixalgo-logo-512.webp 512w, /assets/mixalgo-logo-900.webp 900w"
+           srcset="/assets/mixalgo-logo-512.webp 512w,
+                   /assets/mixalgo-logo-672.webp 672w,
+                   /assets/mixalgo-logo-900.webp 900w"
            sizes="(max-width: 640px) 86vw, 26rem"
            width="900" height="624"
            alt="Logo MIXALGO : cinq cartes de personnages en éventail au centre d'un diamant lumineux."
@@ -1639,7 +1942,13 @@ section{ padding-block:var(--section); position:relative; }
         </figure>
       </div>
 
-      <p class="fusion__lecture" id="fusion-lecture">
+      <!-- aria-live : le bouton « Fusion suivante » remplace les trois
+           cartes, cette phrase et le compteur. Sans region live, un
+           lecteur d'ecran n'annonce rien du tout -- l'utilisateur
+           active un bouton et, pour lui, il ne se passe strictement
+           rien. « polite » et non « assertive » : l'annonce attend la
+           fin de la phrase en cours plutot que de couper la parole. -->
+      <p class="fusion__lecture" id="fusion-lecture" aria-live="polite">
         <strong>Maille</strong> traverse les trois cartes. KEZEU la porte,
         BABADJI la porte, BEMA en hérite.
       </p>
@@ -1648,7 +1957,7 @@ section{ padding-block:var(--section); position:relative; }
         <button class="bouton bouton--trait" type="button" id="relancer">
           Fusion suivante
         </button>
-        <p class="fusion__legende" id="fusion-legende">
+        <p class="fusion__legende" id="fusion-legende" aria-live="polite">
           Fusion 1 sur 3, trios réels du deck Savane
         </p>
       </div>
@@ -1665,7 +1974,7 @@ section{ padding-block:var(--section); position:relative; }
           <p>
             Une carte MIXALGO tient en quatre informations, et pas une de plus.
             Il n'y a ni points, ni valeur, ni couleur de famille, ni texte de
-            règle : rien qui puisse se compter ou se comparer. Ce qui se joue
+            règle : rien qui puisse se compter ou se comparer. Ce qui se joue
             se regarde.
           </p>
         </div>
@@ -1674,7 +1983,7 @@ section{ padding-block:var(--section); position:relative; }
             parce que c'est lui qui porte le jeu. Toute la logique d'une fusion
             est dans ce qu'on y voit.</span></li>
           <li><span><b>Le nom.</b> <code>KEZEU</code> ici. Une identité, jamais un
-            rôle : la même carte est émettrice dans une fusion et réceptrice dans
+            rôle : la même carte est émettrice dans une fusion et réceptrice dans
             une autre.</span></li>
           <li><span><b>Le code.</b> <code>B3</code>. Il sert au référentiel du jeu
             et à l'arbitrage, là où prononcer un nom à voix haute donnerait la
@@ -1703,7 +2012,7 @@ section{ padding-block:var(--section); position:relative; }
           La difficulté ne vient jamais du chronomètre. Elle vient de la
           <strong>distance</strong> qui sépare les trois cartes qu'on vous montre.
           En D1, elles forment une fusion directe. Au-delà, elles sont prélevées
-          le long d'une chaîne : le lien existe toujours, mais il passe par des
+          le long d'une chaîne : le lien existe toujours, mais il passe par des
           cartes que vous ne voyez pas.
         </p>
       </div>
@@ -1766,7 +2075,7 @@ section{ padding-block:var(--section); position:relative; }
       <div class="prose">
         <p>
           EKAMBI, MAGNE, BABADJI, BIKOKO. Chaque carte est un portrait, et le
-          deck entier tient dans un imaginaire afrofuturiste : villes de nuit,
+          deck entier tient dans un imaginaire afrofuturiste : villes de nuit,
           armures de maille, orages électriques et masques d'ancêtres.
           <strong>Tout ce qui compte est dans l'image.</strong>
         </p>
@@ -1973,7 +2282,7 @@ section{ padding-block:var(--section); position:relative; }
           <h3>Installer l'application</h3>
           <p>
             Le fichier APK s'installe directement sur Android. Votre téléphone
-            demandera d'autoriser une installation hors magasin : c'est normal
+            demandera d'autoriser une installation hors magasin : c'est normal
             pour une application distribuée de cette manière.
           </p>
         </li>
@@ -2045,27 +2354,27 @@ section{ padding-block:var(--section); position:relative; }
 
       <div class="faq montee">
         <details class="question" open>
-          <summary>Comment commencer une partie de MIXALGO ?</summary>
+          <summary>Comment commencer une partie de MIXALGO ?</summary>
           <p>Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil.</p>
         </details>
         <details class="question">
-          <summary>Faut-il posséder les cartes physiques pour jouer ?</summary>
+          <summary>Faut-il posséder les cartes physiques pour jouer ?</summary>
           <p>Non pour le mode solo, qui se joue entièrement dans l'application. Les cartes physiques servent au mode collectif, où un animateur annonce un numéro de trio et où les joueurs cherchent les trois cartes correspondantes sur la table.</p>
         </details>
         <details class="question">
-          <summary>Que veulent dire les attributs inscrits sur une carte ?</summary>
-          <p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p>
+          <summary>Que veulent dire les attributs inscrits sur une carte ?</summary>
+          <p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p>
         </details>
         <details class="question">
-          <summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary>
+          <summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary>
           <p>Oui. Le deck est téléchargé une seule fois au premier lancement, puis les questions sont fabriquées sur l'appareil. Une partie entière se joue sans réseau.</p>
         </details>
         <details class="question">
-          <summary>Que signifient les distances D1 à D5 ?</summary>
+          <summary>Que signifient les distances D1 à D5 ?</summary>
           <p>La distance mesure l'éloignement entre les cartes d'un trio dans le graphe du jeu. En D1 les trois cartes forment une fusion directe. À partir de D2, elles sont prélevées le long d'une chaîne de fusions, ce qui rend le lien de moins en moins visible.</p>
         </details>
         <details class="question">
-          <summary>Combien de trios peut-on former dans une partie ?</summary>
+          <summary>Combien de trios peut-on former dans une partie ?</summary>
           <p>Une chaîne de k fusions donne au plus C(2k,2) moins 1 trios valides, soit 1 en D1, 5 en D2, 14 en D3, 27 en D4 et 44 en D5. Un deck de 76 cartes dépasse ainsi plusieurs centaines de questions distinctes.</p>
         </details>
       </div>
@@ -2087,7 +2396,17 @@ section{ padding-block:var(--section); position:relative; }
   </div>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<!-- integrity : sans lui, le jour ou cdnjs sert autre chose que ce
+     fichier -- compromission, erreur de deploiement -- le navigateur
+     executerait ce « autre chose » avec tous les droits de
+     mixalgo.com. Le condensat fait echouer le chargement au lieu de
+     l'executer, et la vitrine retombe simplement sur son fond
+     degrade : monterLeCiel() renonce en silence si THREE est absent.
+     crossorigin est OBLIGATOIRE avec integrity, sinon la reponse est
+     opaque et le navigateur ne peut pas verifier le condensat. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu"
+        crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <script src="/scripts/vitrine.js" defer></script>
 </body>
 </html>
