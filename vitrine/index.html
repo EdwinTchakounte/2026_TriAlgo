@@ -207,7 +207,17 @@ body{
   overflow-x:hidden;
 }
 
-img{ max-width:100%; display:block; }
+/* height:auto n'est pas une precaution, c'est un correctif.
+   Les attributs width et height du HTML servent au navigateur a
+   reserver la place avant le chargement -- sans eux la page
+   saute. Mais ils agissent AUSSI comme une consigne de style :
+   sans height:auto, `height="624"` devient height:624px, et le
+   logo, large de 350 px par le CSS, etait rendu en 350x624 au
+   lieu de 350x243. Un rapport de 0,56 pour une image qui en vaut
+   1,44 : le diamant etait ecrase de moitie.
+   L'aspect-ratio deduit des attributs, lui, ne s'applique QUE si
+   une des deux dimensions reste libre. */
+img{ max-width:100%; height:auto; display:block; }
 
 a{ color:var(--cyan); text-decoration-thickness:1px; text-underline-offset:3px; }
 a:hover{ color:var(--cyan-doux); }
@@ -1729,6 +1739,105 @@ section{ padding-block:var(--section); position:relative; }
   .etape, .question, .chiffre, .distance, .carte{ break-inside:avoid; }
   h1, h2, h3{ break-after:avoid; }
   section{ padding-block:1.5rem; }
+}
+
+/* =============================================================
+   LE PREMIER ECRAN SUR TELEPHONE
+   -------------------------------------------------------------
+   MESURE AVANT CORRECTION, sur un ecran de 390 x 844 :
+     logo      350 x 624   -- 74 % de la hauteur visible
+     titre     hors ecran, a y=745
+     boutons   hors ecran, a y=1069
+   Le visiteur voyait donc le logo, et rien d'autre. Or le logo
+   annonce la marque ; c'est le TITRE qui annonce le jeu, et le
+   bouton qui permet de l'installer.
+
+   Deux causes, deux corrections :
+     1. le logo etait DEFORME (height:auto plus haut) ;
+     2. il reste trop grand meme a la bonne proportion.
+
+   72 % de la colonne au lieu de 100 %, plafonne a 16 rem. A
+   390 px cela donne 252 px de large et 175 de haut : le titre,
+   l'accroche et les deux boutons tiennent alors dans le premier
+   ecran, ce qui est tout l'objet de la page.
+   ------------------------------------------------------------- */
+@media (max-width:640px){
+  .hero__logo{
+    width:min(72%, 16rem);
+    margin-bottom:clamp(1.1rem, 3vw, 1.6rem);
+  }
+  /* Le hero se resserre : chaque pixel rendu par le logo doit
+     profiter au contenu, pas au vide. */
+  .hero{ padding-block:clamp(1rem, 3vw, 1.75rem) var(--section); }
+  .hero__accroche{ margin-bottom:1.6rem; }
+  .chiffres{ margin-top:clamp(2rem, 5vw, 3rem); }
+}
+
+/* -------------------------------------------------------------
+   LA SCENE 3D, ENFIN VISIBLE SUR TELEPHONE
+   -------------------------------------------------------------
+   Le canvas etait deja la, et deja anime. Mais le logo couvrait
+   le centre de l'ecran et son propre fond sombre masquait tout ce
+   qui se passait derriere : l'animation existait sans se voir.
+
+   Maintenant que le logo occupe trois fois moins de place, on
+   remonte la presence du decor plutot que de le laisser au meme
+   niveau que sur un grand ecran, ou il n'a qu'a suggerer.
+   ------------------------------------------------------------- */
+@media (max-width:640px){
+  #ciel{ opacity:1; }
+  /* Le voile qui fond le ciel dans la nuit est allege : sur
+     telephone il effacait justement la zone ou la scene est la
+     plus lisible, autour du logo. */
+  .hero__voile{
+    background:
+      radial-gradient(78% 46% at 50% 26%, rgba(0,24,120,.30) 0%, transparent 72%),
+      linear-gradient(to bottom, transparent 74%, var(--nuit) 100%);
+  }
+}
+
+/* -------------------------------------------------------------
+   LE MENU SUR TELEPHONE
+   -------------------------------------------------------------
+   Il fonctionnait, mais chichement : un panneau de 200 px, des
+   lignes serrees, et aucune facon de le refermer sans viser a
+   nouveau le bouton. Trois corrections :
+
+     - il s'ouvre sur toute la largeur de la colonne, ce qui donne
+       des zones tactiles larges au lieu de precises ;
+     - il apparait au lieu de surgir, ce qui aide a comprendre
+       d'ou il vient ;
+     - un appui a cote le referme (voir vitrine.js).
+   ------------------------------------------------------------- */
+@media (max-width:860px){
+  .menu[open] .menu__liste{
+    left:0; right:0;                 /* toute la colonne */
+    min-width:0;
+    padding:.5rem;
+    gap:.15rem;
+    animation:menu-apparait .18s cubic-bezier(.22,.9,.28,1);
+  }
+  .menu__liste a{
+    padding:.35rem 1rem;
+    min-height:48px;                 /* confortable au pouce */
+    border-radius:8px;
+    font-size:.95rem;
+  }
+  /* Un filet entre les entrees : sur une pleine largeur, des
+     lignes sans separation se lisent comme un bloc de texte. */
+  .menu__liste a + a{ box-shadow:0 -1px 0 var(--trait); }
+}
+
+@keyframes menu-apparait{
+  from{ opacity:0; transform:translateY(-.4rem); }
+  to  { opacity:1; transform:none; }
+}
+
+/* Le mouvement reste une option : la regle globale de reduction
+   coupe la duree, mais l'animation d'entree partirait quand meme
+   d'une opacite nulle. On la neutralise explicitement. */
+@media (prefers-reduced-motion:reduce){
+  .menu[open] .menu__liste{ animation:none; }
 }
 
 /* =============================================================

@@ -87,6 +87,56 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // =====================================================
+        // LES ARCHITECTURES EMBARQUEES
+        // =====================================================
+        // Mesure sur l'APK de 71,8 Mo : 63,6 Mo de bibliotheques
+        // natives, reparties ainsi.
+        //
+        //   arm64-v8a     21,6 Mo   telephones modernes
+        //   armeabi-v7a   17,9 Mo   telephones 32 bits
+        //   x86_64        24,1 Mo   EMULATEURS uniquement
+        //
+        // Aucun telephone du commerce n'execute x86_64 : cette
+        // architecture ne sert qu'aux emulateurs de developpement.
+        // L'APK etant distribue par telechargement direct depuis
+        // mixalgo.com, et non par un magasin qui saurait servir la
+        // bonne variante, chaque joueur telechargeait ces 24 Mo
+        // pour rien -- soit un tiers de l'attente, sur une
+        // connexion mobile ou le fichier met deja plusieurs
+        // minutes.
+        //
+        // Le developpement n'est pas gene : `flutter run` produit
+        // un build de debug, qui n'est pas soumis a ce filtre.
+        //
+        // DEUX MECANISMES SONT NECESSAIRES, et c'est le piege :
+        //
+        //   1. Les bibliotheques de FLUTTER (libflutter.so,
+        //      libapp.so) sont placees par son greffon Gradle
+        //      selon --target-platform, pas selon abiFilters. Le
+        //      filtre seul laissait donc l'APK a 71,8 Mo.
+        //      -> voir la commande de build dans CLAUDE.md
+        //
+        //   2. Les bibliotheques des GREFFONS (ML Kit, CameraX)
+        //      arrivent en dependances Android classiques. Elles
+        //      ne repondent ni a --target-platform ni, en
+        //      pratique, a abiFilters une fois le greffon Flutter
+        //      passe. Elles sont donc exclues a l'empaquetage,
+        //      ci-dessous.
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
+    }
+
+    // Le filet qui attrape ce que les deux mecanismes precedents
+    // laissent passer. Sans lui, libbarhopper_v3.so -- le lecteur
+    // de codes-barres de ML Kit -- pesait a lui seul 5,5 Mo en
+    // x86_64, pour une architecture qu'aucun telephone n'execute.
+    packaging {
+        jniLibs {
+            excludes += setOf("lib/x86/**", "lib/x86_64/**")
+        }
     }
 
     signingConfigs {
