@@ -1,12 +1,12 @@
 {
-    "name": "trialgo_admin",
-    "short_name": "trialgo_admin",
+    "name": "MIXALGO Admin",
+    "short_name": "MIXALGO Admin",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#06041A",
+    "theme_color": "#06041A",
+    "description": "Studio de creation de jeux MIXALGO : cartes, fusions, codes d'activation et comptes.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
