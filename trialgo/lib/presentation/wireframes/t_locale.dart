@@ -198,11 +198,11 @@ class TLocale extends InheritedWidget {
     'result.accuracy': 'Precision',
     'result.max_streak': 'Série max',
     'result.next_level': 'Niveau suivant',
-    'result.retry': 'Reessayer',
+    'result.retry': 'Réessayer',
     'result.home': 'Retour au menu',
 
     // --- Settings ---
-    'settings.title': 'Parametres',
+    'settings.title': 'Paramètres',
     'settings.audio': 'AUDIO',
     'settings.sounds': 'Effets sonores',
     'settings.sounds_desc': 'Sons d\'interaction',
@@ -401,7 +401,7 @@ class TLocale extends InheritedWidget {
     'common.cancel': 'Annuler',
     'common.loading': 'Chargement...',
     'common.error': 'Erreur',
-    'common.retry': 'Reessayer',
+    'common.retry': 'Réessayer',
     'common.back': 'Retour',
 
     // --- Activation (refonte unboxing, activation.title existe deja) ---
@@ -456,7 +456,7 @@ class TLocale extends InheritedWidget {
     'result.stat_accuracy': 'Precision',
     'result.stat_combo': 'Combo',
     'result.cta_next_level': 'NIVEAU SUIVANT',
-    'result.cta_retry': 'REESSAYER',
+    'result.cta_retry': 'RÉESSAYER',
     'result.cta_home': "Retour à l'accueil",
     'result.score_label': 'SCORE',
 
@@ -504,7 +504,7 @@ class TLocale extends InheritedWidget {
     'lb.error_body': 'Vérifié ta connexion et reessaie.',
     'lb.empty_title': 'Aucun joueur',
     'lb.empty_body': 'Sois le premier à apparaître dans le classement !',
-    'lb.cta_retry': 'REESSAYER',
+    'lb.cta_retry': 'RÉESSAYER',
     'lb.level_label': 'Niveau',
     'lb.pts': 'pts',
 
@@ -566,7 +566,7 @@ class TLocale extends InheritedWidget {
     'loading.ready': 'Prêt !',
     'loading.error_title': 'Chargement impossible',
     'loading.error_body': 'Vérifié ta connexion et reessaie.',
-    'loading.cta_retry': 'REESSAYER',
+    'loading.cta_retry': 'RÉESSAYER',
     'loading.oops': 'Oups',
 
     // --- Home tour (refonte) ---
@@ -576,7 +576,7 @@ class TLocale extends InheritedWidget {
     'tour.step2_body': "En haut, retrouve ton niveau, tes points,\ntes vies et ta série de jours.",
     'tour.step3_title': 'Decouvre',
     'tour.step3_body': 'Consulte ta collection de cartes,\nle classement et les défis à venir.',
-    'tour.prev': 'Precedent',
+    'tour.prev': 'Précédent',
     'tour.next': 'SUIVANT',
     'tour.finish': 'TERMINER',
     'tour.skip': 'Passer le tour',
@@ -627,7 +627,7 @@ class TLocale extends InheritedWidget {
 
     // --- Activation ---
     'activation.title': 'Activate your game',
-    'activation.desc': 'Enter the unique code found\nin your TRIALGO game box',
+    'activation.desc': 'Enter the unique code found\nin your MIXALGO game box',
     'activation.hint': 'TRLG-XXXX-XXXX-XXXX',
     'activation.format': 'Format: TRLG-XXXX-XXXX-XXXX',
     'activation.button': 'Activate my game',
@@ -635,7 +635,7 @@ class TLocale extends InheritedWidget {
 
     // --- Home ---
     'home.play': 'PLAY',
-    'home.tagline_small': 'TRIALGO',
+    'home.tagline_small': 'MIXALGO',
     'home.tagline_big': 'Observe. Deduce. Win.',
     'home.tutorial': 'Tutorial',
     'home.tutorial_desc': 'Learn',
@@ -658,7 +658,7 @@ class TLocale extends InheritedWidget {
     'onb.skip': 'Skip',
     'onb.next': 'Next',
     'onb.start': 'Start',
-    'onb.1_title': 'Welcome to TRIALGO',
+    'onb.1_title': 'Welcome to MIXALGO',
     'onb.1_body': 'The observation game where every card matters. Prove your logic.',
     'onb.2_title': 'The magic trio',
     'onb.2_body': 'Emitter + Cable = Receiver. Find the missing card to win.',
@@ -770,8 +770,8 @@ class TLocale extends InheritedWidget {
     // --- Help / FAQ ---
     'help.title': 'Help & FAQ',
     'help.contact': 'Contact support',
-    'help.q1': 'What is TRIALGO?',
-    'help.a1': 'TRIALGO is a card game based on visual transformations. You must find the missing image in a trio E + C = R.',
+    'help.q1': 'What is MIXALGO?',
+    'help.a1': 'MIXALGO is a card game based on visual transformations. You must find the missing image in a trio E + C = R.',
     'help.q2': 'What is an Emitter?',
     'help.a2': 'The Emitter (E) is the base image, the starting point of a trio. Example: a lion drawing.',
     'help.q3': 'What is a Cable?',
@@ -781,7 +781,7 @@ class TLocale extends InheritedWidget {
     'help.q5': 'How to earn points?',
     'help.a5': 'Points = base x distance x time bonus. The faster you answer, the more you earn. Chain correct answers for streak bonuses!',
     'help.q6': 'How to activate my game?',
-    'help.a6': 'Enter the 16-character code found in your TRIALGO game box. The code is linked to a single device.',
+    'help.a6': 'Enter the 16-character code found in your MIXALGO game box. The code is linked to a single device.',
     'help.q7': 'How to progress through levels?',
     'help.a7': 'Reach the correct answer threshold to unlock the next level. Advanced levels use greater distances (D2, D3) and harder configurations.',
     'help.q8': 'How to play daily?',
@@ -860,7 +860,7 @@ class TLocale extends InheritedWidget {
 
     // --- Auth (refonte) ---
     'auth.welcome_back_hero': 'Nice to see you again!',
-    'auth.welcome_new_hero': 'Welcome to TRIALGO!',
+    'auth.welcome_new_hero': 'Welcome to MIXALGO!',
     'auth.welcome_back_sub': 'Sign in to continue your game.',
     'auth.welcome_new_sub': "Let's create your account to start the adventure.",
     'auth.tab_signin': 'SIGN IN',
@@ -885,7 +885,7 @@ class TLocale extends InheritedWidget {
     'auth.error_network': 'Network error. Try again.',
 
     // --- Onboarding (refonte) ---
-    'onb.slide1_title': 'Welcome to TRIALGO',
+    'onb.slide1_title': 'Welcome to MIXALGO',
     'onb.slide1_body': 'The visual trio adventure starts here.\nGet ready to observe, deduce and win.',
     'onb.slide2_title': 'The magic trio',
     'onb.slide2_body': 'Each game, find the card that\ncompletes a trio: Emitter + Cable = Receiver.',
@@ -906,7 +906,7 @@ class TLocale extends InheritedWidget {
 
     // --- Activation (activation.title already exists) ---
     'activation.locked_title': 'Your box is locked',
-    'activation.locked_body': 'Enter the magic code from your\nTRIALGO box to open it.',
+    'activation.locked_body': 'Enter the magic code from your\nMIXALGO box to open it.',
     'activation.code_empty': 'Enter your code to open the box',
     'activation.cta_open': 'OPEN THE BOX',
     'activation.cta_back_games': 'Back to my games',
@@ -1050,7 +1050,7 @@ class TLocale extends InheritedWidget {
     'help.hero_body': 'Find answers to your questions\nor re-read the tutorial.',
     'help.section_gameplay': 'THE GAME',
     'help.section_account': 'MY ACCOUNT',
-    'help.section_physical': 'THE TRIALGO BOX',
+    'help.section_physical': 'THE MIXALGO BOX',
     'help.cta_tutorial': 'REVIEW TUTORIAL',
 
     // --- Legal ---

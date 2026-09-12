@@ -202,7 +202,7 @@ class _TAdminPageState extends State<TAdminPage>
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadData,
-                        child: const Text('Reessayer'),
+                        child: const Text('Réessayer'),
                       ),
                     ],
                   ),
