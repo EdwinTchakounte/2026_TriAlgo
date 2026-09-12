@@ -219,7 +219,7 @@ class _THomeTourState extends State<THomeTour> {
                   if (!isFirst)
                     Expanded(
                       child: AppButton.secondary(
-                        label: 'Precedent',
+                        label: 'Précédent',
                         icon: Icons.arrow_back_rounded,
                         onPressed: _prev,
                         size: AppButtonSize.lg,

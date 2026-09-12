@@ -344,7 +344,7 @@ class _THomePageState extends ConsumerState<THomePage>
               onPressed: () => _navigateTo(const TSettingsPage()),
               icon: Icon(Icons.settings_outlined,
                   color: colors.textSecondary),
-              tooltip: 'Parametres',
+              tooltip: 'Paramètres',
             ),
           ],
         ),
