@@ -100,7 +100,13 @@
     // Reparties dans un volume, pas sur un plan : c'est la
     // dispersion en Z qui donne la sensation de profondeur quand
     // la camera bouge de quelques degres.
-    var nombreEtoiles = largeur < 700 ? 340 : 720;
+    // Le telephone n'est plus le parent pauvre de la scene.
+    // Tant que le logo occupait 74 % de l'ecran, tout ce qui se
+    // passait derriere etait cache : baisser la densite y etait
+    // sans consequence visible. Le logo reduit, le decor se voit,
+    // et il doit donc valoir la peine d'etre regarde.
+    var etroit = largeur < 700;
+    var nombreEtoiles = etroit ? 460 : 720;
     var positions = new Float32Array(nombreEtoiles * 3);
     for (var i = 0; i < nombreEtoiles; i++) {
       positions[i * 3]     = (Math.random() - 0.5) * 46;
@@ -131,8 +137,12 @@
       scene.add(maillage);
       return maillage;
     }
-    var diamantLarge = diamant(9.5, CYAN, 0.22);
-    var diamantFin   = diamant(6.2, AMBRE, 0.13);
+    // Sur un ecran etroit le champ de vision horizontal se
+    // resserre : les aretes s'eloignent des bords et le trait
+    // parait plus tenu. On compense en opacite, sinon la meme
+    // valeur qui suggere sur grand ecran disparait sur petit.
+    var diamantLarge = diamant(9.5, CYAN,  etroit ? 0.34 : 0.22);
+    var diamantFin   = diamant(6.2, AMBRE, etroit ? 0.21 : 0.13);
 
     // ---- Les cartes en orbite -------------------------------
     // De VRAIES cartes du jeu, chargees comme textures. Une carte
@@ -141,7 +151,7 @@
     // tourner autour du logo, pas un motif.
     var chargeur = new THREE.TextureLoader();
     var cartes = [];
-    var nombreCartes = largeur < 700 ? 3 : CARTES_ORBITE.length;
+    var nombreCartes = etroit ? 4 : CARTES_ORBITE.length;
 
     for (var j = 0; j < nombreCartes; j++) {
       var texture = chargeur.load(visuel(CARTES_ORBITE[j]));
@@ -153,7 +163,7 @@
         // Le rapport exact des visuels, 380 x 540.
         new THREE.PlaneGeometry(1.5, 2.13),
         new THREE.MeshBasicMaterial({
-          map: texture, transparent: true, opacity: 0.42,
+          map: texture, transparent: true, opacity: etroit ? 0.55 : 0.42,
           side: THREE.DoubleSide, depthWrite: false
         })
       );
@@ -176,7 +186,31 @@
     // fait travailler la perspective, et la profondeur se voit.
     var visee = { x: 0, y: 0 };
     var actuel = { x: 0, y: 0 };
-    if (!sobre) {
+
+    // Au doigt, `pointermove` ne se declenche que pendant un
+    // glissement : la parallaxe n'existait tout simplement pas sur
+    // telephone, et la scene y tournait seule, sans repondre a
+    // rien. On lui donne donc une autre source de mouvement -- le
+    // DEFILEMENT, qui est le geste naturel sur cet appareil.
+    //
+    // Pas le gyroscope : iOS exige une demande de permission
+    // explicite, declenchee par un geste de l'utilisateur, pour un
+    // decor. Le defilement marche partout, sans rien demander.
+    var pointeurGrossier = !(window.matchMedia &&
+                             window.matchMedia('(pointer: fine)').matches);
+
+    if (!sobre && pointeurGrossier) {
+      var auDefilement = function () {
+        var h = hote.getBoundingClientRect();
+        // -1 quand le hero vient de sortir par le haut, +1 quand il
+        // est encore entier sous la ligne de flottaison.
+        var avance = h.height ? (-h.top / h.height) : 0;
+        visee.y = Math.max(-1, Math.min(1, avance * 2 - 0.2));
+        visee.x = Math.sin(avance * Math.PI) * 0.55;
+      };
+      window.addEventListener('scroll', auDefilement, { passive: true });
+      auDefilement();
+    } else if (!sobre) {
       window.addEventListener('pointermove', function (evenement) {
         visee.x = (evenement.clientX / window.innerWidth - 0.5) * 2;
         visee.y = (evenement.clientY / window.innerHeight - 0.5) * 2;
@@ -848,6 +882,25 @@
 
     menu.addEventListener('click', function (evenement) {
       if (evenement.target.closest('.menu__liste a')) menu.open = false;
+    });
+
+    // ---- L'appui a cote referme ---------------------------------
+    // C'est le geste qu'on fait sans y penser devant un panneau
+    // ouvert : on tape ailleurs. Sans cela il fallait viser a
+    // nouveau le bouton, large de 44 px, en haut de l'ecran.
+    //
+    // L'ecoute est sur le DOCUMENT, en phase de remontee. L'ordre
+    // compte : l'appui sur le bouton ouvre d'abord le <details>,
+    // puis remonte jusqu'ici -- ou `menu.contains` reconnait sa
+    // propre cible et ne referme donc pas ce qui vient de
+    // s'ouvrir.
+    //
+    // `click` et non `pointerdown` : un doigt pose pour faire
+    // defiler la page ne doit pas etre pris pour un appui.
+    document.addEventListener('click', function (evenement) {
+      if (!menu.open) return;
+      if (menu.contains(evenement.target)) return;
+      menu.open = false;
     });
 
     // Echap ferme, comme tout panneau transitoire.
