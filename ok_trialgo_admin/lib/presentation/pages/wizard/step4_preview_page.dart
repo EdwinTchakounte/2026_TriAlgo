@@ -15,6 +15,28 @@
 //   - InteractiveViewer (zoom + pan) pilote par un
 //     TransformationController -> bouton "recentrer".
 //   - Legende DYNAMIQUE : n'affiche que les profondeurs presentes.
+//
+// RACINE VIRTUELLE "JEU"
+// ----------------------
+// BuchheimWalker est un algorithme d'ARBRE : il part d'UNE racine,
+// la premiere qu'il trouve (graphview 1.5, firstWhere sur les noeuds
+// sans predecesseur). Or un jeu TRIALGO est une FORET : chaque fusion
+// D1 sans parent est une racine. Les autres racines n'etaient jamais
+// positionnees : elles restaient toutes empilees a l'origine, les unes
+// sur les autres. Sur un jeu a huit fusions D1, on n'en voyait que deux.
+//
+// On ajoute donc un noeud fictif (cle _kRootKey) dont TOUTES les D1
+// sont les enfants. La foret devient un arbre unique, que l'algorithme
+// sait dessiner en entier. Ce noeud est rendu comme une pastille
+// "jeu", visiblement differente d'une fusion, et n'est pas cliquable.
+//
+// CADRAGE AUTOMATIQUE
+// -------------------
+// Un arbre complet est souvent plus large que l'ecran. A l'ouverture
+// (et a chaque modification du graphe), on mesure le graphe dessine
+// et on calcule le zoom qui le fait tenir en entier : l'admin voit
+// TOUT d'emblee, puis zoome la ou il veut. Le bouton "recentrer"
+// rejoue ce meme cadrage au lieu de revenir a l'echelle 1.
 // =============================================================
 
 import 'package:flutter/material.dart';
@@ -143,8 +165,14 @@ class _GraphView extends StatefulWidget {
   State<_GraphView> createState() => _GraphViewState();
 }
 
+// Cle du noeud fictif "jeu". Les nodeIndex reels commencent a 1 : une
+// valeur negative ne peut jamais entrer en collision avec eux.
+const int _kRootKey = -1;
+
 class _GraphViewState extends State<_GraphView> {
   late Graph _graph;
+  // Permet de mesurer le graphe une fois dessine (cadrage auto).
+  final _graphKey = GlobalKey();
   late BuchheimWalkerConfiguration _builder;
   // Controle le zoom/pan : permet le bouton "recentrer".
   final _tc = TransformationController();
@@ -175,14 +203,22 @@ class _GraphViewState extends State<_GraphView> {
     for (final n in widget.nodes) {
       byId[n.id] = Node.Id(n.nodeIndex);
     }
+    // Racine fictive : voir l'en-tete du fichier. Toute fusion sans
+    // parent CONNU lui est rattachee. "Connu" compte : un parent
+    // supprime cote serveur laisserait sinon un noeud orphelin, que
+    // l'algorithme traiterait comme une seconde racine, donc invisible.
+    final root = Node.Id(_kRootKey);
     for (final n in widget.nodes) {
       final parentId = n.parentNodeId;
       if (parentId != null && byId.containsKey(parentId)) {
         _graph.addEdge(byId[parentId]!, byId[n.id]!);
       } else {
-        _graph.addNode(byId[n.id]!);
+        _graph.addEdge(root, byId[n.id]!);
       }
     }
+    // Le cadrage se calcule APRES le dessin : il faut connaitre la
+    // taille reelle du graphe, que seul le layout fournit.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fitToView());
     // Layout BuchheimWalker : arbre top-down, niveaux espaces.
     _builder = BuchheimWalkerConfiguration()
       ..siblingSeparation = 36
@@ -198,7 +234,35 @@ class _GraphViewState extends State<_GraphView> {
     return null;
   }
 
-  void _recenter() => _tc.value = Matrix4.identity();
+  void _recenter() => _fitToView();
+
+  // -----------------------------------------------------------
+  // Cadrage : tout le graphe visible, centre
+  // -----------------------------------------------------------
+  // scale = le plus petit des deux rapports (largeur, hauteur) entre
+  // la zone visible et le graphe, plafonne a 1 : un petit arbre n'est
+  // pas agrandi (des pastilles geantes n'apportent rien), un grand est
+  // reduit jusqu'a tenir. Le plancher 0.25 = minScale du viewer.
+  // On translate ensuite pour centrer le graphe dans la zone.
+  void _fitToView() {
+    if (!mounted) return;
+    final viewport = context.size;
+    final graphBox =
+        _graphKey.currentContext?.findRenderObject() as RenderBox?;
+    if (viewport == null || graphBox == null || !graphBox.hasSize) return;
+    final g = graphBox.size;
+    if (g.width == 0 || g.height == 0) return;
+    final scale = [
+      viewport.width / g.width,
+      viewport.height / g.height,
+      1.0,
+    ].reduce((a, b) => a < b ? a : b).clamp(0.25, 1.0);
+    final dx = (viewport.width - g.width * scale) / 2;
+    final dy = (viewport.height - g.height * scale) / 2;
+    _tc.value = Matrix4.identity()
+      ..translateByDouble(dx, dy < 0 ? 0.0 : dy, 0, 1)
+      ..scaleByDouble(scale, scale, 1, 1);
+  }
 
   void _openDetail(GameNode node) {
     setState(() => _selectedIndex = node.nodeIndex);
@@ -238,6 +302,7 @@ class _GraphViewState extends State<_GraphView> {
           minScale: 0.25,
           maxScale: 3.0,
           child: Padding(
+            key: _graphKey,
             padding: const EdgeInsets.all(40),
             child: GraphView(
               graph: _graph,
@@ -248,6 +313,13 @@ class _GraphViewState extends State<_GraphView> {
               paint: _edgePaint,
               builder: (Node node) {
                 final idx = node.key!.value as int;
+                if (idx == _kRootKey) {
+                  return _GameRootBubble(
+                    roots: widget.nodes
+                        .where((n) => n.parentNodeId == null)
+                        .length,
+                  );
+                }
                 final gameNode = _byIndex(idx);
                 if (gameNode == null) return const SizedBox.shrink();
                 return _NodeBubble(
@@ -450,6 +522,46 @@ class _NodeBubble extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// =============================================================
+// _GameRootBubble : la racine fictive qui regroupe les D1
+// =============================================================
+// Volontairement differente d'une fusion : contour seul, pas de
+// remplissage colore, pas de numero. Elle n'est pas une donnee du jeu
+// mais un point d'accroche pour le dessin ; elle annonce simplement
+// combien de fusions racines elle porte.
+class _GameRootBubble extends StatelessWidget {
+  final int roots;
+  const _GameRootBubble({required this.roots});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 96,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: AppColors.brand.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.hub_outlined, color: AppColors.brand, size: 20),
+          const SizedBox(height: 3),
+          Text(
+            '$roots racine${roots > 1 ? 's' : ''}',
+            style: AppTextStyles.caption().copyWith(fontSize: 11),
+          ),
+        ],
       ),
     );
   }

@@ -46,6 +46,7 @@ import '../../providers/repositories_provider.dart';
 import '../../providers/wizard_provider.dart';
 import '../../widgets/card_thumbnail.dart';
 import '../../widgets/guidance_banner.dart';
+import '../../widgets/horizontal_strip.dart';
 import '../../widgets/wizard_nav.dart';
 
 class Step3TriosPage extends ConsumerStatefulWidget {
@@ -441,25 +442,25 @@ class _CardPickerStrip extends StatelessWidget {
         ),
       );
     }
-    return SizedBox(
+    // HorizontalStrip et non un ListView nu : sur le web, un ListView
+    // horizontal ne se defile ni a la souris ni a la molette, et les
+    // cartes au-dela de la largeur de l'ecran devenaient impossibles a
+    // selectionner (voir horizontal_strip.dart).
+    return HorizontalStrip(
       height: 170,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: cards.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (_, i) {
-          final c = cards[i];
-          return SizedBox(
-            width: 120,
-            child: CardThumbnail(
-              card: c,
-              selected: selected?.id == c.id,
-              onTap: () => onChanged(c),
-              height: 170,
-            ),
-          );
-        },
-      ),
+      itemCount: cards.length,
+      itemBuilder: (_, i) {
+        final c = cards[i];
+        return SizedBox(
+          width: 120,
+          child: CardThumbnail(
+            card: c,
+            selected: selected?.id == c.id,
+            onTap: () => onChanged(c),
+            height: 170,
+          ),
+        );
+      },
     );
   }
 }
