@@ -132,6 +132,21 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
       return;
     }
 
+    // Trois cartes DISTINCTES. Les bandeaux montrent desormais toutes
+    // les cartes a chaque place : rien n'empeche plus visuellement de
+    // choisir deux fois la meme. Le backend refuse aussi, mais un
+    // refus ici est immediat et dit exactement quoi corriger.
+    final ingredientA = _parent?.receptriceId ?? _emettrice!.id;
+    if (ingredientA == _cable!.id ||
+        ingredientA == _receptrice!.id ||
+        _cable!.id == _receptrice!.id) {
+      messenger.showSnackBar(
+        const SnackBar(
+            content: Text('Une fusion demande trois cartes différentes')),
+      );
+      return;
+    }
+
     final depth = (_parent?.depth ?? 0) + 1;
     if (depth > 5) {
       messenger.showSnackBar(
@@ -277,9 +292,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                   ),
                   const SizedBox(height: 8),
                   _CardPickerStrip(
-                    cards: cards
-                        .where((c) => c.type == CardType.emettrice)
-                        .toList(),
+                    cards: _parRole(cards, CardType.emettrice),
                     selected: _emettrice,
                     onChanged: (c) {
                       setState(() => _emettrice = c);
@@ -303,8 +316,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                 _SectionHeader(title: 'Ingredient B'),
                 const SizedBox(height: 8),
                 _CardPickerStrip(
-                  cards:
-                      cards.where((c) => c.type == CardType.cable).toList(),
+                  cards: _parRole(cards, CardType.cable),
                   selected: _cable,
                   onChanged: (c) => setState(() => _cable = c),
                 ),
@@ -316,9 +328,7 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
                 _SectionHeader(title: 'Produit'),
                 const SizedBox(height: 8),
                 _CardPickerStrip(
-                  cards: cards
-                      .where((c) => c.type == CardType.receptrice)
-                      .toList(),
+                  cards: _parRole(cards, CardType.receptrice),
                   selected: _receptrice,
                   onChanged: (c) => setState(() => _receptrice = c),
                 ),
@@ -386,6 +396,22 @@ class _Step3TriosPageState extends ConsumerState<Step3TriosPage> {
     );
   }
 }
+
+// =============================================================
+// _parRole : toutes les cartes, celles du role attendu d'abord
+// =============================================================
+// Une carte est NEUTRE : son role ne depend que de sa place dans un
+// noeud. Filtrer les bandeaux sur card_type (ancien comportement)
+// cachait donc des cartes parfaitement valides -- et pour un jeu
+// importe, ou tout est marque « Ingredient A », les bandeaux B et
+// Produit etaient vides : impossible de composer la moindre fusion.
+//
+// On garde l'aide sans la contrainte : les cartes marquees du role de
+// la place passent en tete, les autres suivent.
+List<GameCard> _parRole(List<GameCard> cards, CardType role) => [
+      ...cards.where((c) => c.type == role),
+      ...cards.where((c) => c.type != role),
+    ];
 
 // =============================================================
 // _SectionHeader : titre + hint

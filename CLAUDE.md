@@ -667,9 +667,12 @@ ailleurs, et la deduction de libelle a ses tests unitaires.
   politique du bucket reposée (objet 200, inventaire 403), `backup.sh` fonctionnel.
   **En production**, faire `./scripts/backup.sh` AVANT le premier
   `docker compose ... up -d` qui changera l'image.
-- **`card_type` des cartes importées** : `scripts/referentiel.py` pose `emettrice`
-  partout, alors que l'étape « Fusions » du studio filtre ses bandeaux par rôle.
-  Un jeu importé n'y offre donc aucun ingrédient B ni produit.
+- **`card_type` n'est plus qu'une aide de tri dans le studio** (2026-10-18) : l'étape
+  Fusions montre toutes les cartes à chaque place (celles du rôle attendu d'abord) et
+  l'étape Cartes demande 3 cartes au lieu d'« une de chaque rôle ». Un jeu importé
+  par `referentiel.py` (tout en `emettrice`) redevient éditable. Corollaire : la règle
+  des trois cartes distinctes est vérifiée explicitement par `POST .../nodes`, y
+  compris contre l'ingrédient A hérité du parent.
 - `README.md` du backend : la section « Play » décrit des endpoints (`/api/sessions/...`) qui
   n'existent plus depuis la migration `0004`.
 
