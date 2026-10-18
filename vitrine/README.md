@@ -1,23 +1,77 @@
 # La vitrine MIXALGO
 
-Le site public de `mixalgo.com`. Trois fichiers, aucune compilation, aucun
-gestionnaire de paquets : ce dossier se recopie tel quel sur le serveur.
+Le site public de `mixalgo.com`. Aucune compilation, aucun gestionnaire de
+paquets : ce dossier se recopie tel quel sur le serveur.
 
 ```
 vitrine/
-├── index.html          la page, autonome (HTML + CSS + donnees structurees)
-├── scripts/vitrine.js  la scene 3D, la demonstration de fusion, l'appel a l'API
-├── assets/             logo detoure, cartes, QR, image de partage, favicon
-│   └── cartes/         les douze cartes, tirees de la planche d'impression
+├── index.html            la page, autonome et complete sans JavaScript
+├── styles/vitrine.css    l'habillage (curseur, tiroir, eventail, demo...)
+├── scripts/vitrine.js    le mouvement, la partie de demo, le contenu publie
+├── assets/
+│   ├── originaux/        les illustrations SANS cadre (480 et 960 px)
+│   └── cartes/           les cartes imprimees, cadre compris (mode collectif)
 ├── robots.txt
 ├── sitemap.xml
 └── outils/
-    ├── detourer_logo.py    logo transparent + favicon + image de partage
-    ├── extraire_cartes.py  les visuels de cartes, depuis le PDF d'impression
-    └── generer_qr.py       le QR code de telechargement
+    ├── recuperer_originaux.py  rapatrie les illustrations depuis l'API
+    ├── detourer_logo.py        logo transparent + favicon + image de partage
+    ├── extraire_cartes.py      les cartes imprimees, depuis le PDF
+    └── generer_qr.py           le QR code de telechargement
 ```
 
----
+## L'ordre de la page : l'image d'abord
+
+La premiere version posait logo, titre, paragraphe, boutons et chiffres AVANT la
+premiere illustration : sur telephone, trois ecrans de texte pour voir une carte.
+MIXALGO est un jeu d'observation ; c'est ce qu'on voit qui doit convaincre.
+
+1. **Hero** : une vraie fusion du deck en grand (KEZEU + BABADJI = BEMA). Sur
+   telephone, l'eventail passe AU-DESSUS du titre.
+2. **Double bandeau** d'illustrations qui defile.
+3. **Partie de demonstration** : cinq manches, vingt secondes chacune, sur les
+   dix trios du referentiel entierement illustres par les originaux. Elle ne
+   demarre que sur un clic (« Lancer la partie ») : un depart automatique a
+   l'apparition du plateau faisait perdre la premiere manche a qui lisait encore.
+4. La regle, le deck (visionneuse plein ecran), les distances, le mode
+   collectif, le telechargement : peu de mots.
+5. La FAQ en bas, pour qui la cherche (et pour le referencement).
+
+Curseur neon (souris uniquement, jamais sous « mouvement reduit »), tiroir de
+navigation (piege a focus, Echap, croix toujours visible), visionneuse en
+`<dialog>`.
+
+## Le contenu editable depuis le studio
+
+L'ecran **« Vitrine du site »** du studio publie un document dans
+`GET /api/public/site/accueil` (module `site` du backend). La page le lit au
+chargement et remplace :
+
+- les textes portant `data-cms="..."` (hero, titres et chapeaux de section) ;
+- avec la **galerie** : les trois premieres images forment l'eventail du hero,
+  la galerie entiere alimente le bandeau et la grille du deck.
+
+Tout est optionnel : un champ vide laisse le texte du HTML en place, et une API
+injoignable laisse la page intacte. Les textes sont poses par `textContent`
+(jamais interpretes comme du HTML), les images n'acceptent que http(s) - le
+serveur le verifie aussi.
+
+La partie de demonstration, elle, reste sur ses trios embarques : ils doivent
+etre de vraies fusions, ce qu'une galerie libre ne garantit pas.
+
+## Les originaux
+
+`assets/originaux/` contient les illustrations SANS le cadre imprime, rognees
+au format 4:5. Elles viennent du jeu « MixAlgo Puzzle 1 » en production, via
+l'API publique :
+
+```bash
+python3 vitrine/outils/recuperer_originaux.py            # jeu par defaut
+python3 vitrine/outils/recuperer_originaux.py --jeu "..." # un autre jeu
+```
+
+Elles sont figees dans le depot pour que le premier rendu ne depende d'aucun
+appel reseau.
 
 ## Le parti pris
 
@@ -75,7 +129,11 @@ favicon. Rien n'est retouche a la main, donc rien n'est a refaire si le logo cha
 
 ---
 
-## Les cartes
+## Les cartes imprimees
+
+> Depuis la refonte « l'image d'abord », ces visuels encadres ne servent plus
+> qu'a la section du mode collectif, la ou l'on montre la carte telle qu'on la
+> tient. Partout ailleurs, ce sont les originaux (voir plus haut).
 
 Les douze visuels de `assets/cartes/` sont extraits de
 **`TRIALGO_15_cartes_A4_63x88mm-1.pdf`**, la planche d'impression au format
@@ -113,6 +171,11 @@ nombre d'images ne correspond plus.
 ---
 
 ## Ce que la vitrine demande a l'API
+
+> Trois appels, tous publics : `GET /api/public/site/accueil` (contenu publie
+> depuis le studio), puis `GET /api/public/games` et `.../cards` pour la taille
+> reelle du deck. Le detail historique ci-dessous reste valable pour les deux
+> derniers.
 
 `GET /api/public/games` puis `GET /api/public/games/{id}/cards`, deux endpoints
 **sans authentification** concus pour cet usage.
