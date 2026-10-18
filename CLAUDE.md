@@ -43,7 +43,7 @@ Documents de référence (ne pas les dupliquer, les lire) :
 | `ok_trialgo_backend/` | API FastAPI + Postgres + MinIO | **Brique centrale actuelle** |
 | `ok_trialgo_admin/` | Studio admin Flutter (création des jeux/cartes/trios) | Actif, branché FastAPI |
 | `trialgo/` | App joueur Flutter | Actif, **migration Supabase → FastAPI en cours** |
-| `trialgo_dashboard/`, `trialgo_admin/`, `point_sauvegarde1/` | Legacy | **Ne pas modifier. À supprimer.** |
+| `vitrine/` | Site public `mixalgo.com` (HTML/JS statique, sans build) | Actif, voir `vitrine/README.md` |
 
 Le dossier `trialgo/supabase/migrations/` est l'ancien schéma Supabase — historique, remplacé par Alembic côté backend.
 
@@ -201,7 +201,7 @@ Domaine `mixalgo.com` :
 
 | Hôte | Sert | Servi par |
 |---|---|---|
-| `mixalgo.com` | vitrine | hors de ce dépôt |
+| `mixalgo.com` | vitrine | `vitrine/`, fichiers statiques |
 | `api.mixalgo.com` | API FastAPI | Caddy → `api:8000` |
 | `api.mixalgo.com/files/*` | images des cartes | Caddy → `minio:9000` (préfixe retiré) |
 | `dashboard.mixalgo.com` | studio admin (Flutter web) | Caddy → `/srv/dashboard` |
