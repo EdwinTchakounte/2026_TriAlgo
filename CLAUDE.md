@@ -43,7 +43,7 @@ Documents de référence (ne pas les dupliquer, les lire) :
 | `ok_trialgo_backend/` | API FastAPI + Postgres + MinIO | **Brique centrale actuelle** |
 | `ok_trialgo_admin/` | Studio admin Flutter (création des jeux/cartes/trios) | Actif, branché FastAPI |
 | `trialgo/` | App joueur Flutter | Actif, **migration Supabase → FastAPI en cours** |
-| `trialgo_dashboard/`, `trialgo_admin/`, `point_sauvegarde1/` | Legacy | **Ne pas modifier. À supprimer.** |
+| `vitrine/` | Site public `mixalgo.com` (HTML/JS statique, sans build) | Actif, voir `vitrine/README.md` |
 
 Le dossier `trialgo/supabase/migrations/` est l'ancien schéma Supabase — historique, remplacé par Alembic côté backend.
 
@@ -80,7 +80,9 @@ alors que `login` et `refresh` les renvoient **à plat**. Ne pas confondre les d
 
 `auth` · `games` · `cards` (+`image`) · `nodes` (+`analyzer`) · `public` · `admin_users` ·
 `codes` · `user_games` (+`refill` vies) · `sessions_history` · `unlocked_cards` ·
-`played_nodes` · `stars` (+`regen`) · `collective` · `leaderboard` · `mail` · `storage`.
+`played_nodes` · `stars` (+`regen`) · `collective` · `leaderboard` · `mail` · `storage` ·
+`site` (contenu éditable de la vitrine : `GET /api/public/site/accueil`, `GET|PUT /api/admin/site/accueil`,
+`POST /api/admin/site/images` ; document JSONB unique validé par Pydantic, clés inconnues refusées).
 
 Il n'y a **pas** de module `app/play/` : la migration `0004_reset_play_extend_users` a supprimé
 `game_sessions`/`session_attempts` (modèle de gameplay abandonné). Le vrai gameplay passe par
@@ -201,7 +203,7 @@ Domaine `mixalgo.com` :
 
 | Hôte | Sert | Servi par |
 |---|---|---|
-| `mixalgo.com` | vitrine | hors de ce dépôt |
+| `mixalgo.com` | vitrine | `vitrine/`, fichiers statiques |
 | `api.mixalgo.com` | API FastAPI | Caddy → `api:8000` |
 | `api.mixalgo.com/files/*` | images des cartes | Caddy → `minio:9000` (préfixe retiré) |
 | `dashboard.mixalgo.com` | studio admin (Flutter web) | Caddy → `/srv/dashboard` |
@@ -602,6 +604,28 @@ ailleurs, et la deduction de libelle a ses tests unitaires.
 
 ---
 
+### Vitrine « l'image d'abord » et contenu editable (octobre 2026)
+
+- `vitrine/` refondue : illustrations ORIGINALES sans cadre (`assets/originaux/`,
+  rapatriees par `vitrine/outils/recuperer_originaux.py` depuis le jeu « MixAlgo
+  Puzzle 1 » en production), partie de demonstration jouable sur dix vrais trios du
+  referentiel, curseur neon, tiroir, visionneuse. Styles sortis dans
+  `styles/vitrine.css` (le vhost nginx a un bloc `/styles/`). Voir `vitrine/README.md`.
+- Module backend `site` + migration `0011` : `GET /api/public/site/accueil`,
+  `GET|PUT /api/admin/site/accueil`, `POST /api/admin/site/images`. Document JSON
+  unique, `extra="forbid"`, images http(s) seulement.
+- Studio : ecran « Vitrine du site » (icone vitrine dans la barre du hub) pour
+  editer textes et galerie. Les 3 premieres images = eventail du hero.
+
+### Studio : deux defauts corriges
+
+- Les bandeaux horizontaux de cartes (etape Fusions) ne defilaient ni a la souris
+  ni a la molette sur le web : les cartes au-dela de l'ecran etaient inatteignables.
+  Widget `HorizontalStrip` (barre visible, glisser souris, molette).
+- L'apercu de l'arbre n'affichait que la premiere racine : `graphview`
+  (BuchheimWalker) ne part que du premier noeud sans parent. Une racine virtuelle
+  rattache toutes les D1, et le graphe est cadre en entier a l'ouverture.
+
 ## 8. Points ouverts
 
 - Le paquet `supabase_flutter` reste une dépendance de `pubspec.yaml` : le mode `supabase`
@@ -637,6 +661,18 @@ ailleurs, et la deduction de libelle a ses tests unitaires.
 - L'app joueur en Flutter web : `device_info_plus` n'y fournit pas d'identifiant stable, donc le
   binding « un code d'activation = un appareil » ne tient pas. Le studio admin en web, lui, est
   sans problème.
+- **MinIO tourne sur le fork `pgsty/minio`** (depuis le 2026-10-18) : MinIO ne publie
+  plus d'images, ni sur le Docker Hub ni sur quay.io (toutes les étiquettes y répondent
+  401). Vérifié en dev sur le volume existant : 166 clés de la base toutes présentes,
+  politique du bucket reposée (objet 200, inventaire 403), `backup.sh` fonctionnel.
+  **En production**, faire `./scripts/backup.sh` AVANT le premier
+  `docker compose ... up -d` qui changera l'image.
+- **`card_type` n'est plus qu'une aide de tri dans le studio** (2026-10-18) : l'étape
+  Fusions montre toutes les cartes à chaque place (celles du rôle attendu d'abord) et
+  l'étape Cartes demande 3 cartes au lieu d'« une de chaque rôle ». Un jeu importé
+  par `referentiel.py` (tout en `emettrice`) redevient éditable. Corollaire : la règle
+  des trois cartes distinctes est vérifiée explicitement par `POST .../nodes`, y
+  compris contre l'ingrédient A hérité du parent.
 - `README.md` du backend : la section « Play » décrit des endpoints (`/api/sessions/...`) qui
   n'existent plus depuis la migration `0004`.
 

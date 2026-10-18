@@ -160,11 +160,12 @@ class _Step2CardsPageState extends ConsumerState<Step2CardsPage> {
     final cardsAsync = ref.watch(cardsProvider);
     final cards = cardsAsync.valueOrNull ?? const [];
 
-    // Conditions pour passer a l'etape suivante.
-    final hasE = cards.any((c) => c.type == CardType.emettrice);
-    final hasC = cards.any((c) => c.type == CardType.cable);
-    final hasR = cards.any((c) => c.type == CardType.receptrice);
-    final canContinue = hasE && hasC && hasR;
+    // Condition pour passer a l'etape suivante : trois cartes, le
+    // minimum d'une fusion. PAS « une de chaque role » : une carte est
+    // neutre, son role ne depend que de sa place dans un noeud. L'ancien
+    // critere bloquait tout jeu importe par scripts/referentiel.py, qui
+    // marque toutes les cartes « Ingredient A » faute de role a donner.
+    final canContinue = cards.length >= 3;
 
     // Liste filtree (sur la valeur du filtre).
     final filtered = _filter == null
@@ -185,7 +186,7 @@ class _Step2CardsPageState extends ConsumerState<Step2CardsPage> {
                 icon: Icons.collections_outlined,
                 title: 'Cartes du jeu',
                 description:
-                    'Ajoutez vos cartes en specifiant leur role dans la fusion : Ingredient A, Ingredient B, ou Produit. Il faut au moins 1 de chaque pour composer une fusion.',
+                    'Ajoutez vos cartes. Le rôle indiqué (Ingrédient A, Ingrédient B, Produit) est une simple aide de tri : une carte peut occuper n\'importe quelle place dans une fusion. Trois cartes suffisent pour continuer.',
               ),
               const SizedBox(height: 14),
               Row(
@@ -279,7 +280,7 @@ class _Step2CardsPageState extends ConsumerState<Step2CardsPage> {
           continueLabel: 'Continuer : composer des fusions',
           missingHint: canContinue
               ? null
-              : 'Pour continuer, il faut au moins 1 ingredient A, 1 ingredient B et 1 produit.',
+              : 'Pour continuer, il faut au moins 3 cartes.',
           onBack: () => ref.read(wizardProvider.notifier).back(),
           onNext: () => ref.read(wizardProvider.notifier).next(),
         ),

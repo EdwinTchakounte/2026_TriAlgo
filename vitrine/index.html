@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
 <title>MIXALGO, le jeu de fusion visuelle</title>
-<meta name="description" content="MIXALGO est un jeu d'observation où deux cartes fusionnent pour en donner une troisième. Découvrez la règle, les distances D1 à D5, le mode collectif, et téléchargez l'application Android.">
+<meta name="description" content="MIXALGO est un jeu d'observation où deux cartes fusionnent pour en donner une troisième. Jouez une partie de démonstration, découvrez le deck afrofuturiste et téléchargez l'application Android.">
 <meta name="author" content="MIXALGO">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://mixalgo.com/">
@@ -23,10 +23,10 @@
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MIXALGO, le jeu de fusion visuelle">
-<meta name="twitter:description" content="Deux cartes fusionnent, une troisième apparaît. Découvrez la règle, les distances D1 à D5 et le mode collectif.">
+<meta name="twitter:description" content="Deux cartes fusionnent, une troisième apparaît. Jouez une partie de démonstration et découvrez le deck.">
 <meta name="twitter:image" content="https://mixalgo.com/assets/mixalgo-og.jpg">
 
-<meta name="theme-color" content="#06041A">
+<meta name="theme-color" content="#05031A">
 <link rel="icon" href="/assets/favicon.ico" sizes="48x48">
 <link rel="icon" href="/assets/favicon.png" type="image/png" sizes="512x512">
 <link rel="apple-touch-icon" href="/assets/favicon.png">
@@ -35,6 +35,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://api.mixalgo.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- La carte du hero est la plus grosse image du premier ecran :
+     la precharger evite qu'elle arrive apres le texte. -->
+<link rel="preload" as="image" href="/assets/originaux/A4-960.webp" imagesrcset="/assets/originaux/A4-480.webp 480w, /assets/originaux/A4-960.webp 960w" imagesizes="(max-width: 60rem) 48vw, 16rem">
+<link rel="stylesheet" href="/styles/vitrine.css">
 
 <script type="application/ld+json">
 {
@@ -133,1760 +137,34 @@
 }
 </script>
 
-<style>
-/* =============================================================
-   MIXALGO, vitrine
-   -------------------------------------------------------------
-   Parti pris : un monde unique et sombre, assume. Pas de theme
-   clair. Le logo est une lumiere neon sur du noir ; le poser sur
-   du blanc reviendrait a l'eteindre. Toutes les couleurs sont
-   donc peintes explicitement, jamais heritees du navigateur.
-
-   La palette n'est pas inventee : elle est echantillonnee dans le
-   logo lui meme. Le cyan #00D8F0 en est la teinte dominante apres
-   le blanc, l'ambre #F0A800 vient du mot "Mix", le bleu #001878
-   des profondeurs du diamant, et la braise #F01800 de la fleche
-   basse, qui est aussi la seule couleur chaude et saturee de tout
-   le logo. Elle est donc traitee ici comme telle : rarissime.
-   ============================================================= */
-
-:root{
-  /* --- Fonds, du plus profond au plus proche ---------------- */
-  --nuit:      #06041A;
-  --voile:     #0C0930;
-  --voile-clair:#141046;
-  --abysse:    #001878;
-
-  /* --- Accents ---------------------------------------------- */
-  --cyan:      #00D8F0;
-  --cyan-doux: #7FE9F7;
-  --ambre:     #F0A800;
-  --ambre-clair:#FFC93C;
-  --braise:    #F01800;
-
-  /* --- Texte. Aucun gris pur : tout est biaise vers l'accent - */
-  --craie:     #EAF4FA;
-  --brume:     #96A2CC;
-  /* #5E679A a l'origine, soit 3,73 pour 1 sur --nuit : sous le
-     seuil AA de 4,5 exige pour du petit texte. Or ce jeton porte
-     precisement les mentions les plus petites de la page -- les
-     attributs a 9 px, les libelles des chiffres, la note du hero,
-     le pied. Le contraste y manquait la ou il etait le plus
-     necessaire. Remonte a 5,9 pour 1, il reste nettement en
-     retrait de --brume (8,0) : la hierarchie tient, la lisibilite
-     ne se paie plus. */
-  --brume-sourde:#7E88BE;
-
-  /* --- Traits et voiles ------------------------------------- */
-  --trait:      rgba(0, 216, 240, .16);
-  --trait-fort: rgba(0, 216, 240, .38);
-  --ombre-nette: 0 24px 60px rgba(0, 6, 40, .7);
-
-  /* --- Typographie ------------------------------------------ */
-  --titre: "Unbounded", "Trebuchet MS", sans-serif;
-  --texte: "Archivo", "Helvetica Neue", Arial, sans-serif;
-  --mono:  "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  /* --- Rythme ----------------------------------------------- */
-  --colonne: min(100% - 2.5rem, 70rem);
-  --section: clamp(3.75rem, 7vw, 6rem);
-}
-
-*,*::before,*::after{ box-sizing:border-box; }
-
-html{ scroll-behavior:smooth; }
-
-body{
-  margin:0;
-  background:var(--nuit);
-  color:var(--craie);
-  font-family:var(--texte);
-  font-size:1.0625rem;
-  line-height:1.7;
-  -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
-}
-
-/* height:auto n'est pas une precaution, c'est un correctif.
-   Les attributs width et height du HTML servent au navigateur a
-   reserver la place avant le chargement -- sans eux la page
-   saute. Mais ils agissent AUSSI comme une consigne de style :
-   sans height:auto, `height="624"` devient height:624px, et le
-   logo, large de 350 px par le CSS, etait rendu en 350x624 au
-   lieu de 350x243. Un rapport de 0,56 pour une image qui en vaut
-   1,44 : le diamant etait ecrase de moitie.
-   L'aspect-ratio deduit des attributs, lui, ne s'applique QUE si
-   une des deux dimensions reste libre. */
-img{ max-width:100%; height:auto; display:block; }
-
-a{ color:var(--cyan); text-decoration-thickness:1px; text-underline-offset:3px; }
-a:hover{ color:var(--cyan-doux); }
-
-:focus-visible{
-  outline:2px solid var(--cyan);
-  outline-offset:3px;
-  border-radius:4px;
-}
-
-.saut-lien{
-  position:absolute; left:-9999px;
-  background:var(--cyan); color:var(--nuit);
-  padding:.7rem 1.2rem; font-weight:600; z-index:99;
-}
-.saut-lien:focus{ left:1rem; top:1rem; }
-
-.enveloppe{ width:var(--colonne); margin-inline:auto; }
-
-/* -------------------------------------------------------------
-   Le motif recurrent : le diamant du logo, reduit a un carre
-   pivote. Il sert de puce de section et de repere visuel. Il
-   n'est pas decoratif au hasard : c'est la forme du logo.
-   ------------------------------------------------------------- */
-.losange{
-  width:.5rem; height:.5rem;
-  background:var(--cyan);
-  transform:rotate(45deg);
-  flex:none;
-  box-shadow:0 0 12px var(--cyan);
-}
-
-.surtitre{
-  display:flex; align-items:center; gap:.75rem;
-  font-family:var(--mono);
-  font-size:.75rem;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  color:var(--cyan);
-  margin:0 0 1.1rem;
-}
-
-h1,h2,h3{ font-family:var(--titre); text-wrap:balance; margin:0; }
-
-h1{
-  font-weight:900;
-  font-size:clamp(2.35rem, 5.8vw, 4.25rem);
-  line-height:1.02;
-  letter-spacing:-.02em;
-}
-h2{
-  font-weight:700;
-  font-size:clamp(1.85rem, 3.6vw, 2.85rem);
-  line-height:1.12;
-  letter-spacing:-.01em;
-}
-h3{
-  font-weight:700;
-  font-size:1.15rem;
-  line-height:1.35;
-}
-/* h2 a margin:0 comme tous les titres, mais il est TOUJOURS suivi
-   d'un contenu : sans cette respiration, le chapeau vient se coller
-   sous le titre et les deux se lisent comme un seul bloc. */
-h2{ margin-bottom:1.35rem; }
-
-p{ margin:0 0 1.1rem; }
-.prose{ max-width:62ch; color:var(--brume); }
-.prose strong{ color:var(--craie); font-weight:600; }
-
-/* Justification.
-   Elle n'est appliquee qu'au dela de 620 px. Sur une colonne
-   etroite, justifier un texte francais creuse des rivieres de blanc
-   entre les mots : le gain d'alignement coute plus qu'il ne rapporte.
-   hyphens:auto est indissociable de la justification ; il s'appuie
-   sur le lang="fr" declare sur <html> pour couper les mots aux bons
-   endroits, ce qui resorbe l'essentiel de ces blancs. */
-@media (min-width:620px){
-  .prose p, .legende li{
-    text-align:justify;
-    text-wrap:pretty;
-    hyphens:auto;
-    -webkit-hyphens:auto;
-  }
-}
-
-section{ padding-block:var(--section); position:relative; }
-
-/* =============================================================
-   ENTETE
-   ============================================================= */
-.entete{
-  position:sticky; top:0; z-index:40;
-  background:rgba(6,4,26,.72);
-  backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--trait);
-}
-.entete__interieur{
-  width:var(--colonne); margin-inline:auto;
-  display:flex; align-items:center; gap:1.5rem;
-  min-height:4.25rem;
-  /* Bloc conteneur du panneau de menu sur telephone : ancre a la
-     barre, le panneau s'aligne sur le bord de la colonne. Ancre au
-     bouton -- 44 px de large, place aux deux tiers de la barre --
-     un panneau de 200 px debordait de 10 px par la GAUCHE a 320 px.
-     Un debordement a gauche ne cree aucune barre de defilement, il
-     coupe simplement le panneau : invisible aux mesures, visible a
-     l'oeil. */
-  position:relative;
-}
-.marque{
-  display:flex; align-items:center; gap:.6rem;
-  font-family:var(--titre); font-weight:900;
-  font-size:1.05rem; letter-spacing:.04em;
-  color:var(--craie); text-decoration:none;
-  /* 29 px de haut auparavant : sous le minimum touchable. */
-  min-height:44px;
-}
-.marque b{ color:var(--ambre); font-weight:inherit; }
-.navigation{
-  margin-left:auto;
-  display:flex; align-items:center; gap:1.75rem;
-}
-/* :not(.bouton) est indispensable. Sans lui, ce selecteur (une
-   classe + un element) l'emporte en specificite sur .bouton--plein
-   (une seule classe) et repeint le texte du bouton en clair sur
-   fond ambre. Le bouton reste visible, mais son libelle devient
-   illisible : exactement le genre de collision qui ne se voit pas
-   en lisant le CSS. */
-.navigation a:not(.bouton){
-  color:var(--brume); text-decoration:none;
-  font-size:.9rem; font-weight:500;
-}
-.navigation a:not(.bouton):hover{ color:var(--craie); }
-
-/* -------------------------------------------------------------
-   LE MENU DE SECTIONS
-   -------------------------------------------------------------
-   Auparavant les quatre liens etaient purement et simplement
-   masques sous 860 px. Or le visiteur arrive majoritairement PAR
-   LE TELEPHONE -- c'est l'appareil que designe le QR code, et le
-   seul sur lequel le jeu s'installe. Il se retrouvait donc sans
-   aucun moyen d'atteindre une section sur une page de onze mille
-   pixels : le seul lien survivant menait au telechargement.
-
-   POURQUOI <details> ET PAS DU JAVASCRIPT
-   ---------------------------------------
-   L'ouverture, la fermeture, l'etat expanded annonce aux lecteurs
-   d'ecran, l'activation a la barre d'espace et a Entree : tout
-   cela est deja dans le navigateur. Un menu ecrit a la main
-   redemanderait ces quatre comportements, et en oublierait au
-   moins un. La page garde en prime sa regle fondatrice -- elle
-   doit etre complete sans le script.
-
-   LE MEME BALISAGE SERT AUX DEUX TAILLES
-   --------------------------------------
-   Sur grand ecran le bouton disparait et la liste est forcee en
-   display:flex, ce qui suffit a surcharger le masquage que le
-   navigateur applique a un <details> ferme. Pas de duplication
-   des liens, donc aucun risque de les voir diverger.
-   ------------------------------------------------------------- */
-.menu{ position:relative; }
-
-.menu__bascule{
-  display:none;                 /* rangee simple par defaut */
-  align-items:center; gap:.55rem;
-  min-height:44px; padding:.45rem .8rem;
-  cursor:pointer; list-style:none;
-  color:var(--brume); font-size:.9rem; font-weight:500;
-  border:1px solid var(--trait); border-radius:8px;
-  transition:border-color .2s ease, color .2s ease;
-}
-.menu__bascule::-webkit-details-marker{ display:none; }
-.menu__bascule:hover{ border-color:var(--trait-fort); color:var(--craie); }
-
-/* Trois barres dessinees en CSS plutot qu'une icone : c'est trois
-   declarations contre une requete reseau, et la couleur suit le
-   texte sans qu'on ait a la redeclarer. */
-.menu__barres{
-  width:1rem; height:2px; flex:none;
-  background:currentColor; position:relative;
-}
-.menu__barres::before,
-.menu__barres::after{
-  content:""; position:absolute; left:0;
-  width:100%; height:2px; background:currentColor;
-}
-.menu__barres::before{ top:-5px; }
-.menu__barres::after{ top:5px; }
-.menu[open] .menu__bascule{ border-color:var(--cyan); color:var(--craie); }
-
-/* display:flex suffit a rendre la liste VISIBLE malgre le <details>
-   ferme, mais pas a la faire COMPTER : les navigateurs recents
-   posent content-visibility:hidden sur ::details-content, et un
-   contenu ainsi saute ne contribue plus a la taille intrinseque de
-   son conteneur. La liste se retrouvait large de 0 px et ses quatre
-   liens debordaient l'en-tete par la droite -- « Le deck » sortait
-   de 26 px hors de la fenetre a 1280. Il faut donc lever les deux :
-   l'affichage ET le calcul de taille. */
-.menu__liste{ display:flex; align-items:center; gap:1.75rem; }
-.menu__liste a{ display:inline-flex; align-items:center; min-height:44px; }
-
-/* content-visibility rend la liste mesurable par le moteur de mise
-   en page malgre le <details> ferme -- sans quoi, sur grand ecran,
-   elle serait large de 0 px et ses liens deborderaient la barre. */
-.menu::details-content{ content-visibility:visible; }
-
-/* Masquage VISUEL seulement : le mot reste dans l'arbre
-   d'accessibilite. Un summary reduit a trois barres n'a plus de
-   nom accessible, et un lecteur d'ecran annoncerait un bouton
-   anonyme. display:none le supprimerait vraiment ; clip-path le
-   retire de l'image sans le retirer du document. */
-.hors-ecran{
-  position:absolute; width:1px; height:1px;
-  padding:0; margin:-1px; overflow:hidden;
-  clip-path:inset(50%); white-space:nowrap; border:0;
-}
-
-@media (max-width:860px){
-  .menu__bascule{ display:flex; }
-  .menu{ position:static; }
-
-  /* ON NE S'EN REMET PAS au masquage natif du <details>.
-     Poser un `display` sur cet enfant le neutralise, quelle que
-     soit la valeur : la liste restait affichee en permanence par
-     dessus la page, panneau ouvert sans que personne ne l'ait
-     ouvert. Et aucune mesure de debordement ne le signalait --
-     elle est en position absolue, donc elle ne pousse rien. Seul
-     un regard sur la capture l'a montre.
-     L'affichage est donc pilote explicitement sur [open]. Ce qui
-     est deterministe se lit, et se teste. */
-  .menu__liste{ display:none; }
-  .menu[open] .menu__liste{
-    display:flex;
-    position:absolute; top:calc(100% + .6rem); right:0;
-    flex-direction:column; align-items:stretch; gap:.1rem;
-    min-width:12.5rem; padding:.4rem;
-    background:var(--voile);
-    border:1px solid var(--trait-fort); border-radius:10px;
-    box-shadow:0 18px 44px rgba(0,4,26,.7);
-    z-index:60;
-  }
-  .menu__liste a{
-    padding:.25rem .85rem; border-radius:6px;
-  }
-  .menu__liste a:hover{ background:rgba(0,216,240,.07); }
-}
-
-/* -------------------------------------------------------------
-   L'EN-TETE SUR ECRAN ETROIT
-   -------------------------------------------------------------
-   Trois elements se partagent la barre : la marque, le menu et le
-   bouton de telechargement. A 320 px la colonne ne fait que
-   280 px, et le bouton « Sections » complet -- icone plus mot --
-   en reclamait 110 a lui seul : l'en-tete debordait de 99 px et
-   poussait la PAGE ENTIERE horizontalement. C'est exactement le
-   defaut qui avait deja ete corrige sur le losange du mode
-   collectif : une barre trop large ne se rogne pas toute seule,
-   elle elargit le document.
-
-   Le mot passe donc hors ecran sous 520 px, les ecarts se
-   resserrent, et le bouton devient un carre de 44 px -- la taille
-   touchable minimale, pas moins.
-   ------------------------------------------------------------- */
-@media (max-width:520px){
-  .entete__interieur{ gap:.7rem; }
-  .navigation{ gap:.6rem; }
-  .menu__mot{
-    position:absolute; width:1px; height:1px;
-    padding:0; margin:-1px; overflow:hidden;
-    clip-path:inset(50%); white-space:nowrap; border:0;
-  }
-  .menu__bascule{ width:44px; padding:0; justify-content:center; }
-  .bouton--menu{ padding:.5rem .8rem; font-size:.8rem; }
-  .marque{ font-size:.95rem; gap:.45rem; }
-}
-
-/* =============================================================
-   BOUTONS
-   ============================================================= */
-.bouton{
-  display:inline-flex; align-items:center; gap:.6rem;
-  padding:.85rem 1.5rem;
-  border-radius:2px;
-  font-family:var(--texte);
-  font-size:.95rem; font-weight:600;
-  text-decoration:none;
-  border:1px solid transparent;
-  cursor:pointer;
-  transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
-}
-.bouton--plein{
-  background:linear-gradient(100deg, var(--ambre) 0%, var(--ambre-clair) 100%);
-  color:#1A0F00;
-  box-shadow:0 0 0 1px rgba(255,201,60,.35), 0 14px 34px rgba(240,168,0,.24);
-}
-.bouton--plein:hover{
-  transform:translateY(-2px);
-  box-shadow:0 0 0 1px rgba(255,201,60,.5), 0 18px 44px rgba(240,168,0,.34);
-  color:#1A0F00;
-}
-.bouton--trait{
-  background:transparent;
-  color:var(--craie);
-  border-color:var(--trait-fort);
-}
-.bouton--trait:hover{
-  transform:translateY(-2px);
-  border-color:var(--cyan);
-  background:rgba(0,216,240,.06);
-  color:var(--craie);
-}
-/* min-height : ce bouton faisait 43 px de haut, un pixel sous la
-   cible de 44 recommandee au doigt. Un pixel ne se voit pas et se
-   sent, sur le seul bouton que la barre garde en permanence. */
-.bouton--menu{ padding:.55rem 1.05rem; font-size:.85rem; min-height:44px; }
-
-/* =============================================================
-   HERO
-   -------------------------------------------------------------
-   Volontairement dimensionne par son CONTENU, pas par la fenetre.
-   Un hero en 100vh pousse hors du premier ecran ce que la page a
-   reellement a dire.
-   ============================================================= */
-.hero{ padding-block:clamp(1.5rem, 3.5vw, 2.75rem) var(--section); }
-
-#ciel{
-  position:absolute; inset:0;
-  width:100%; height:100%;
-  display:block;
-  z-index:0;
-  pointer-events:none;
-}
-.hero__voile{
-  position:absolute; inset:0; z-index:1;
-  background:
-    radial-gradient(70% 55% at 50% 34%, rgba(0,24,120,.42) 0%, transparent 70%),
-    linear-gradient(to bottom, transparent 62%, var(--nuit) 100%);
-  pointer-events:none;
-}
-.hero__contenu{ position:relative; z-index:2; text-align:center; }
-
-/* <picture> est un element INLINE : il s'assoit sur une ligne de
-   texte et traine derriere lui l'espace reserve aux jambages, une
-   trentaine de pixels de vide sous le logo que rien dans le CSS du
-   logo lui meme ne peut retirer. */
-.hero picture{ display:block; }
-
-.hero__logo{
-  /* 26rem et non 40rem : a 40rem le logo occupait tout le premier
-     ecran et repoussait le titre sous la ligne de flottaison. Le
-     logo annonce la marque, le titre annonce le jeu ; les deux
-     doivent tenir ensemble dans le premier regard. */
-  width:min(100%, 26rem);
-  margin:0 auto clamp(1.75rem, 3vw, 2.75rem);
-  filter:drop-shadow(0 18px 50px rgba(0,120,200,.35));
-}
-.hero h1{ margin-bottom:1.25rem; }
-.hero h1 em{
-  font-style:normal;
-  background:linear-gradient(96deg, var(--ambre) 8%, var(--cyan) 92%);
-  -webkit-background-clip:text; background-clip:text;
-  color:transparent;
-}
-.hero__accroche{
-  max-width:46ch; margin:0 auto 2.25rem;
-  font-size:clamp(1.05rem, 1.7vw, 1.25rem);
-  color:var(--brume);
-}
-.hero__actions{
-  display:flex; flex-wrap:wrap; gap:.9rem;
-  justify-content:center;
-}
-.hero__note{
-  margin:1.5rem 0 0;
-  font-family:var(--mono); font-size:.78rem;
-  letter-spacing:.08em; color:var(--brume-sourde);
-}
-
-/* --- La bande de chiffres, sous le hero --------------------- */
-.chiffres{
-  position:relative; z-index:2;
-  margin-top:clamp(3rem, 6vw, 5rem);
-  display:grid; gap:1px;
-  grid-template-columns:repeat(auto-fit, minmax(11rem, 1fr));
-  background:var(--trait);
-  border:1px solid var(--trait);
-}
-.chiffre{ background:var(--nuit); padding:1.6rem 1.4rem; }
-.chiffre dt{
-  font-family:var(--mono); font-size:.7rem;
-  letter-spacing:.2em; text-transform:uppercase;
-  color:var(--brume-sourde); margin-bottom:.5rem;
-}
-.chiffre dd{
-  margin:0;
-  font-family:var(--titre); font-weight:700;
-  font-size:1.85rem; line-height:1;
-  font-variant-numeric:tabular-nums;
-  color:var(--craie);
-}
-.chiffre dd small{
-  display:block; margin-top:.45rem;
-  font-family:var(--texte); font-weight:400;
-  font-size:.82rem; letter-spacing:0; color:var(--brume);
-}
-
-/* =============================================================
-   LA REGLE, avec la demonstration de fusion en 3D
-   ============================================================= */
-.regle{ background:linear-gradient(to bottom, var(--nuit), var(--voile) 45%, var(--nuit)); }
-
-/* --largeur-carte est declaree ICI et pas en dur dans .carte :
-   les operateurs doivent s'aligner sur le MILIEU DU VISUEL, pas sur
-   le milieu de la figure entiere. Depuis que les cartes portent un
-   nom et des attributs sous elles, ces deux points ne coincident
-   plus, et un simple align-items:center posait le + et le = trop
-   bas. La formule les remonte exactement a la moitie de la hauteur
-   de l'image (rapport 540/380), moins la demi-hauteur du signe. */
-.fusion{
-  --largeur-carte:clamp(5rem, 14vw, 10.5rem);
-  margin-top:clamp(2.5rem, 5vw, 4rem);
-  display:flex; align-items:flex-start; justify-content:center;
-  gap:clamp(.4rem, 1.8vw, 1.5rem);
-  perspective:1400px;
-  flex-wrap:nowrap;
-}
-.fusion .carte{ width:var(--largeur-carte); }
-.operateur{
-  font-family:var(--titre); font-weight:700;
-  font-size:clamp(1.1rem, 3vw, 2.1rem);
-  color:var(--cyan);
-  flex:none;
-  line-height:1;
-  margin-top:calc(var(--largeur-carte) * 540 / 380 / 2 - .5em);
-  text-shadow:0 0 22px rgba(0,216,240,.6);
-}
-
-/* --- La carte, objet repete de toute la page ---------------- */
-.carte{
-  margin:0; flex:none;
-  width:clamp(5.5rem, 15vw, 11rem);
-  transform-style:preserve-3d;
-  transition:transform .7s cubic-bezier(.22,.9,.28,1);
-}
-.carte__face{
-  position:relative;
-  /* Le rapport exact des visuels extraits de la planche
-     d'impression (380 x 540). Un 3/4 approximatif rognerait le
-     cadre bleu que chaque carte porte deja. */
-  aspect-ratio:380/540;
-  border-radius:10px;
-  overflow:hidden;
-  border:1px solid var(--trait-fort);
-  background:
-    radial-gradient(120% 90% at 50% 0%, var(--voile-clair) 0%, var(--voile) 55%, var(--nuit) 100%);
-  box-shadow:var(--ombre-nette);
-  transition:box-shadow .35s ease, transform .35s cubic-bezier(.22,.9,.28,1);
-}
-.carte__face img{
-  position:absolute; inset:0;
-  width:100%; height:100%;
-  object-fit:cover;
-}
-
-/* Une carte reelle porte deja son propre cadre bleu, son nom, son
-   code et ses attributs, peints dans l'image. Lui superposer une
-   bordure et une etiquette reviendrait a encadrer un cadre. Des
-   qu'un visuel est present, l'habillage de secours s'efface. */
-.carte__face.est-chargee{
-  border-color:transparent;
-  background:none;
-}
-.carte__face.est-chargee::after,
-.carte__face.est-chargee .carte__code{ display:none; }
-/* Filigrane en losange, visible tant que l'image n'est pas la. */
-.carte__face::after{
-  content:"";
-  position:absolute; left:50%; top:50%;
-  width:44%; aspect-ratio:1;
-  transform:translate(-50%,-50%) rotate(45deg);
-  border:1px solid var(--trait-fort);
-  box-shadow:0 0 30px rgba(0,216,240,.25) inset;
-}
-.carte__face.est-chargee::after{ display:none; }
-
-.carte__code{
-  position:absolute; left:0; right:0; bottom:0; z-index:2;
-  padding:.5rem .6rem;
-  font-family:var(--mono); font-size:.78rem;
-  letter-spacing:.14em; text-align:center;
-  color:var(--craie);
-  background:linear-gradient(to top, rgba(6,4,26,.92), transparent);
-}
-.carte__role{
-  display:block;
-  margin:.7rem 0 0;
-  font-family:var(--mono); font-size:.66rem;
-  letter-spacing:.18em; text-transform:uppercase;
-  text-align:center; color:var(--brume-sourde);
-}
-.carte__nom{
-  display:block;
-  margin-top:.25rem;
-  font-family:var(--titre); font-weight:700;
-  font-size:.92rem; letter-spacing:.02em;
-  text-align:center; color:var(--craie);
-}
-.carte[data-role="receptrice"] .carte__role{ color:var(--ambre); }
-
-/* Les attributs, repris de la carte physique ou ils sont listes
-   sous le portrait. Ils ne sont pas decoratifs : c'est le
-   vocabulaire du jeu. */
-.attributs{
-  display:flex; flex-wrap:wrap; gap:.25rem;
-  justify-content:center;
-  margin:.55rem 0 0; padding:0; list-style:none;
-}
-.attribut{
-  font-family:var(--mono); font-size:.68rem;
-  letter-spacing:.08em; text-transform:uppercase;
-  padding:.18rem .4rem;
-  border:1px solid var(--trait);
-  color:var(--brume-sourde);
-  white-space:nowrap;
-}
-/* L'attribut que la fusion fait passer d'un parent a l'enfant.
-   C'est la seule chose de toute la page qui merite l'ambre a cet
-   endroit : elle designe le fil que le joueur doit voir. */
-.attribut.est-partage{
-  border-color:rgba(240,168,0,.55);
-  color:var(--ambre);
-  background:rgba(240,168,0,.07);
-}
-
-/* Sur telephone, la rangee de fusion tient trois cartes de 5rem cote
-   a cote. Or "Humain augmente" est insecable : son white-space:nowrap
-   donne au bloc d'attributs une largeur minimale de 96px, superieure
-   aux 80px de la carte. Le surplus ne rognait pas la carte, il
-   poussait la page entiere : 53px de defilement horizontal sur toute
-   la vitrine, sur le format d'ecran par lequel arrive justement le
-   visiteur qui scanne le QR. On autorise la coupure ici seulement ;
-   au-dessus de 520px le nowrap garde chaque attribut sur une ligne. */
-@media (max-width:520px){
-  .attribut{ white-space:normal; }
-  .attributs{ max-width:100%; }
-}
-
-/* L'instant de fusion : les deux parents se penchent l'un vers
-   l'autre, l'enfant pivote pour apparaitre. */
-.fusion.est-active .carte[data-role="emettrice"]{ transform:rotateY(16deg) translateZ(30px); }
-.fusion.est-active .carte[data-role="cable"]{     transform:rotateY(-16deg) translateZ(30px); }
-.fusion.est-active .carte[data-role="receptrice"]{ transform:rotateY(360deg) scale(1.06); }
-
-/* La ligne de lecture. Elle est la vraie valeur pedagogique de la
-   demonstration : elle dit CE QU'IL FAUT REGARDER, ce qu'une suite
-   de trois images ne dit pas d'elle meme. */
-.fusion__lecture{
-  max-width:52ch;
-  margin:2rem auto 0;
-  text-align:center;
-  font-size:1.02rem;
-  color:var(--brume);
-}
-.fusion__lecture strong{
-  color:var(--ambre); font-weight:600;
-}
-
-.fusion__pilote{
-  margin-top:2.25rem;
-  display:flex; flex-wrap:wrap; align-items:center;
-  justify-content:center; gap:1rem;
-}
-.fusion__legende{
-  font-family:var(--mono); font-size:.78rem;
-  color:var(--brume-sourde); letter-spacing:.06em;
-}
-
-/* =============================================================
-   LES DISTANCES
-   ============================================================= */
-.distances{ display:grid; gap:1px; background:var(--trait); border:1px solid var(--trait); margin-top:3rem; }
-.distance{
-  background:var(--nuit);
-  display:grid;
-  grid-template-columns:4.5rem minmax(0,1fr) 5.5rem;
-  align-items:center; gap:clamp(.75rem,2vw,1.75rem);
-  padding:1.15rem 1.35rem;
-}
-.distance__cle{
-  font-family:var(--titre); font-weight:700; font-size:1.15rem;
-  color:var(--cyan);
-}
-.distance__nom{ font-size:.95rem; color:var(--brume); }
-.distance__nom b{ color:var(--craie); font-weight:600; }
-/* display:block est structurel, pas cosmetique : sur un span
-   inline, height et margin-top n'ont aucun effet et la jauge
-   n'apparait tout simplement pas. */
-.distance__jauge{
-  display:block;
-  height:5px; margin-top:.55rem;
-  background:var(--voile-clair);
-  overflow:hidden;
-}
-.distance__jauge i{
-  display:block; height:100%;
-  background:linear-gradient(90deg, var(--abysse), var(--cyan));
-  box-shadow:0 0 14px rgba(0,216,240,.5);
-}
-.distance__valeur{
-  font-family:var(--titre); font-weight:700;
-  font-size:1.5rem; text-align:right;
-  font-variant-numeric:tabular-nums;
-  color:var(--craie);
-}
-.distance__valeur small{
-  display:block;
-  font-family:var(--mono); font-weight:400;
-  font-size:.62rem; letter-spacing:.14em;
-  text-transform:uppercase; color:var(--brume-sourde);
-}
-.formule{
-  margin-top:1.75rem;
-  font-family:var(--mono); font-size:.86rem;
-  color:var(--brume);
-}
-.formule code{
-  color:var(--cyan);
-  background:rgba(0,216,240,.08);
-  padding:.15rem .45rem;
-}
-
-/* =============================================================
-   LE DECK
-   ============================================================= */
-.deck{ background:linear-gradient(to bottom, var(--nuit), var(--voile) 50%, var(--nuit)); }
-/* Colonnes FIXES, pas auto-fill. Les douze cartes se repartissent
-   en 6, 4 ou 3 par rangee : trois nombres qui divisent douze, donc
-   une derniere rangee toujours pleine. Avec auto-fill, la largeur
-   disponible decidait seule et donnait 7 puis 5, avec un trou de
-   deux emplacements au milieu de la grille. */
-.grille-deck{
-  margin-top:3rem;
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  gap:clamp(.75rem, 1.6vw, 1.15rem);
-}
-@media (min-width:560px){ .grille-deck{ grid-template-columns:repeat(4, 1fr); } }
-@media (min-width:900px){ .grille-deck{ grid-template-columns:repeat(6, 1fr); } }
-.grille-deck .carte{ width:100%; perspective:800px; }
-/* Le survol des cartes de la grille est desormais decrit dans le
-   bloc RELIEF, plus bas. Il y etait obligatoire : pose ici, il
-   fixait `transform` avec une specificite de quatre classes que
-   rien dans .carte__face ne pouvait battre, et l'inclinaison
-   suivie au pointeur n'aurait jamais pu s'appliquer. */
-.deck__etat{
-  margin-top:1.5rem;
-  font-family:var(--mono); font-size:.78rem;
-  color:var(--brume-sourde); letter-spacing:.06em;
-}
-
-/* =============================================================
-   ANATOMIE D'UNE CARTE
-   ============================================================= */
-.anatomie{ background:linear-gradient(to bottom, var(--nuit), var(--voile) 50%, var(--nuit)); }
-.anatomie__carte{
-  display:flex; justify-content:center;
-  perspective:1200px;
-}
-.anatomie__carte img{
-  /* Bornee en hauteur autant qu'en largeur : sur un ecran large la
-     colonne de texte fait environ 30rem de haut, et une carte plus
-     grande qu'elle desequilibrerait les deux moities. */
-  width:min(100%, 19rem);
-  max-height:30rem; object-fit:contain;
-  border-radius:12px;
-  transform:rotateY(-9deg) rotateX(3deg);
-  box-shadow:0 34px 80px rgba(0,6,40,.85), 0 0 46px rgba(0,216,240,.16);
-}
-/* Une liste numerotee parce que c'est un PARCOURS DE LECTURE : on
-   regarde le portrait, puis le nom, puis le code, puis les
-   attributs. L'ordre porte une information, il ne decore pas. */
-.legende{
-  margin:2rem 0 0; padding:0;
-  list-style:none; counter-reset:repere;
-  display:grid; gap:1.15rem;
-}
-.legende li{
-  position:relative;
-  display:grid;
-  grid-template-columns:2rem 1fr;
-  gap:.9rem;
-  color:var(--brume); font-size:.95rem;
-}
-/* Le repere est fait de DEUX pseudo-elements, et pas d'un seul.
-   Un losange obtenu en faisant pivoter la boite qui contient le
-   chiffre fait pivoter le chiffre avec elle : le 2 se couche, le 3
-   devient illisible. Le cadre tourne donc seul, en ::after posee
-   derriere, pendant que le chiffre reste droit dans ::before. */
-.legende li::before{
-  counter-increment:repere;
-  content:counter(repere);
-  position:relative; z-index:1;
-  display:grid; place-items:center;
-  width:2rem; height:2rem;
-  font-family:var(--mono); font-size:.75rem;
-  color:var(--cyan);
-}
-.legende li::after{
-  content:"";
-  position:absolute; left:0; top:0;
-  width:2rem; height:2rem;
-  border:1px solid var(--trait-fort);
-  transform:rotate(45deg);
-}
-.legende b{ color:var(--craie); font-weight:600; }
-.legende code{
-  font-family:var(--mono); font-size:.85em;
-  color:var(--ambre);
-}
-
-/* =============================================================
-   MODE COLLECTIF, en deux colonnes
-   ============================================================= */
-.duo{
-  display:grid; gap:clamp(2rem, 5vw, 4rem);
-  grid-template-columns:1fr;
-  align-items:center;
-}
-@media (min-width:900px){
-  .duo{ grid-template-columns:1fr 1fr; }
-  .duo--inverse > *:first-child{ order:2; }
-}
-.table-cartes{
-  position:relative;
-  display:flex; justify-content:center;
-  gap:.75rem;
-  perspective:1200px;
-  padding:clamp(1.5rem,4vw,3rem) 0;
-}
-.table-cartes .carte{ width:clamp(5rem, 12vw, 8rem); }
-.table-cartes .carte:nth-child(1){ transform:rotate(-7deg) translateY(6px); }
-.table-cartes .carte:nth-child(3){ transform:rotate(7deg) translateY(6px); }
-.table-cartes::before{
-  content:"";
-  position:absolute; left:50%; top:50%;
-  /* 70% et non 100% : ce carre est pivote de 45 degres, et un carre
-     pivote occupe racine de 2 fois son cote, soit 41% de plus. A
-     100% il debordait donc son conteneur de 20% de chaque cote --
-     invisible sur large ecran ou 26rem plafonne avant, mais sur
-     telephone c'est ce losange, et lui seul, qui ajoutait 53px de
-     defilement horizontal a la page entiere. 70% x 1,414 = 99%. */
-  width:min(70%, 26rem); aspect-ratio:1;
-  transform:translate(-50%,-50%) rotate(45deg);
-  border:1px solid var(--trait);
-  z-index:-1;
-}
-
-/* --- Les etapes, une vraie sequence ------------------------- */
-.etapes{
-  margin-top:3rem;
-  display:grid; gap:1.5rem;
-  grid-template-columns:repeat(auto-fit, minmax(15rem, 1fr));
-  /* Le compteur est pose par ::before ci-dessous. Sans list-style:none, le
-     marqueur natif du <li> s'affiche EN PLUS, et l'etape se lit "1.01". */
-  list-style:none;
-  counter-reset:etape;
-}
-.etape{
-  border-top:1px solid var(--trait-fort);
-  padding-top:1.25rem;
-}
-.etape::before{
-  counter-increment:etape;
-  content:counter(etape, decimal-leading-zero);
-  display:block; margin-bottom:.75rem;
-  font-family:var(--mono); font-size:.78rem;
-  letter-spacing:.18em; color:var(--cyan);
-}
-.etape p{ margin:.5rem 0 0; color:var(--brume); font-size:.95rem; }
-
-/* =============================================================
-   TELECHARGEMENT
-   ============================================================= */
-.telecharger{
-  border:1px solid var(--trait-fort);
-  background:
-    radial-gradient(90% 130% at 50% 0%, rgba(0,24,120,.5) 0%, transparent 68%),
-    var(--voile);
-  padding:clamp(2.5rem, 6vw, 4.5rem) clamp(1.5rem, 4vw, 3.5rem);
-  text-align:center;
-}
-.telecharger h2{ margin-bottom:1rem; }
-.telecharger .prose{ margin-inline:auto; }
-.telecharger__actions{
-  display:flex; flex-wrap:wrap; gap:.9rem; justify-content:center;
-  margin-top:2rem;
-}
-.telecharger__mentions{
-  margin:1.75rem 0 0;
-  font-family:var(--mono); font-size:.74rem;
-  letter-spacing:.06em; color:var(--brume-sourde);
-}
-
-/* --- Le pont vers le telephone -----------------------------
-   Affiche par defaut, et retire par le script sur Android, ou il
-   n'a plus lieu d'etre : l'appareil sous les yeux est deja le bon.
-   Dans ce sens, un visiteur sans JavaScript voit le QR de trop,
-   jamais l'inverse. */
-.pont{
-  margin-top:2.5rem;
-  padding-top:2.25rem;
-  border-top:1px solid var(--trait);
-  display:flex; flex-wrap:wrap;
-  align-items:center; justify-content:center;
-  gap:1.75rem;
-  text-align:left;
-}
-.pont__code{
-  flex:none;
-  background:#fff;
-  padding:.6rem;
-  border-radius:8px;
-  line-height:0;
-  box-shadow:0 12px 34px rgba(0,6,40,.55);
-}
-.pont__code img{ width:7.5rem; height:7.5rem; }
-.pont__texte{ max-width:30ch; }
-.pont__texte b{
-  display:block;
-  font-family:var(--titre); font-weight:700;
-  font-size:1rem; color:var(--craie);
-  margin-bottom:.4rem;
-}
-.pont__texte span{ font-size:.88rem; color:var(--brume); }
-
-/* =============================================================
-   FAQ
-   ============================================================= */
-.faq{ margin-top:3rem; max-width:52rem; }
-.question{
-  border-bottom:1px solid var(--trait);
-}
-.question summary{
-  cursor:pointer; list-style:none;
-  padding:1.3rem 0;
-  display:flex; align-items:center; gap:1rem;
-  font-family:var(--titre); font-weight:700;
-  font-size:1.02rem; line-height:1.4;
-  color:var(--craie);
-}
-.question summary::-webkit-details-marker{ display:none; }
-.question summary::after{
-  content:"+";
-  margin-left:auto; flex:none;
-  font-family:var(--mono); font-size:1.3rem;
-  color:var(--cyan); transition:transform .25s ease;
-}
-.question[open] summary::after{ transform:rotate(45deg); }
-.question p{
-  margin:0 0 1.4rem;
-  padding-left:1.5rem;
-  color:var(--brume); max-width:58ch;
-}
-
-/* =============================================================
-   PIED
-   ============================================================= */
-.pied{
-  border-top:1px solid var(--trait);
-  padding-block:3rem 2.5rem;
-  color:var(--brume-sourde);
-  font-size:.88rem;
-}
-.pied__interieur{
-  width:var(--colonne); margin-inline:auto;
-  display:flex; flex-wrap:wrap; gap:1.5rem 2.5rem;
-  align-items:baseline;
-}
-/* gap reduit et zone agrandie : ces liens faisaient 24 px de haut,
-   sous le minimum de 24x24 exige par WCAG 2.5.8 et tres loin des
-   44 px confortables au doigt. Le padding vertical les porte a 44
-   sans changer l'apparence -- la zone touchable grandit, pas le
-   texte. Le gap passe de 1,5 a 1 rem pour compenser l'ecart que le
-   padding cree deja. */
-.pied nav{ display:flex; flex-wrap:wrap; gap:0 1rem; margin-left:auto; }
-.pied a{
-  color:var(--brume); text-decoration:none;
-  display:inline-flex; align-items:center; min-height:44px;
-}
-.pied a:hover{ color:var(--craie); }
-
-/* =============================================================
-   LE RELIEF
-   -------------------------------------------------------------
-   Tout ce qui donne du volume a la page est ici, et rien d'autre.
-   La regle est la meme que pour le script : si ce bloc disparait,
-   la vitrine reste complete et lisible. Elle redevient seulement
-   plate.
-
-   TROIS MOYENS, ET TROIS SEULEMENT
-   --------------------------------
-     1. L'ELEVATION    des ombres en deux couches, plus un lisere
-                       de lumiere sur l'arete haute
-     2. L'INCLINAISON  l'objet pivote vers le pointeur, avec sa
-                       propre perspective
-     3. LE REFLET      une tache de lumiere qui suit le pointeur
-
-   POURQUOI DEUX COUCHES D'OMBRE
-   -----------------------------
-   Une ombre unique et large donne un objet qui FLOTTE, sans
-   poids ni point de contact. L'oeil lit la profondeur dans le
-   rapport entre une ombre courte et dense -- le contact -- et une
-   ombre longue et diffuse -- l'occlusion ambiante. Les deux
-   ensemble donnent un objet POSE.
-
-   Et le lisere interieur clair n'est pas un detail : c'est lui,
-   plus que l'ombre, qui fait lire une surface comme un MATERIAU
-   plutot que comme un aplat de couleur. Une arete superieure
-   accroche toujours la lumiere.
-
-   CE QUI N'Y EST PAS, DELIBEREMENT
-   --------------------------------
-   Aucune ombre portee sur du texte, aucun degrade sur un titre,
-   aucune entree qui deplace le contenu horizontalement. Le
-   mouvement est vertical et court, parce qu'un contenu qui arrive
-   de cote se lit comme une publicite.
-   ============================================================= */
-
-:root{
-  --relief-1:
-    inset 0 1px 0 rgba(255,255,255,.06),
-    0 2px 6px rgba(0,4,26,.55),
-    0 10px 26px rgba(0,4,26,.42);
-  --relief-2:
-    inset 0 1px 0 rgba(255,255,255,.09),
-    0 6px 16px rgba(0,4,26,.6),
-    0 24px 54px rgba(0,4,26,.52);
-  --relief-3:
-    inset 0 1px 0 rgba(255,255,255,.13),
-    0 12px 28px rgba(0,4,26,.7),
-    0 40px 88px rgba(0,4,26,.62);
-  --halo-cyan: 0 0 34px rgba(0,216,240,.26);
-  --elan: cubic-bezier(.22,.9,.28,1);
-}
-
-/* -------------------------------------------------------------
-   1. LES CARTES
-   -------------------------------------------------------------
-   La carte est l'objet du jeu. C'est donc elle, et pas les
-   panneaux autour, qui merite le vrai traitement en volume.
-
-   La perspective est posee sur .carte, pas sur la grille qui la
-   contient. Une perspective de conteneur donne a toutes ses
-   cartes le MEME point de fuite : celles du bord se tordent vers
-   le centre alors qu'on les incline pareil que les autres. Une
-   perspective par carte donne a chacune son point de fuite
-   centre sur elle, et l'inclinaison redevient honnete.
-
-   transform-style repasse a "flat" pour la meme raison : en
-   preserve-3d, la face heriterait de l'espace 3D du parent et
-   court-circuiterait la perspective qu'on vient de lui donner.
-   La choregraphie de fusion, elle, transforme .carte elle meme
-   et continue de s'appuyer sur la perspective de .fusion.
-   ------------------------------------------------------------- */
-.carte{
-  perspective:760px;
-  transform-style:flat;
-}
-
-.carte__face{
-  /* Les quatre variables pilotees soit par le CSS au survol, soit
-     par le script au pointeur. Les declarer ici avec une valeur
-     neutre evite qu'une transformation partielle laisse la carte
-     dans un etat indefini. */
-  --incl-x:0deg;
-  --incl-y:0deg;
-  --leve:0px;
-  --echelle:1;
-  transform:
-    translate3d(0, var(--leve), 0)
-    rotateX(var(--incl-x))
-    rotateY(var(--incl-y))
-    scale(var(--echelle));
-  box-shadow:var(--relief-2);
-  /* Deux durees, et c'est volontaire : le retour au repos est
-     long et souple, le suivi du pointeur est court et lineaire.
-     Une seule duree donnerait soit un suivi mou et en retard,
-     soit un retour sec. */
-  transition:box-shadow .35s ease, transform .45s var(--elan);
-}
-.carte.incline .carte__face{
-  transition:box-shadow .35s ease, transform .1s linear;
-}
-
-/* Le reflet. Une tache large et douce, jamais un trait net : une
-   carte imprimee sous vernis diffuse la lumiere, elle ne la
-   renvoie pas comme un miroir. Elle est posee au dessus de tout,
-   code compris, parce qu'un reflet passe sur la surface entiere. */
-.carte__face::before{
-  content:"";
-  position:absolute; inset:0; z-index:3;
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .35s ease;
-  background:radial-gradient(
-    46% 34% at var(--lux-x,50%) var(--lux-y,10%),
-    rgba(255,255,255,.30) 0%,
-    rgba(150,232,255,.11) 40%,
-    transparent 72%);
-}
-.carte.incline .carte__face::before{ opacity:1; }
-
-/* Le survol dans la grille du deck. Les angles restent en CSS
-   pour que la carte s'incline meme sans le script ; le script ne
-   fait que les remplacer par des valeurs suivies au pointeur. */
-.grille-deck .carte{ perspective:760px; }
-.grille-deck .carte:hover .carte__face,
-.grille-deck .carte:focus-within .carte__face{
-  --leve:-10px;
-  --echelle:1.03;
-  --incl-x:6deg;
-  --incl-y:-6deg;
-  box-shadow:var(--relief-3), 0 0 0 1px var(--trait-fort), var(--halo-cyan);
-}
-
-/* Dans la demonstration de fusion, la receptrice est le resultat :
-   elle est posee un cran plus haut que ses deux parents. */
-.fusion .carte[data-role="receptrice"] .carte__face{
-  box-shadow:var(--relief-3), 0 0 26px rgba(240,168,0,.16);
-}
-
-/* La table du mode collectif : trois cartes en eventail. Au
-   survol, l'eventail s'ouvre au lieu de se soulever -- c'est le
-   geste qu'on fait vraiment sur une table. */
-.table-cartes .carte{
-  transition:transform .45s var(--elan);
-}
-.table-cartes:hover .carte:nth-child(1){ transform:rotate(-11deg) translateY(2px) translateX(-6px); }
-.table-cartes:hover .carte:nth-child(2){ transform:translateY(-8px); }
-.table-cartes:hover .carte:nth-child(3){ transform:rotate(11deg) translateY(2px) translateX(6px); }
-
-/* La grande carte de la section Anatomie. Meme mecanique que les
-   petites, avec une inclinaison de depart plus marquee : isolee au
-   milieu de sa colonne, elle n'a aucun voisin pour donner
-   l'echelle, et c'est son angle qui la pose dans l'espace. */
-.anatomie__carte img{
-  --incl-x:3deg;
-  --incl-y:-9deg;
-  --leve:0px;
-  transform:
-    translate3d(0, var(--leve), 0)
-    rotateX(var(--incl-x))
-    rotateY(var(--incl-y));
-  box-shadow:var(--relief-3), var(--halo-cyan);
-  transition:transform .5s var(--elan), box-shadow .4s ease;
-}
-.anatomie__carte.incline img{ transition:transform .1s linear, box-shadow .4s ease; }
-
-/* -------------------------------------------------------------
-   2. LES SURFACES
-   -------------------------------------------------------------
-   Les panneaux ne s'inclinent pas. Ils recoivent seulement une
-   elevation et un lisere : ce sont des supports, pas des objets
-   qu'on manipule. Les faire bouger autant que les cartes
-   brouillerait la hierarchie au lieu de la creer.
-   ------------------------------------------------------------- */
-
-/* La bande de chiffres. Les filets d'un pixel entre les cellules
-   sont obtenus par un gap sur un fond colore ; overflow:hidden est
-   donc indispensable pour que l'arrondi ne les laisse pas
-   depasser aux quatre coins. */
-.chiffres{
-  border-radius:14px;
-  overflow:hidden;
-  box-shadow:var(--relief-2);
-}
-.chiffre{
-  position:relative;
-  transition:background .3s ease;
-}
-.chiffre::before{
-  content:"";
-  position:absolute; left:0; right:0; top:0; height:1px;
-  background:linear-gradient(90deg, transparent, var(--trait-fort), transparent);
-  opacity:0; transition:opacity .3s ease;
-}
-.chiffre:hover{ background:var(--voile); }
-.chiffre:hover::before{ opacity:1; }
-/* Le libelle passe de --brume-sourde a --brume au survol, et ce
-   n'est pas cosmetique. Un fond qui s'eclaircit fait BAISSER le
-   contraste du texte pose dessus : ce libelle, deja le plus faible
-   de la page, tomberait de 3,73 a 3,54 pour 1. En remontant la
-   couleur d'un cran on passe au contraire au dessus de 7 pour 1.
-   Une surface qui s'allume ne doit jamais rendre son texte moins
-   lisible qu'au repos. */
-.chiffre:hover dt{ color:var(--brume); }
-
-/* Le tableau des distances, meme traitement. La jauge recoit un
-   creux : une barre de progression est un SILLON dans lequel une
-   valeur monte, pas une etiquette posee dessus. */
-.distances{
-  border-radius:14px;
-  overflow:hidden;
-  box-shadow:var(--relief-2);
-}
-.distance{ transition:background .3s ease; }
-.distance:hover{ background:var(--voile); }
-.distance__jauge{
-  border-radius:99px;
-  box-shadow:inset 0 1px 2px rgba(0,0,0,.55);
-}
-.distance__jauge i{
-  border-radius:99px;
-  /* transform-origin a gauche : la jauge se remplit depuis son
-     depart. Par defaut elle grandirait des deux cotes a la fois. */
-  transform-origin:left center;
-}
-
-/* Les trois etapes deviennent de vraies fiches. Elles etaient
-   separees par un simple filet haut, ce qui les faisait lire comme
-   trois paragraphes d'un meme texte plutot que comme trois gestes
-   distincts. */
-.etape{
-  border:1px solid var(--trait);
-  border-top-color:var(--trait-fort);
-  border-radius:12px;
-  padding:1.4rem 1.35rem 1.5rem;
-  background:linear-gradient(180deg, rgba(20,16,70,.5), rgba(12,9,48,.28));
-  box-shadow:var(--relief-1);
-  transition:transform .3s var(--elan), box-shadow .3s ease, border-color .3s ease;
-}
-.etape:hover{
-  transform:translateY(-5px);
-  box-shadow:var(--relief-2);
-  border-color:var(--trait-fort);
-}
-
-/* Le panneau de telechargement est la destination de la page :
-   c'est le seul element qui a droit a l'elevation maximale. */
-.telecharger{
-  border-radius:20px;
-  box-shadow:var(--relief-3);
-}
-
-/* Le QR est un carre blanc sur du noir. Sans elevation il se lit
-   comme un trou dans la page ; avec, comme une etiquette posee
-   dessus. */
-.pont__code{
-  box-shadow:var(--relief-2);
-  transition:transform .35s var(--elan), box-shadow .35s ease;
-}
-.pont__code:hover{
-  transform:translateY(-4px) scale(1.03);
-  box-shadow:var(--relief-3);
-}
-
-/* La FAQ. Fermee, elle reste une simple liste. Ouverte, la
-   question devient un panneau : c'est ce changement d'etat, et non
-   une bordure permanente, qui montre ou on en est. */
-.question{
-  border-radius:10px;
-  padding-inline:1rem;
-  transition:background .3s ease, box-shadow .3s ease;
-}
-.question:hover{ background:rgba(0,216,240,.045); }
-.question[open]{
-  background:linear-gradient(180deg, rgba(20,16,70,.55), rgba(12,9,48,.3));
-  box-shadow:var(--relief-1);
-  border-bottom-color:transparent;
-}
-.question summary::after{ transition:transform .25s var(--elan), color .25s ease; }
-.question[open] summary::after{ color:var(--ambre); }
-
-/* -------------------------------------------------------------
-   3. LES BOUTONS
-   -------------------------------------------------------------
-   Un bouton est la seule chose de la page qu'on ENFONCE. Il lui
-   faut donc les trois etats du volume : pose, souleve au survol,
-   ecrase au clic. Sans le troisieme, le clic ne rend rien et
-   l'element ne se lit plus comme un bouton.
-   ------------------------------------------------------------- */
-.bouton{
-  border-radius:8px;
-  transition:transform .18s var(--elan), box-shadow .18s ease,
-             background .18s ease, border-color .18s ease;
-}
-.bouton--plein{
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.45),
-    0 2px 5px rgba(90,60,0,.4),
-    0 12px 28px rgba(240,168,0,.26);
-}
-.bouton--plein:hover{
-  transform:translateY(-3px);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.6),
-    0 4px 10px rgba(90,60,0,.45),
-    0 20px 42px rgba(240,168,0,.38);
-}
-.bouton--trait{
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 6px 18px rgba(0,4,26,.4);
-}
-.bouton--trait:hover{
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 12px 30px rgba(0,4,26,.5),
-             0 0 24px rgba(0,216,240,.18);
-}
-/* Le retour au sol. translateY(-1px) et non 0 : l'oeil lit mieux
-   une descente vers un niveau intermediaire qu'un retour brutal
-   au repos, qui donne l'impression que le bouton a saute. */
-.bouton:active{
-  transform:translateY(-1px) scale(.985);
-  transition-duration:.06s;
-}
-
-/* -------------------------------------------------------------
-   4. L'ENTETE
-   -------------------------------------------------------------
-   Immobile en haut de page, elle ne doit rien peser. Des que le
-   contenu passe dessous, elle doit au contraire s'en detacher :
-   sans ombre, le texte qui defile semble traverser la barre.
-   La classe est posee par le script.
-   ------------------------------------------------------------- */
-.entete{
-  transition:background .3s ease, box-shadow .3s ease, border-color .3s ease;
-}
-.entete.est-defilee{
-  background:rgba(6,4,26,.92);
-  border-bottom-color:var(--trait-fort);
-  box-shadow:0 10px 30px rgba(0,4,26,.55);
-}
-
-/* -------------------------------------------------------------
-   5. L'ARRIVEE AU DEFILEMENT
-   -------------------------------------------------------------
-   Seuls les BLOCS VISUELS montent : grilles, panneaux, tableaux.
-   Jamais les titres ni les paragraphes. Un texte qui apparait par
-   morceaux se lit mal, et retarder le titre principal degraderait
-   la mesure de vitesse percue du navigateur pour rien.
-
-   On anime la propriete `translate` et non `transform` : les deux
-   sont independantes en CSS moderne. Ainsi l'arrivee n'entre
-   jamais en conflit avec les transformations de survol et
-   d'inclinaison, qui gardent `transform` pour elles seules.
-
-   Le masquage est conditionne a la classe `anime`, posee dans le
-   <head> et retiree par un minuteur de securite si le script
-   principal ne repond pas. Sans JavaScript, sans cette classe, ou
-   en mouvement reduit, rien n'est jamais masque.
-   ------------------------------------------------------------- */
-.anime .montee{
-  opacity:0;
-  translate:0 26px;
-  transition:opacity .75s ease, translate .75s var(--elan);
-}
-.anime .montee.est-vue{
-  opacity:1;
-  translate:none;
-}
-
-/* Les enfants des grilles arrivent en cascade. Le retard est pose
-   par le script, cellule par cellule ; a defaut il vaut zero et
-   tout arrive ensemble, ce qui reste correct. */
-.anime .grille-deck .carte,
-.anime .etapes .etape{
-  opacity:0;
-  translate:0 18px;
-  transition:opacity .55s ease var(--retard,0s),
-             translate .55s var(--elan) var(--retard,0s);
-}
-.anime .grille-deck.est-vue .carte,
-.anime .etapes.est-vue .etape{
-  opacity:1;
-  translate:none;
-}
-
-/* Les jauges se remplissent a l'arrivee du tableau. On anime
-   scaleX et non la largeur : la largeur reste ecrite en clair dans
-   le HTML, ou elle est la source de verite. Si rien ne se declenche
-   -- script absent, mouvement reduit -- aucune transformation n'est
-   posee et la jauge s'affiche a sa valeur exacte. */
-.anime .distances .distance__jauge i{
-  transform:scaleX(0);
-  transition:transform 1.1s var(--elan) var(--retard,0s);
-}
-.anime .distances.est-vue .distance__jauge i{
-  transform:scaleX(1);
-}
-
-/* -------------------------------------------------------------
-   6. L'EQUILIBRE DE LA COLONNE
-   -------------------------------------------------------------
-   LE PROBLEME, MESURE
-   -------------------
-   La colonne fait 1120 px sur un ecran large, mais un paragraphe
-   est borne a 62 caracteres, soit 528 a 604 px. La moitie droite
-   de l'ecran restait donc vide, six sections de suite. La page se
-   lisait comme une mise en page telephone etiree, alors que rien
-   n'y etait faux.
-
-   CE QU'ON NE FAIT PAS
-   --------------------
-   Elargir le texte. Les 62 caracteres ne sont pas un caprice :
-   au dela, l'oeil perd la ligne en revenant a la marge. Le
-   confort de lecture ne se sacrifie pas pour remplir un vide.
-
-   CE QU'ON FAIT
-   -------------
-   On met le TITRE et le TEXTE cote a cote. Les deux existaient
-   deja, ils etaient simplement empiles. La largeur se remplit
-   sans une ligne de contenu supplementaire, et l'enchainement
-   -- surtitre, titre, texte, bloc -- cesse d'etre identique dans
-   toutes les sections.
-
-   Le partage n'est pas 50/50 mais 0,85 contre 1,15 : ainsi la
-   colonne de texte retombe a 607 px, c'est a dire exactement sa
-   mesure naturelle de 62 caracteres. Un partage egal l'aurait
-   comprimee a 52 caracteres, et on aurait remplace un defaut par
-   un autre.
-
-   Le seuil est a 1000 px. En dessous, deux colonnes donneraient
-   des lignes trop courtes : l'empilement redevient le bon choix,
-   et la regle ne s'applique tout simplement pas.
-   ------------------------------------------------------------- */
-@media (min-width:1000px){
-  .intro-large{
-    display:grid;
-    grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
-    column-gap:clamp(2.5rem,4vw,4rem);
-    align-items:start;
-  }
-  .intro-large > .surtitre{ grid-column:1 / -1; grid-row:1; }
-  .intro-large > h2{
-    grid-column:1; grid-row:2;
-    /* La marge basse du titre n'a plus lieu d'etre : il n'a plus
-       rien sous lui, il a quelque chose A COTE. */
-    margin-bottom:0;
-  }
-  .intro-large > .prose{
-    grid-column:2; grid-row:2;
-    /* Alignement OPTIQUE, pas geometrique. Les deux colonnes
-       demarrent au meme pixel, mais un titre de 46 px et un texte
-       de 17 px n'ont pas la meme premiere ligne de base : sans ce
-       decalage, le texte parait monter plus haut que le titre. */
-    padding-top:.55rem;
-  }
-  /* Tout le reste -- la demonstration, le tableau, la grille --
-     reprend la largeur entiere, en dessous. */
-  .intro-large > :not(.surtitre):not(h2):not(.prose){ grid-column:1 / -1; }
-}
-
-/* -------------------------------------------------------------
-   7. LA TABLE DU MODE COLLECTIF
-   -------------------------------------------------------------
-   C'etait la section la plus faible de la page : 307 px de
-   contenu dans 499 px de hauteur, trois cartes minuscules et un
-   losange d'un pixel qu'on ne voyait pas. Elle ne paraissait pas
-   inachevee par hasard -- elle etait la seule dont le visuel ne
-   pesait pas autant que son texte.
-
-   Elle ne recoit pas un mot de plus. Ce qui manquait n'etait pas
-   du contenu, c'etait de la PRESENCE : des cartes a la bonne
-   taille, un eventail qui se lit comme un eventail, et une
-   surface sous elles.
-
-   La largeur du losange ne bouge PAS. C'est le correctif
-   documente plus haut : pivote a 45 degres, il occupe racine de
-   deux fois son cote, et repasser au dessus de 70 % rendrait a la
-   page les 53 px de defilement horizontal qu'on lui a retires.
-   On l'appuie donc en couleur et en matiere, jamais en taille.
-   ------------------------------------------------------------- */
-.table-cartes .carte{ width:clamp(5rem, 13vw, 9rem); }
-
-/* L'arc. La carte du milieu monte, les deux autres descendent et
-   s'inclinent : c'est la forme que prend un eventail pose, et
-   trois cartes alignees a plat ne la donnaient pas. */
-.table-cartes .carte:nth-child(1){ transform:rotate(-9deg) translateY(10px); }
-.table-cartes .carte:nth-child(2){ transform:translateY(-6px); }
-.table-cartes .carte:nth-child(3){ transform:rotate(9deg)  translateY(10px); }
-.table-cartes:hover .carte:nth-child(2){ transform:translateY(-14px); }
-
-.table-cartes::before{
-  border-color:var(--trait-fort);
-  background:radial-gradient(closest-side, rgba(0,24,120,.38), transparent 76%);
-}
-
-/* La surface sous les cartes. Une ellipse de lumiere basse, pas
-   une ombre : sur un fond deja noir une ombre ne se voit pas, et
-   c'est la lueur qui fait exister le plan sur lequel les cartes
-   reposent. */
-.table-cartes::after{
-  content:"";
-  position:absolute; z-index:-1; pointer-events:none;
-  left:50%; bottom:clamp(.75rem, 2.5vw, 2rem);
-  width:min(78%, 22rem); height:2.75rem;
-  transform:translateX(-50%);
-  background:radial-gradient(closest-side, rgba(0,216,240,.17), transparent 74%);
-}
-
-/* =============================================================
-   LES FINITIONS
-   -------------------------------------------------------------
-   Rien ici ne change la mise en page. Ce sont les details qu'on
-   ne remarque que lorsqu'ils manquent : la couleur de selection,
-   l'ascenseur, le comportement des ancres, et ce que devient la
-   page quand le systeme du visiteur demande autre chose.
-   ============================================================= */
-
-:root{
-  /* Dit au navigateur que la page est sombre. Il en tire tout ce
-     qu'il dessine LUI-MEME et que le CSS ne peut pas atteindre :
-     l'ascenseur, le fond des menus natifs, le surlignage du
-     correcteur orthographique, la couleur par defaut d'un champ.
-     Sans cette ligne, un ascenseur blanc borde une page noire. */
-  color-scheme:dark;
-
-  /* Et pour les navigateurs qui acceptent qu'on precise. */
-  scrollbar-color:var(--trait-fort) transparent;
-  scrollbar-width:thin;
-}
-
-/* Le bleu de selection par defaut du systeme sur une page cyan et
-   ambre : la seule couleur de toute la page qui ne vienne pas du
-   logo. */
-::selection{ background:var(--cyan); color:var(--nuit); }
-
-/* -------------------------------------------------------------
-   LES ANCRES SOUS L'EN-TETE COLLANTE
-   -------------------------------------------------------------
-   Un saut vers #distances amene le haut de la section a y=0 --
-   c'est a dire SOUS la barre, qui fait 68 px et cache donc les 68
-   premiers pixels de la section. Le surtitre y perdait 9 px, et
-   le panneau de telechargement, qui n'a pas le meme rembourrage,
-   voyait son titre ampute de 14.
-
-   scroll-margin-top decale la cible d'exactement la hauteur de la
-   barre. L'arrivee reproduit alors ce qu'on voit en defilant a la
-   main jusqu'a cette section -- ce qui est precisement ce qu'on
-   attend d'un lien d'ancrage.
-   ------------------------------------------------------------- */
-[id]{ scroll-margin-top:4.25rem; }
-
-/* -------------------------------------------------------------
-   CONTRASTE RENFORCE
-   -------------------------------------------------------------
-   Un reglage systeme, comme le mouvement reduit : il existe pour
-   des yeux qui en ont besoin, pas pour une preference. On ne
-   touche qu'aux teintes discretes et aux filets -- les titres et
-   le corps de texte sont deja tres au dessus des seuils.
-   ------------------------------------------------------------- */
-@media (prefers-contrast:more){
-  :root{
-    --brume:#C6CFEE;
-    --brume-sourde:#A8B2DA;
-    --trait:rgba(0,216,240,.34);
-    --trait-fort:rgba(0,216,240,.64);
-  }
-  .carte__face::before{ display:none; }   /* le reflet voile le visuel */
-}
-
-/* Le flou de l'en-tete est un effet, pas une information. Certains
-   systemes le desactivent pour des raisons de lisibilite ou de
-   performance ; on remplace alors le voile par un fond plein,
-   sans quoi le texte defile visiblement sous la barre. */
-@media (prefers-reduced-transparency:reduce){
-  .entete{ background:var(--nuit); backdrop-filter:none; }
-  .menu__liste{ background:var(--nuit); }
-}
-
-/* -------------------------------------------------------------
-   L'IMPRESSION
-   -------------------------------------------------------------
-   Les navigateurs n'impriment pas les fonds. Une page peinte en
-   clair sur du noir sort donc en clair sur du BLANC : une feuille
-   vierge, sans le moindre message d'erreur. C'est le defaut
-   d'impression le plus courant des sites sombres, et le plus
-   silencieux.
-
-   On inverse donc les jetons plutot que de reecrire des regles :
-   la cascade fait le reste toute seule.
-   ------------------------------------------------------------- */
-@media print{
-  :root{
-    --nuit:#FFFFFF; --voile:#FFFFFF; --voile-clair:#FFFFFF;
-    --craie:#101018; --brume:#3A3A4A; --brume-sourde:#5A5A6C;
-    --cyan:#164E63; --cyan-doux:#164E63; --ambre:#7A4B00;
-    --trait:#D4D4DE; --trait-fort:#9A9AAA;
-    --ombre-nette:none; --relief-1:none; --relief-2:none; --relief-3:none;
-    --halo-cyan:none;
-  }
-  body{ background:#fff; color:#101018; }
-
-  /* Decors, commandes et navigation : rien a faire sur du papier. */
-  body::before, #ciel, .hero__voile, .entete, .saut-lien,
-  .fusion__pilote, .bouton, .table-cartes::before,
-  .table-cartes::after{ display:none !important; }
-
-  .carte__face{ border:1px solid #BBB; box-shadow:none; }
-  .carte__face::before{ display:none; }
-  .telecharger, .etape, .chiffres, .distances{
-    border:1px solid #BBB; box-shadow:none;
-  }
-
-  /* Une reponse repliee ne s'imprime pas. Sur papier il n'y a
-     personne pour cliquer : la FAQ doit sortir entiere. */
-  .question::details-content{ content-visibility:visible; }
-  .question p{ display:block !important; }
-  .question summary::after{ display:none; }
-
-  /* Un lien imprime ne mene nulle part si son adresse reste
-     cachee. Seuls les liens EXTERNES la meritent : « #regle »
-     n'apprendrait rien a personne. */
-  a[href^="http"]::after{
-    content:" (" attr(href) ")";
-    font-size:.82em; color:#5A5A6C; word-break:break-all;
-  }
-
-  /* Ne pas couper un bloc au milieu d'une page. */
-  .etape, .question, .chiffre, .distance, .carte{ break-inside:avoid; }
-  h1, h2, h3{ break-after:avoid; }
-  section{ padding-block:1.5rem; }
-}
-
-/* =============================================================
-   LE PREMIER ECRAN SUR TELEPHONE
-   -------------------------------------------------------------
-   MESURE AVANT CORRECTION, sur un ecran de 390 x 844 :
-     logo      350 x 624   -- 74 % de la hauteur visible
-     titre     hors ecran, a y=745
-     boutons   hors ecran, a y=1069
-   Le visiteur voyait donc le logo, et rien d'autre. Or le logo
-   annonce la marque ; c'est le TITRE qui annonce le jeu, et le
-   bouton qui permet de l'installer.
-
-   Deux causes, deux corrections :
-     1. le logo etait DEFORME (height:auto plus haut) ;
-     2. il reste trop grand meme a la bonne proportion.
-
-   72 % de la colonne au lieu de 100 %, plafonne a 16 rem. A
-   390 px cela donne 252 px de large et 175 de haut : le titre,
-   l'accroche et les deux boutons tiennent alors dans le premier
-   ecran, ce qui est tout l'objet de la page.
-   ------------------------------------------------------------- */
-@media (max-width:640px){
-  .hero__logo{
-    width:min(72%, 16rem);
-    margin-bottom:clamp(1.1rem, 3vw, 1.6rem);
-  }
-  /* Le hero se resserre : chaque pixel rendu par le logo doit
-     profiter au contenu, pas au vide. */
-  .hero{ padding-block:clamp(1rem, 3vw, 1.75rem) var(--section); }
-  .hero__accroche{ margin-bottom:1.6rem; }
-  .chiffres{ margin-top:clamp(2rem, 5vw, 3rem); }
-}
-
-/* -------------------------------------------------------------
-   LA SCENE 3D, ENFIN VISIBLE SUR TELEPHONE
-   -------------------------------------------------------------
-   Le canvas etait deja la, et deja anime. Mais le logo couvrait
-   le centre de l'ecran et son propre fond sombre masquait tout ce
-   qui se passait derriere : l'animation existait sans se voir.
-
-   Maintenant que le logo occupe trois fois moins de place, on
-   remonte la presence du decor plutot que de le laisser au meme
-   niveau que sur un grand ecran, ou il n'a qu'a suggerer.
-   ------------------------------------------------------------- */
-@media (max-width:640px){
-  #ciel{ opacity:1; }
-  /* Le voile qui fond le ciel dans la nuit est allege : sur
-     telephone il effacait justement la zone ou la scene est la
-     plus lisible, autour du logo. */
-  .hero__voile{
-    background:
-      radial-gradient(78% 46% at 50% 26%, rgba(0,24,120,.30) 0%, transparent 72%),
-      linear-gradient(to bottom, transparent 74%, var(--nuit) 100%);
-  }
-}
-
-/* -------------------------------------------------------------
-   LE MENU SUR TELEPHONE
-   -------------------------------------------------------------
-   Il fonctionnait, mais chichement : un panneau de 200 px, des
-   lignes serrees, et aucune facon de le refermer sans viser a
-   nouveau le bouton. Trois corrections :
-
-     - il s'ouvre sur toute la largeur de la colonne, ce qui donne
-       des zones tactiles larges au lieu de precises ;
-     - il apparait au lieu de surgir, ce qui aide a comprendre
-       d'ou il vient ;
-     - un appui a cote le referme (voir vitrine.js).
-   ------------------------------------------------------------- */
-@media (max-width:860px){
-  .menu[open] .menu__liste{
-    left:0; right:0;                 /* toute la colonne */
-    min-width:0;
-    padding:.5rem;
-    gap:.15rem;
-    animation:menu-apparait .18s cubic-bezier(.22,.9,.28,1);
-  }
-  .menu__liste a{
-    padding:.35rem 1rem;
-    min-height:48px;                 /* confortable au pouce */
-    border-radius:8px;
-    font-size:.95rem;
-  }
-  /* Un filet entre les entrees : sur une pleine largeur, des
-     lignes sans separation se lisent comme un bloc de texte. */
-  .menu__liste a + a{ box-shadow:0 -1px 0 var(--trait); }
-}
-
-@keyframes menu-apparait{
-  from{ opacity:0; transform:translateY(-.4rem); }
-  to  { opacity:1; transform:none; }
-}
-
-/* Le mouvement reste une option : la regle globale de reduction
-   coupe la duree, mais l'animation d'entree partirait quand meme
-   d'une opacite nulle. On la neutralise explicitement. */
-@media (prefers-reduced-motion:reduce){
-  .menu[open] .menu__liste{ animation:none; }
-}
-
-/* =============================================================
-   ACCESSIBILITE : le mouvement est une option, pas un du
-   ============================================================= */
-@media (prefers-reduced-motion:reduce){
-  html{ scroll-behavior:auto; }
-  *,*::before,*::after{
-    animation-duration:.001ms !important;
-    transition-duration:.001ms !important;
-  }
-}
-</style>
-
 <script>
 /* =============================================================
-   L'ARMEMENT DES ARRIVEES AU DEFILEMENT
+   ARMEMENT, AVANT LE PREMIER RENDU
    -------------------------------------------------------------
-   Cette classe conditionne le masquage initial des blocs qui
-   montent a l'ecran. Elle est posee ICI, dans le <head>, et non
-   dans le script differe : posee apres le rendu, elle ferait
-   apparaitre les blocs puis les effacerait, soit un clignotement
-   sur toute la page.
+   Pose ici, dans le <head>, et non dans le script differe : posees
+   apres le rendu, ces classes feraient apparaitre puis disparaitre
+   les blocs animes -- un clignotement sur toute la page.
 
-   Masquer du contenu en JavaScript est un pari, et le prix d'un
-   pari perdu est une page vide. D'ou trois garde-fous :
+     js       la page sait que le script tourne (masque la mention
+              « activez JavaScript pour jouer ») ;
+     anime    arme les arrivees au defilement et l'entree de
+              l'eventail, SAUF si le visiteur a demande moins de
+              mouvement.
 
-     1. SANS JAVASCRIPT   cette ligne ne s'execute pas, la classe
-                          n'existe pas, rien n'est masque.
-     2. MOUVEMENT REDUIT  on n'arme rien du tout.
-     3. SCRIPT ABSENT     si vitrine.js ne repond pas au bout de
-                          deux secondes et demie, le minuteur
-                          desarme et tout redevient visible.
-
-   Le troisieme cas est le seul vraiment dangereux : le script
-   principal peut manquer (reseau coupe en cours de chargement,
-   cache corrompu) alors que JavaScript, lui, fonctionne. C'est
-   exactement la situation ou la page se viderait sans le minuteur.
+   Masquer du contenu en JavaScript est un pari dont le prix, perdu,
+   est une page vide. D'ou le minuteur : si vitrine.js n'a pas pris
+   la main en deux secondes et demie (reseau coupe, cache corrompu),
+   on desarme et tout redevient visible.
    ============================================================= */
 (function () {
   try {
     var racine = document.documentElement;
+    racine.className += ' js';
     if (window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     racine.className += ' anime';
     setTimeout(function () {
-      if (!racine.classList.contains('revele-actif')) {
-        racine.classList.remove('anime');
-      }
+      if (!racine.classList.contains('revele-actif')) racine.classList.remove('anime');
     }, 2500);
   } catch (e) { /* Un navigateur qui trebuche ici garde une page complete. */ }
 })();
@@ -1896,596 +174,298 @@ section{ padding-block:var(--section); position:relative; }
 <body>
 <a class="saut-lien" href="#contenu">Aller au contenu</a>
 
+<!-- Le curseur : deux elements vides, animes par le script. -->
+<div class="curseur" aria-hidden="true">
+  <div class="curseur__anneau"><span class="curseur__libelle"></span></div>
+  <div class="curseur__point"></div>
+</div>
+
 <header class="entete">
   <div class="entete__interieur">
-    <a class="marque" href="/">
-      <span class="losange" aria-hidden="true"></span>
-      <!-- Sur une seule ligne : un saut de ligne entre MIX et le
-           span serait rendu comme une espace, et le mot de la
-           marque apparaitrait coupe en deux. -->
-      <span>MIX<b>ALGO</b></span>
-    </a>
+    <a class="marque" href="/"><span class="losange" aria-hidden="true"></span><span>MIX<b>ALGO</b></span></a>
     <nav class="navigation" aria-label="Navigation principale">
-      <details class="menu" id="menu">
-        <summary class="menu__bascule">
-          <span class="menu__barres" aria-hidden="true"></span>
-          <span class="menu__mot">Sections</span>
-        </summary>
-        <div class="menu__liste">
-          <a href="#regle">La règle</a>
-          <a href="#anatomie">La carte</a>
-          <a href="#distances">Les distances</a>
-          <a href="#deck">Le deck</a>
-        </div>
-      </details>
-      <a class="bouton bouton--plein bouton--menu" href="#telecharger">Télécharger</a>
+      <div class="navigation__liens">
+        <a href="#jouer">Jouer</a>
+        <a href="#regle">La règle</a>
+        <a href="#deck">Le deck</a>
+        <a href="#distances">Distances</a>
+      </div>
+      <a class="bouton bouton--plein" href="#telecharger">Télécharger</a>
+      <!-- Sans script, ce lien mene au plan du pied de page. Le
+           script en fait le bouton du tiroir. -->
+      <a class="burger" href="#plan" id="burger" aria-controls="tiroir" aria-label="Ouvrir le menu"><span></span></a>
     </nav>
   </div>
 </header>
 
+<div class="tiroir" id="tiroir" hidden>
+  <button class="tiroir__fond" type="button" tabindex="-1" aria-label="Fermer le menu"></button>
+  <nav class="tiroir__panneau" aria-label="Menu">
+    <ul class="tiroir__liens">
+      <li><a href="#jouer">Jouer une partie</a></li>
+      <li><a href="#regle">La règle</a></li>
+      <li><a href="#deck">Le deck</a></li>
+      <li><a href="#distances">Les distances</a></li>
+      <li><a href="#collectif">Mode collectif</a></li>
+      <li><a href="#faq">Questions</a></li>
+    </ul>
+    <div class="tiroir__cartes" aria-hidden="true">
+      <figure class="illu"><img src="/assets/originaux/K2-480.webp" srcset="/assets/originaux/K2-480.webp 480w, /assets/originaux/K2-960.webp 960w" sizes="8rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">K2</span></figure><figure class="illu"><img src="/assets/originaux/Y5-480.webp" srcset="/assets/originaux/Y5-480.webp 480w, /assets/originaux/Y5-960.webp 960w" sizes="8rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Y5</span></figure><figure class="illu"><img src="/assets/originaux/F2-480.webp" srcset="/assets/originaux/F2-480.webp 480w, /assets/originaux/F2-960.webp 960w" sizes="8rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">F2</span></figure>
+    </div>
+    <a class="bouton bouton--plein" href="#telecharger">Télécharger pour Android</a>
+  </nav>
+</div>
+
 <main id="contenu">
 
   <!-- ========================= HERO ========================= -->
-  <section class="hero">
+  <section class="hero" aria-labelledby="titre-hero">
     <canvas id="ciel" aria-hidden="true"></canvas>
-    <div class="hero__voile" aria-hidden="true"></div>
+    <div class="hero__lueur" aria-hidden="true"></div>
 
-    <div class="enveloppe hero__contenu">
-      <img class="hero__logo"
-           src="/assets/mixalgo-logo.png"
-           srcset="/assets/mixalgo-logo-512.webp 512w,
-                   /assets/mixalgo-logo-672.webp 672w,
-                   /assets/mixalgo-logo-900.webp 900w"
-           sizes="(max-width: 640px) 86vw, 26rem"
-           width="900" height="624"
-           alt="Logo MIXALGO : cinq cartes de personnages en éventail au centre d'un diamant lumineux."
-           fetchpriority="high">
-
-      <h1>Deux cartes fusionnent.<br><em>Une troisième apparaît.</em></h1>
-
-      <p class="hero__accroche">
-        MIXALGO est un jeu d'observation pure. Aucune règle à mémoriser,
-        aucun texte à déchiffrer. Vous regardez, et vous voyez le lien.
-        Ou vous ne le voyez pas encore.
-      </p>
-
-      <div class="hero__actions">
-        <a class="bouton bouton--plein" href="#telecharger">
-          Télécharger pour Android
-        </a>
-        <a class="bouton bouton--trait" href="#regle">
-          Voir la règle en dix secondes
-        </a>
+    <div class="hero__grille">
+      <div class="hero__visuel">
+        <!-- Les trois cartes forment une VRAIE fusion du deck :
+             KEZEU + BABADJI = BEMA. Le studio peut les remplacer
+             (galerie, trois premieres images). -->
+        <div class="eventail" id="eventail" data-cms="eventail">
+          <div class="eventail__carte eventail__carte--e"><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="(max-width: 60rem) 40vw, 14rem" width="480" height="600" loading="eager" decoding="async" alt="Carte KEZEU (B3) : une combattante en armure rouge dans une ville nocturne."><span class="illu__code">B3</span></figure></div>
+          <div class="eventail__carte eventail__carte--c"><figure class="illu"><img src="/assets/originaux/M3-480.webp" srcset="/assets/originaux/M3-480.webp 480w, /assets/originaux/M3-960.webp 960w" sizes="(max-width: 60rem) 40vw, 14rem" width="480" height="600" loading="eager" decoding="async" alt="Carte BABADJI (M3) : un circuit rouge lumineux sur fond de nuit."><span class="illu__code">M3</span></figure></div>
+          <div class="eventail__carte eventail__carte--r"><figure class="illu"><img src="/assets/originaux/A4-480.webp" srcset="/assets/originaux/A4-480.webp 480w, /assets/originaux/A4-960.webp 960w" sizes="(max-width: 60rem) 48vw, 16rem" width="480" height="600" loading="eager" decoding="async" alt="Carte BEMA (A4) : deux combattantes symétriques en armure rouge sur un fond doré."><span class="illu__code">A4</span></figure></div>
+          <span class="eventail__op eventail__op--plus" aria-hidden="true">+</span>
+          <span class="eventail__op eventail__op--egal" aria-hidden="true">=</span>
+          <p class="eventail__roles" aria-hidden="true"><span>Émettrice</span><span>Câble</span><span>Réceptrice</span></p>
+        </div>
       </div>
 
-      <p class="hero__note">Application Android &middot; Deck activé par code &middot; Jouable hors connexion</p>
+      <div class="hero__texte">
+        <p class="surtitre" data-cms="hero.surtitre">Jeu d'observation visuelle</p>
+        <h1 id="titre-hero"><span data-cms="hero.titre">Deux cartes fusionnent.</span> <em class="neon" data-cms="hero.titre_accent">Une troisième apparaît.</em></h1>
+        <p class="hero__accroche" data-cms="hero.accroche">Aucune règle à lire. Vous regardez, et vous voyez le lien.</p>
+        <div class="hero__actions">
+          <a class="bouton bouton--plein" href="#jouer" data-cms="hero.bouton_principal">Jouer maintenant</a>
+          <a class="bouton" href="#telecharger" data-cms="hero.bouton_secondaire">Télécharger l'app</a>
+        </div>
+        <ul class="hero__puces">
+          <li>76 cartes</li><li>46 fusions</li><li>D1 → D5</li><li>Hors connexion</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
-      <dl class="chiffres montee">
-        <div class="chiffre">
-          <dt>Cartes du deck Savane</dt>
-          <dd>76<small>Toutes neutres, aucune n'a de rôle fixe</small></dd>
+  <!-- ========================= BANDEAU ========================= -->
+  <!-- Decoratif : les memes cartes sont decrites dans le deck plus
+       bas. aria-hidden evite de lire vingt-huit images d'affilee. -->
+  <div class="defile" aria-hidden="true">
+    <div class="defile__rangee" data-cms="galerie-rangee"><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">B3</span></figure><figure class="illu"><img src="/assets/originaux/Y5-480.webp" srcset="/assets/originaux/Y5-480.webp 480w, /assets/originaux/Y5-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Y5</span></figure><figure class="illu"><img src="/assets/originaux/K2-480.webp" srcset="/assets/originaux/K2-480.webp 480w, /assets/originaux/K2-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">K2</span></figure><figure class="illu"><img src="/assets/originaux/N1-480.webp" srcset="/assets/originaux/N1-480.webp 480w, /assets/originaux/N1-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">N1</span></figure><figure class="illu"><img src="/assets/originaux/F2-480.webp" srcset="/assets/originaux/F2-480.webp 480w, /assets/originaux/F2-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">F2</span></figure><figure class="illu"><img src="/assets/originaux/X1-480.webp" srcset="/assets/originaux/X1-480.webp 480w, /assets/originaux/X1-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">X1</span></figure><figure class="illu"><img src="/assets/originaux/A7-480.webp" srcset="/assets/originaux/A7-480.webp 480w, /assets/originaux/A7-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">A7</span></figure><figure class="illu"><img src="/assets/originaux/H4-480.webp" srcset="/assets/originaux/H4-480.webp 480w, /assets/originaux/H4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">H4</span></figure><figure class="illu"><img src="/assets/originaux/L9-480.webp" srcset="/assets/originaux/L9-480.webp 480w, /assets/originaux/L9-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">L9</span></figure><figure class="illu"><img src="/assets/originaux/Q4-480.webp" srcset="/assets/originaux/Q4-480.webp 480w, /assets/originaux/Q4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Q4</span></figure><figure class="illu"><img src="/assets/originaux/C7-480.webp" srcset="/assets/originaux/C7-480.webp 480w, /assets/originaux/C7-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">C7</span></figure><figure class="illu"><img src="/assets/originaux/E5-480.webp" srcset="/assets/originaux/E5-480.webp 480w, /assets/originaux/E5-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">E5</span></figure><figure class="illu"><img src="/assets/originaux/P6-480.webp" srcset="/assets/originaux/P6-480.webp 480w, /assets/originaux/P6-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">P6</span></figure><figure class="illu"><img src="/assets/originaux/Z8-480.webp" srcset="/assets/originaux/Z8-480.webp 480w, /assets/originaux/Z8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Z8</span></figure><div style="display:contents" aria-hidden="true"><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">B3</span></figure><figure class="illu"><img src="/assets/originaux/Y5-480.webp" srcset="/assets/originaux/Y5-480.webp 480w, /assets/originaux/Y5-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Y5</span></figure><figure class="illu"><img src="/assets/originaux/K2-480.webp" srcset="/assets/originaux/K2-480.webp 480w, /assets/originaux/K2-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">K2</span></figure><figure class="illu"><img src="/assets/originaux/N1-480.webp" srcset="/assets/originaux/N1-480.webp 480w, /assets/originaux/N1-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">N1</span></figure><figure class="illu"><img src="/assets/originaux/F2-480.webp" srcset="/assets/originaux/F2-480.webp 480w, /assets/originaux/F2-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">F2</span></figure><figure class="illu"><img src="/assets/originaux/X1-480.webp" srcset="/assets/originaux/X1-480.webp 480w, /assets/originaux/X1-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">X1</span></figure><figure class="illu"><img src="/assets/originaux/A7-480.webp" srcset="/assets/originaux/A7-480.webp 480w, /assets/originaux/A7-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">A7</span></figure><figure class="illu"><img src="/assets/originaux/H4-480.webp" srcset="/assets/originaux/H4-480.webp 480w, /assets/originaux/H4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">H4</span></figure><figure class="illu"><img src="/assets/originaux/L9-480.webp" srcset="/assets/originaux/L9-480.webp 480w, /assets/originaux/L9-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">L9</span></figure><figure class="illu"><img src="/assets/originaux/Q4-480.webp" srcset="/assets/originaux/Q4-480.webp 480w, /assets/originaux/Q4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Q4</span></figure><figure class="illu"><img src="/assets/originaux/C7-480.webp" srcset="/assets/originaux/C7-480.webp 480w, /assets/originaux/C7-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">C7</span></figure><figure class="illu"><img src="/assets/originaux/E5-480.webp" srcset="/assets/originaux/E5-480.webp 480w, /assets/originaux/E5-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">E5</span></figure><figure class="illu"><img src="/assets/originaux/P6-480.webp" srcset="/assets/originaux/P6-480.webp 480w, /assets/originaux/P6-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">P6</span></figure><figure class="illu"><img src="/assets/originaux/Z8-480.webp" srcset="/assets/originaux/Z8-480.webp 480w, /assets/originaux/Z8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">Z8</span></figure></div></div>
+    <div class="defile__rangee defile__rangee--inverse" data-cms="galerie-rangee"><figure class="illu"><img src="/assets/originaux/A4-480.webp" srcset="/assets/originaux/A4-480.webp 480w, /assets/originaux/A4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">A4</span></figure><figure class="illu"><img src="/assets/originaux/T3-480.webp" srcset="/assets/originaux/T3-480.webp 480w, /assets/originaux/T3-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">T3</span></figure><figure class="illu"><img src="/assets/originaux/P7-480.webp" srcset="/assets/originaux/P7-480.webp 480w, /assets/originaux/P7-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">P7</span></figure><figure class="illu"><img src="/assets/originaux/V6-480.webp" srcset="/assets/originaux/V6-480.webp 480w, /assets/originaux/V6-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">V6</span></figure><figure class="illu"><img src="/assets/originaux/C2-480.webp" srcset="/assets/originaux/C2-480.webp 480w, /assets/originaux/C2-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">C2</span></figure><figure class="illu"><img src="/assets/originaux/R5-480.webp" srcset="/assets/originaux/R5-480.webp 480w, /assets/originaux/R5-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">R5</span></figure><figure class="illu"><img src="/assets/originaux/F1-480.webp" srcset="/assets/originaux/F1-480.webp 480w, /assets/originaux/F1-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">F1</span></figure><figure class="illu"><img src="/assets/originaux/G8-480.webp" srcset="/assets/originaux/G8-480.webp 480w, /assets/originaux/G8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">G8</span></figure><figure class="illu"><img src="/assets/originaux/M8-480.webp" srcset="/assets/originaux/M8-480.webp 480w, /assets/originaux/M8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">M8</span></figure><figure class="illu"><img src="/assets/originaux/D9-480.webp" srcset="/assets/originaux/D9-480.webp 480w, /assets/originaux/D9-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">D9</span></figure><figure class="illu"><img src="/assets/originaux/K4-480.webp" srcset="/assets/originaux/K4-480.webp 480w, /assets/originaux/K4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">K4</span></figure><figure class="illu"><img src="/assets/originaux/W9-480.webp" srcset="/assets/originaux/W9-480.webp 480w, /assets/originaux/W9-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">W9</span></figure><figure class="illu"><img src="/assets/originaux/M3-480.webp" srcset="/assets/originaux/M3-480.webp 480w, /assets/originaux/M3-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">M3</span></figure><figure class="illu"><img src="/assets/originaux/D8-480.webp" srcset="/assets/originaux/D8-480.webp 480w, /assets/originaux/D8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">D8</span></figure><div style="display:contents" aria-hidden="true"><figure class="illu"><img src="/assets/originaux/A4-480.webp" srcset="/assets/originaux/A4-480.webp 480w, /assets/originaux/A4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">A4</span></figure><figure class="illu"><img src="/assets/originaux/T3-480.webp" srcset="/assets/originaux/T3-480.webp 480w, /assets/originaux/T3-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">T3</span></figure><figure class="illu"><img src="/assets/originaux/P7-480.webp" srcset="/assets/originaux/P7-480.webp 480w, /assets/originaux/P7-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">P7</span></figure><figure class="illu"><img src="/assets/originaux/V6-480.webp" srcset="/assets/originaux/V6-480.webp 480w, /assets/originaux/V6-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">V6</span></figure><figure class="illu"><img src="/assets/originaux/C2-480.webp" srcset="/assets/originaux/C2-480.webp 480w, /assets/originaux/C2-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">C2</span></figure><figure class="illu"><img src="/assets/originaux/R5-480.webp" srcset="/assets/originaux/R5-480.webp 480w, /assets/originaux/R5-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">R5</span></figure><figure class="illu"><img src="/assets/originaux/F1-480.webp" srcset="/assets/originaux/F1-480.webp 480w, /assets/originaux/F1-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">F1</span></figure><figure class="illu"><img src="/assets/originaux/G8-480.webp" srcset="/assets/originaux/G8-480.webp 480w, /assets/originaux/G8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">G8</span></figure><figure class="illu"><img src="/assets/originaux/M8-480.webp" srcset="/assets/originaux/M8-480.webp 480w, /assets/originaux/M8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">M8</span></figure><figure class="illu"><img src="/assets/originaux/D9-480.webp" srcset="/assets/originaux/D9-480.webp 480w, /assets/originaux/D9-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">D9</span></figure><figure class="illu"><img src="/assets/originaux/K4-480.webp" srcset="/assets/originaux/K4-480.webp 480w, /assets/originaux/K4-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">K4</span></figure><figure class="illu"><img src="/assets/originaux/W9-480.webp" srcset="/assets/originaux/W9-480.webp 480w, /assets/originaux/W9-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">W9</span></figure><figure class="illu"><img src="/assets/originaux/M3-480.webp" srcset="/assets/originaux/M3-480.webp 480w, /assets/originaux/M3-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">M3</span></figure><figure class="illu"><img src="/assets/originaux/D8-480.webp" srcset="/assets/originaux/D8-480.webp 480w, /assets/originaux/D8-960.webp 960w" sizes="13rem" width="480" height="600" loading="lazy" decoding="async" alt=""><span class="illu__code">D8</span></figure></div></div>
+  </div>
+
+  <!-- ========================= LA PARTIE ========================= -->
+  <section class="demo" id="jouer" aria-labelledby="titre-jouer">
+    <div class="enveloppe">
+      <div class="entete-section">
+        <p class="surtitre"><b>01</b> Partie de démonstration</p>
+        <h2 id="titre-jouer" data-cms="sections.demo.titre">À vous de jouer</h2>
+        <p class="chapeau" data-cms="sections.demo.texte">Deux cartes, une fusion. <strong>Trouvez la troisième</strong> parmi quatre. Cinq manches, de vrais trios du deck.</p>
+      </div>
+
+      <div class="jeu" id="jeu">
+        <div class="jeu__eclair" aria-hidden="true"></div>
+        <div class="jeu__hud">
+          <div>Manche<b id="jeu-manche">1 / 5</b></div>
+          <div>Série<b id="jeu-serie">0</b></div>
+          <div>Score<b id="jeu-score">0</b></div>
         </div>
-        <div class="chiffre">
-          <dt>Fusions de référence</dt>
-          <dd>46<small>Les trios validés du jeu, vérifiés un à un</small></dd>
+        <div class="jeu__temps" aria-hidden="true"><i id="jeu-temps"></i></div>
+
+        <div class="jeu__plateau">
+          <div id="jeu-e"><figure class="illu"><img src="/assets/originaux/A7-480.webp" srcset="/assets/originaux/A7-480.webp 480w, /assets/originaux/A7-960.webp 960w" sizes="(max-width: 46rem) 28vw, 13rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte A7 : une guerrière tenant une arme dans une ville néon violette."><span class="illu__code">A7</span></figure></div>
+          <span class="jeu__op" aria-hidden="true">+</span>
+          <div id="jeu-c"><figure class="illu"><img src="/assets/originaux/K4-480.webp" srcset="/assets/originaux/K4-480.webp 480w, /assets/originaux/K4-960.webp 960w" sizes="(max-width: 46rem) 28vw, 13rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte K4 : un motif géométrique vert et or."><span class="illu__code">K4</span></figure></div>
+          <span class="jeu__op jeu__op--egal" aria-hidden="true">=</span>
+          <div class="jeu__mystere est-revele" id="jeu-mystere">
+            <div class="jeu__mystere-dos"><span></span></div>
+            <div class="jeu__mystere-face" id="jeu-r"><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="(max-width: 46rem) 28vw, 13rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte KEZEU (B3) : une combattante en armure rouge dans une ville nocturne."><span class="illu__code">B3</span></figure></div>
+          </div>
         </div>
-        <div class="chiffre">
-          <dt>Niveaux de profondeur</dt>
-          <dd>D1 à D5<small>Du lien évident au lien presque invisible</small></dd>
+
+        <p class="jeu__consigne" id="jeu-consigne" aria-live="polite">Quelle carte naît de cette fusion ?</p>
+
+        <ul class="jeu__choix" id="jeu-choix">
+          <li><button class="choix" type="button" data-curseur="Choisir"><span class="choix__touche">1</span><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="(max-width: 40rem) 45vw, 11rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte KEZEU (B3) : une combattante en armure rouge dans une ville nocturne."><span class="illu__code">B3</span></figure></button></li>
+          <li><button class="choix" type="button" data-curseur="Choisir"><span class="choix__touche">2</span><figure class="illu"><img src="/assets/originaux/Y5-480.webp" srcset="/assets/originaux/Y5-480.webp 480w, /assets/originaux/Y5-960.webp 960w" sizes="(max-width: 40rem) 45vw, 11rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte ETOO (Y5) : une femme aux cheveux blancs entourée d&#x27;éclairs bleus."><span class="illu__code">Y5</span></figure></button></li>
+          <li><button class="choix" type="button" data-curseur="Choisir"><span class="choix__touche">3</span><figure class="illu"><img src="/assets/originaux/F2-480.webp" srcset="/assets/originaux/F2-480.webp 480w, /assets/originaux/F2-960.webp 960w" sizes="(max-width: 40rem) 45vw, 11rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte F2 : un esprit végétal masqué, cornu, tenant un bâton."><span class="illu__code">F2</span></figure></button></li>
+          <li><button class="choix" type="button" data-curseur="Choisir"><span class="choix__touche">4</span><figure class="illu"><img src="/assets/originaux/P7-480.webp" srcset="/assets/originaux/P7-480.webp 480w, /assets/originaux/P7-960.webp 960w" sizes="(max-width: 40rem) 45vw, 11rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte P7 : trois guerrières en armure rouge."><span class="illu__code">P7</span></figure></button></li>
+        </ul>
+        <p class="jeu__sans-script">Ici, la réponse est KEZEU (B3). Activez JavaScript pour jouer une vraie partie.</p>
+
+        <!-- L'ecran de depart. Absent sans script (hidden), affiche par
+             lui : le chronometre ne part que sur un geste du visiteur,
+             jamais pendant qu'il lit encore le titre. -->
+        <div class="jeu__fin" id="jeu-debut" hidden>
+          <div>
+            <p class="surtitre" style="justify-content:center">5 manches · 20 secondes</p>
+            <h3>Prêt ?</h3>
+            <p>Deux cartes s'affichent. Trouvez celle qui naît de leur fusion.</p>
+            <div class="jeu__fin-actions">
+              <button class="bouton bouton--plein" type="button" id="jeu-lancer">Lancer la partie</button>
+            </div>
+          </div>
         </div>
-        <div class="chiffre">
-          <dt>Questions possibles</dt>
-          <dd>480<small>Sur les trois premières distances seulement</small></dd>
+
+        <div class="jeu__fin" id="jeu-fin" hidden>
+          <div>
+            <p class="surtitre" style="justify-content:center">Partie terminée</p>
+            <div class="score neon" id="jeu-fin-score">0</div>
+            <h3 id="jeu-fin-titre">Bien vu.</h3>
+            <p id="jeu-fin-texte"></p>
+            <div class="jeu__fin-actions">
+              <a class="bouton bouton--plein" href="#telecharger">Jouer aux 76 cartes</a>
+              <button class="bouton" type="button" id="jeu-rejouer">Rejouer</button>
+            </div>
+          </div>
         </div>
-      </dl>
+      </div>
     </div>
   </section>
 
   <!-- ========================= LA REGLE ========================= -->
-  <section class="regle" id="regle">
-    <div class="enveloppe intro-large">
-      <p class="surtitre"><span class="losange" aria-hidden="true"></span> La relation atomique</p>
-      <h2>Émettrice, câble, réceptrice</h2>
-      <div class="prose">
-        <p>
-          Une carte donne la forme. Une autre lui applique une transformation.
-          Le résultat est une troisième carte, déjà présente dans le deck.
-          C'est toute la grammaire du jeu, et elle ne change jamais.
-        </p>
-        <p>
-          <strong>Aucune carte n'a de rôle fixe.</strong> La réceptrice d'une fusion
-          devient l'émettrice de la suivante. C'est ce chaînage qui fait naître
-          la difficulté, sans jamais ajouter une seule règle.
-        </p>
+  <section id="regle" aria-labelledby="titre-regle">
+    <div class="enveloppe regle__mise">
+      <div class="entete-section">
+        <p class="surtitre"><b>02</b> La règle</p>
+        <h2 id="titre-regle" data-cms="sections.regle.titre">Une forme, une touche, un résultat</h2>
+        <p class="chapeau" data-cms="sections.regle.texte">L'émettrice donne la forme, le câble la transforme, la réceptrice en hérite. <strong>Aucune carte n'a de rôle fixe</strong> : la réceptrice d'une fusion devient l'émettrice de la suivante.</p>
       </div>
-
-      <div class="fusion montee" id="fusion">
-        <figure class="carte" data-code="B3" data-role="emettrice">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/B3.webp" width="380" height="540"
-                 loading="eager" decoding="async" alt="Carte KEZEU, code B3. Attributs : humain augmenté, maille, biotech.">
-            <span class="carte__code">B3</span>
-          </div>
-          <figcaption>
-          <span class="carte__role">Émettrice</span>
-            <span class="carte__nom">KEZEU</span>
-            <ul class="attributs">
-            <li class="attribut">Humain augmenté</li>
-            <li class="attribut est-partage">Maille</li>
-            <li class="attribut">Biotech</li>
-            </ul>
-          </figcaption>
-        </figure>
-        <span class="operateur" aria-hidden="true">+</span>
-        <figure class="carte" data-code="M3" data-role="cable">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/M3.webp" width="380" height="540"
-                 loading="eager" decoding="async" alt="Carte BABADJI, code M3. Attributs : électrique, maille.">
-            <span class="carte__code">M3</span>
-          </div>
-          <figcaption>
-          <span class="carte__role">Câble</span>
-            <span class="carte__nom">BABADJI</span>
-            <ul class="attributs">
-            <li class="attribut">Électrique</li>
-            <li class="attribut est-partage">Maille</li>
-            </ul>
-          </figcaption>
-        </figure>
-        <span class="operateur" aria-hidden="true">=</span>
-        <figure class="carte" data-code="A4" data-role="receptrice">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/A4.webp" width="380" height="540"
-                 loading="eager" decoding="async" alt="Carte BEMA, code A4. Attributs : duo, maille, afro.">
-            <span class="carte__code">A4</span>
-          </div>
-          <figcaption>
-          <span class="carte__role">Réceptrice</span>
-            <span class="carte__nom">BEMA</span>
-            <ul class="attributs">
-            <li class="attribut">Duo</li>
-            <li class="attribut est-partage">Maille</li>
-            <li class="attribut">Afro</li>
-            </ul>
-          </figcaption>
-        </figure>
-      </div>
-
-      <!-- aria-live : le bouton « Fusion suivante » remplace les trois
-           cartes, cette phrase et le compteur. Sans region live, un
-           lecteur d'ecran n'annonce rien du tout -- l'utilisateur
-           active un bouton et, pour lui, il ne se passe strictement
-           rien. « polite » et non « assertive » : l'annonce attend la
-           fin de la phrase en cours plutot que de couper la parole. -->
-      <p class="fusion__lecture" id="fusion-lecture" aria-live="polite">
-        <strong>Maille</strong> traverse les trois cartes. KEZEU la porte,
-        BABADJI la porte, BEMA en hérite.
-      </p>
-
-      <div class="fusion__pilote">
-        <button class="bouton bouton--trait" type="button" id="relancer">
-          Fusion suivante
-        </button>
-        <p class="fusion__legende" id="fusion-legende" aria-live="polite">
-          Fusion 1 sur 3, trios réels du deck Savane
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================= ANATOMIE ========================= -->
-  <section class="anatomie" id="anatomie">
-    <div class="enveloppe duo">
       <div>
-        <p class="surtitre"><span class="losange" aria-hidden="true"></span> Anatomie</p>
-        <h2>Ce qu'une carte vous dit</h2>
-        <div class="prose">
-          <p>
-            Une carte MIXALGO tient en quatre informations, et pas une de plus.
-            Il n'y a ni points, ni valeur, ni couleur de famille, ni texte de
-            règle : rien qui puisse se compter ou se comparer. Ce qui se joue
-            se regarde.
-          </p>
+        <div class="regle__trio" id="fusion">
+          <figure data-role="emettrice"><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="(max-width: 60rem) 28vw, 12rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte KEZEU (B3) : une combattante en armure rouge dans une ville nocturne."><span class="illu__code">B3</span></figure><figcaption><span class="regle__role">Émettrice</span><span class="regle__nom">KEZEU</span></figcaption></figure>
+          <span class="jeu__op" aria-hidden="true">+</span>
+          <figure data-role="cable"><figure class="illu"><img src="/assets/originaux/M3-480.webp" srcset="/assets/originaux/M3-480.webp 480w, /assets/originaux/M3-960.webp 960w" sizes="(max-width: 60rem) 28vw, 12rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte BABADJI (M3) : un circuit rouge lumineux sur fond de nuit."><span class="illu__code">M3</span></figure><figcaption><span class="regle__role">Câble</span><span class="regle__nom">BABADJI</span></figcaption></figure>
+          <span class="jeu__op jeu__op--egal" aria-hidden="true">=</span>
+          <figure data-role="receptrice"><figure class="illu"><img src="/assets/originaux/A4-480.webp" srcset="/assets/originaux/A4-480.webp 480w, /assets/originaux/A4-960.webp 960w" sizes="(max-width: 60rem) 28vw, 12rem" width="480" height="600" loading="lazy" decoding="async" alt="Carte BEMA (A4) : deux combattantes symétriques en armure rouge sur un fond doré."><span class="illu__code">A4</span></figure><figcaption><span class="regle__role">Réceptrice</span><span class="regle__nom">BEMA</span></figcaption></figure>
         </div>
-        <ol class="legende">
-          <li><span><b>Le portrait.</b> Il occupe les trois quarts de la carte,
-            parce que c'est lui qui porte le jeu. Toute la logique d'une fusion
-            est dans ce qu'on y voit.</span></li>
-          <li><span><b>Le nom.</b> <code>KEZEU</code> ici. Une identité, jamais un
-            rôle : la même carte est émettrice dans une fusion et réceptrice dans
-            une autre.</span></li>
-          <li><span><b>Le code.</b> <code>B3</code>. Il sert au référentiel du jeu
-            et à l'arbitrage, là où prononcer un nom à voix haute donnerait la
-            réponse à toute la table.</span></li>
-          <li><span><b>Les attributs.</b> Deux ou trois mots-clés, ici
-            <em>humain augmenté</em>, <em>maille</em> et <em>biotech</em>. Des
-            repères de lecture, pas des règles. Ils aident à formuler ce que
-            l'œil a déjà vu.</span></li>
-        </ol>
-      </div>
-      <div class="anatomie__carte montee">
-        <img src="/assets/cartes/B3-detail.webp" width="760" height="1079"
-             loading="lazy" decoding="async"
-             alt="La carte KEZEU en grand : portrait d'une combattante en armure rouge dans une ville nocturne, son nom, le code B3, et ses trois attributs.">
-      </div>
-    </div>
-  </section>
-
-  <!-- ========================= LES DISTANCES ========================= -->
-  <section id="distances">
-    <div class="enveloppe intro-large">
-      <p class="surtitre"><span class="losange" aria-hidden="true"></span> La progression</p>
-      <h2>Cinq distances, une seule règle</h2>
-      <div class="prose">
-        <p>
-          La difficulté ne vient jamais du chronomètre. Elle vient de la
-          <strong>distance</strong> qui sépare les trois cartes qu'on vous montre.
-          En D1, elles forment une fusion directe. Au-delà, elles sont prélevées
-          le long d'une chaîne : le lien existe toujours, mais il passe par des
-          cartes que vous ne voyez pas.
-        </p>
-      </div>
-
-      <div class="distances montee">
-        <div class="distance">
-          <span class="distance__cle">D1</span>
-          <span class="distance__nom">
-            <b>La fusion elle-même</b>, les trois cartes se touchent
-            <span class="distance__jauge"><i style="width:2%"></i></span>
-          </span>
-          <span class="distance__valeur">1<small>trio</small></span>
-        </div>
-        <div class="distance">
-          <span class="distance__cle">D2</span>
-          <span class="distance__nom">
-            <b>Un maillon d'écart</b>, une carte intermédiaire reste cachée
-            <span class="distance__jauge"><i style="width:11%"></i></span>
-          </span>
-          <span class="distance__valeur">5<small>trios</small></span>
-        </div>
-        <div class="distance">
-          <span class="distance__cle">D3</span>
-          <span class="distance__nom">
-            <b>Deux maillons</b>, le lien cesse d'être visible d'un coup d'œil
-            <span class="distance__jauge"><i style="width:32%"></i></span>
-          </span>
-          <span class="distance__valeur">14<small>trios</small></span>
-        </div>
-        <div class="distance">
-          <span class="distance__cle">D4</span>
-          <span class="distance__nom">
-            <b>Trois maillons</b>, il faut reconstruire la chaîne de tête
-            <span class="distance__jauge"><i style="width:61%"></i></span>
-          </span>
-          <span class="distance__valeur">27<small>trios</small></span>
-        </div>
-        <div class="distance">
-          <span class="distance__cle">D5</span>
-          <span class="distance__nom">
-            <b>Quatre maillons</b>, la limite du jeu
-            <span class="distance__jauge"><i style="width:100%"></i></span>
-          </span>
-          <span class="distance__valeur">44<small>trios</small></span>
+        <p class="regle__lecture" id="fusion-lecture" aria-live="polite">Le circuit rouge de BABADJI se pose sur l'armure de KEZEU : BEMA porte <strong>la maille</strong> des deux.</p>
+        <div class="regle__pilote">
+          <button class="bouton" type="button" id="relancer">Fusion suivante</button>
+          <p class="regle__legende" id="fusion-legende" aria-live="polite">Fusion 1 sur 3 · trios réels du deck</p>
         </div>
       </div>
-
-      <p class="formule">
-        Une chaîne de <code>k</code> fusions produit au plus <code>C(2k,2) - 1</code> trios valides.
-        Le trio doit contenir la carte finale, et ne jamais reproduire une fusion déjà connue.
-      </p>
     </div>
   </section>
 
   <!-- ========================= LE DECK ========================= -->
-  <section class="deck" id="deck">
-    <div class="enveloppe intro-large">
-      <p class="surtitre"><span class="losange" aria-hidden="true"></span> Extraits du deck</p>
-      <h2>Soixante-seize cartes, aucune légende</h2>
-      <div class="prose">
-        <p>
-          EKAMBI, MAGNE, BABADJI, BIKOKO. Chaque carte est un portrait, et le
-          deck entier tient dans un imaginaire afrofuturiste : villes de nuit,
-          armures de maille, orages électriques et masques d'ancêtres.
-          <strong>Tout ce qui compte est dans l'image.</strong>
-        </p>
+  <section id="deck" aria-labelledby="titre-deck">
+    <div class="enveloppe">
+      <div class="entete-section">
+        <p class="surtitre"><b>03</b> Le deck</p>
+        <h2 id="titre-deck" data-cms="sections.deck.titre">Tout est dans l'image</h2>
+        <p class="chapeau" data-cms="sections.deck.texte">Villes de nuit, armures de maille, orages électriques, masques d'ancêtres. Un imaginaire afrofuturiste, carte après carte.</p>
       </div>
-
-      <!-- Les douze emplacements sont dans le HTML, pas fabriques par le
-           script : la section doit etre complete des le premier rendu, y
-           compris pour un robot d indexation ou un visiteur sans
-           JavaScript. -->
-      <!-- Pas de puces d attributs ici : chaque carte porte deja son
-           nom, son code et ses attributs peints dans l image, et a
-           cette taille ils sont lisibles. Les repeter dessous
-           doublait l information et encombrait la grille. Elles ne
-           servent que dans la demonstration de fusion, ou l attribut
-           partage est mis en evidence. -->
-      <div class="grille-deck montee" id="grille-deck" aria-label="Aperçu de cartes du deck">
-        <figure class="carte" data-code="B3">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/B3.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte KEZEU, code B3. Attributs : humain augmenté, maille, biotech.">
-            <span class="carte__code">B3</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">KEZEU</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="Z8">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/Z8.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte MILLA, code Z8. Attributs : mystique, électrique, biotech.">
-            <span class="carte__code">Z8</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">MILLA</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="L9">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/L9.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte TUEKAM, code L9. Attributs : humain augmenté, électrique, afro.">
-            <span class="carte__code">L9</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">TUEKAM</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="M3">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/M3.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte BABADJI, code M3. Attributs : électrique, maille.">
-            <span class="carte__code">M3</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">BABADJI</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="A4">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/A4.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte BEMA, code A4. Attributs : duo, maille, afro.">
-            <span class="carte__code">A4</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">BEMA</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="C7">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/C7.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte BIKOKO, code C7. Attributs : fantaisiste, chapeau, groupe.">
-            <span class="carte__code">C7</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">BIKOKO</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="N1">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/N1.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte WAKAM, code N1. Attributs : humain augmenté, rouge, ailes.">
-            <span class="carte__code">N1</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">WAKAM</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="D9">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/D9.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte NOTA, code D9. Attributs : visage électrique, robot.">
-            <span class="carte__code">D9</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">NOTA</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="X1">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/X1.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte EKAMBI, code X1. Attributs : duo, électrique, losange.">
-            <span class="carte__code">X1</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">EKAMBI</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="M8">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/M8.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte FEKAM, code M8. Attributs : trio, losange.">
-            <span class="carte__code">M8</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">FEKAM</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="K2">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/K2.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte MAGNE, code K2. Attributs : royal, mystère ancestral, losange.">
-            <span class="carte__code">K2</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">MAGNE</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="Y5">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/Y5.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte ETOO, code Y5. Attributs : électrique, cheveux blancs, humain augmenté.">
-            <span class="carte__code">Y5</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">ETOO</span>
-          </figcaption>
-        </figure>
+      <ul class="grille-deck" id="grille-deck" style="list-style:none;margin:0;padding:0">
+        <li><button class="vignette" type="button" data-code="B3" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/B3-480.webp" srcset="/assets/originaux/B3-480.webp 480w, /assets/originaux/B3-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte KEZEU (B3) : une combattante en armure rouge dans une ville nocturne."><span class="illu__code">B3</span><span class="illu__nom">KEZEU</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="Z8" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/Z8-480.webp" srcset="/assets/originaux/Z8-480.webp 480w, /assets/originaux/Z8-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte MILLA (Z8) : une silhouette aux cheveux blancs, armure lumineuse et éclairs bleus."><span class="illu__code">Z8</span><span class="illu__nom">MILLA</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="K2" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/K2-480.webp" srcset="/assets/originaux/K2-480.webp 480w, /assets/originaux/K2-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte MAGNE (K2) : un roi masqué d&#x27;or entouré de deux enfants."><span class="illu__code">K2</span><span class="illu__nom">MAGNE</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="N1" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/N1-480.webp" srcset="/assets/originaux/N1-480.webp 480w, /assets/originaux/N1-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte WAKAM (N1) : une combattante ailée en rouge dans une ville néon."><span class="illu__code">N1</span><span class="illu__nom">WAKAM</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="X1" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/X1-480.webp" srcset="/assets/originaux/X1-480.webp 480w, /assets/originaux/X1-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte EKAMBI (X1) : des jumeaux en armure dorée sous des éclairs jaunes."><span class="illu__code">X1</span><span class="illu__nom">EKAMBI</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="F2" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/F2-480.webp" srcset="/assets/originaux/F2-480.webp 480w, /assets/originaux/F2-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte F2 : un esprit végétal masqué, cornu, tenant un bâton."><span class="illu__code">F2</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="Y5" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/Y5-480.webp" srcset="/assets/originaux/Y5-480.webp 480w, /assets/originaux/Y5-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte ETOO (Y5) : une femme aux cheveux blancs entourée d&#x27;éclairs bleus."><span class="illu__code">Y5</span><span class="illu__nom">ETOO</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="A7" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/A7-480.webp" srcset="/assets/originaux/A7-480.webp 480w, /assets/originaux/A7-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte A7 : une guerrière tenant une arme dans une ville néon violette."><span class="illu__code">A7</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="Q4" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/Q4-480.webp" srcset="/assets/originaux/Q4-480.webp 480w, /assets/originaux/Q4-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte Q4 : un groupe d&#x27;esprits végétaux cornus dans une lumière verte."><span class="illu__code">Q4</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="H4" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/H4-480.webp" srcset="/assets/originaux/H4-480.webp 480w, /assets/originaux/H4-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte H4 : un guerrier aux cheveux en pointes entouré d&#x27;éclairs bleus."><span class="illu__code">H4</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="C7" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/C7-480.webp" srcset="/assets/originaux/C7-480.webp 480w, /assets/originaux/C7-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte BIKOKO (C7) : un personnage fantaisiste au chapeau sur des motifs de circuit."><span class="illu__code">C7</span><span class="illu__nom">BIKOKO</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li><button class="vignette" type="button" data-code="P6" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/P6-480.webp" srcset="/assets/originaux/P6-480.webp 480w, /assets/originaux/P6-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte P6 : un guerrier de la jungle à la coiffe dorée."><span class="illu__code">P6</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="A4" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/A4-480.webp" srcset="/assets/originaux/A4-480.webp 480w, /assets/originaux/A4-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte BEMA (A4) : deux combattantes symétriques en armure rouge sur un fond doré."><span class="illu__code">A4</span><span class="illu__nom">BEMA</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="C2" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/C2-480.webp" srcset="/assets/originaux/C2-480.webp 480w, /assets/originaux/C2-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte C2 : deux guerrières en rouge devant un cœur de verre."><span class="illu__code">C2</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="D8" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/D8-480.webp" srcset="/assets/originaux/D8-480.webp 480w, /assets/originaux/D8-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte D8 : un circuit rouge et noir sur fond blanc."><span class="illu__code">D8</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="D9" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/D9-480.webp" srcset="/assets/originaux/D9-480.webp 480w, /assets/originaux/D9-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte NOTA (D9) : un circuit bleu sur fond de nuit."><span class="illu__code">D9</span><span class="illu__nom">NOTA</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="E5" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/E5-480.webp" srcset="/assets/originaux/E5-480.webp 480w, /assets/originaux/E5-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte E5 : un moine en méditation dans des flammes orangées."><span class="illu__code">E5</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="F1" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/F1-480.webp" srcset="/assets/originaux/F1-480.webp 480w, /assets/originaux/F1-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte F1 : un sage aux longues tresses en armure de cuir."><span class="illu__code">F1</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="G8" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/G8-480.webp" srcset="/assets/originaux/G8-480.webp 480w, /assets/originaux/G8-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte G8 : un portrait au trait, cheveux en pointes et collier."><span class="illu__code">G8</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="K4" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/K4-480.webp" srcset="/assets/originaux/K4-480.webp 480w, /assets/originaux/K4-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte K4 : un motif géométrique vert et or."><span class="illu__code">K4</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="L9" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/L9-480.webp" srcset="/assets/originaux/L9-480.webp 480w, /assets/originaux/L9-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte TUEKAM (L9) : une guerrière en armure rouge traversée d&#x27;éclairs."><span class="illu__code">L9</span><span class="illu__nom">TUEKAM</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="M3" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/M3-480.webp" srcset="/assets/originaux/M3-480.webp 480w, /assets/originaux/M3-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte BABADJI (M3) : un circuit rouge lumineux sur fond de nuit."><span class="illu__code">M3</span><span class="illu__nom">BABADJI</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="M8" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/M8-480.webp" srcset="/assets/originaux/M8-480.webp 480w, /assets/originaux/M8-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte FEKAM (M8) : un losange de circuit blanc et rouge."><span class="illu__code">M8</span><span class="illu__nom">FEKAM</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="P7" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/P7-480.webp" srcset="/assets/originaux/P7-480.webp 480w, /assets/originaux/P7-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte P7 : trois guerrières en armure rouge."><span class="illu__code">P7</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="R5" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/R5-480.webp" srcset="/assets/originaux/R5-480.webp 480w, /assets/originaux/R5-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte R5 : un jeune guerrier au bras bionique dans le désert."><span class="illu__code">R5</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="T3" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/T3-480.webp" srcset="/assets/originaux/T3-480.webp 480w, /assets/originaux/T3-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte T3 : un guerrier aux tresses dans des éclairs dorés."><span class="illu__code">T3</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="V6" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/V6-480.webp" srcset="/assets/originaux/V6-480.webp 480w, /assets/originaux/V6-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte V6 : un jeune homme aux cheveux en pointes, veste de cuir."><span class="illu__code">V6</span></figure><span class="visuellement-cache">Agrandir</span></button></li><li class="est-replie"><button class="vignette" type="button" data-code="W9" data-curseur="Voir"><figure class="illu"><img src="/assets/originaux/W9-480.webp" srcset="/assets/originaux/W9-480.webp 480w, /assets/originaux/W9-960.webp 960w" sizes="(max-width: 36rem) 46vw, (max-width: 56rem) 30vw, 280px" width="480" height="600" loading="lazy" decoding="async" alt="Carte W9 : un masque de circuit rouge aux deux yeux lumineux."><span class="illu__code">W9</span></figure><span class="visuellement-cache">Agrandir</span></button></li>
+      </ul>
+      <div class="deck__pied">
+        <p class="deck__etat" id="deck-etat">12 illustrations sur les 76 du deck Savane</p>
+        <button class="bouton" type="button" id="deck-plus" hidden>Voir les 28 illustrations</button>
       </div>
-      <p class="deck__etat" id="deck-etat">Douze cartes sur les soixante-seize du deck Savane</p>
     </div>
   </section>
 
-  <!-- ========================= MODE COLLECTIF ========================= -->
-  <section id="collectif">
-    <div class="enveloppe duo duo--inverse">
-      <div>
-        <p class="surtitre"><span class="losange" aria-hidden="true"></span> Autour d'une table</p>
-        <h2>Le mode collectif</h2>
-        <div class="prose">
-          <p>
-            Les cartes physiques se posent sur la table. L'animateur annonce un
-            numéro de trio à voix haute, et chacun cherche les trois cartes qui
-            le composent. On propose, on défend, on se trompe ensemble.
-          </p>
-          <p>
-            <strong>L'application ne joue pas, elle arbitre.</strong> Elle confirme
-            le trio et nomme les trois cartes. Le reste se passe entre joueurs,
-            sans écran.
-          </p>
-        </div>
+  <dialog class="visionneuse" id="visionneuse" aria-label="Visionneuse de cartes">
+    <button class="rond visionneuse__fermer" type="button" data-fermer aria-label="Fermer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="visionneuse__cadre">
+      <button class="rond" type="button" data-pas="-1" aria-label="Carte précédente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <figure><img id="visionneuse-image" src="" alt="" width="960" height="1200"><figcaption id="visionneuse-legende"></figcaption></figure>
+      <button class="rond" type="button" data-pas="1" aria-label="Carte suivante">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </dialog>
+
+  <!-- ========================= LES DISTANCES ========================= -->
+  <section id="distances" aria-labelledby="titre-distances">
+    <div class="enveloppe">
+      <div class="entete-section">
+        <p class="surtitre"><b>04</b> La progression</p>
+        <h2 id="titre-distances">Cinq distances</h2>
+        <p class="chapeau">En D1 les trois cartes se touchent. Au-delà, <strong>le lien passe par des cartes cachées</strong>.</p>
       </div>
-      <div class="table-cartes montee">
-        <figure class="carte" data-code="B3">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/B3.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte KEZEU, code B3. Attributs : humain augmenté, maille, biotech.">
-            <span class="carte__code">B3</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">KEZEU</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="M3">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/M3.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte BABADJI, code M3. Attributs : électrique, maille.">
-            <span class="carte__code">M3</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">BABADJI</span>
-          </figcaption>
-        </figure>
-        <figure class="carte" data-code="A4">
-          <div class="carte__face est-chargee">
-            <img src="/assets/cartes/A4.webp" width="380" height="540"
-                 loading="lazy" decoding="async" alt="Carte BEMA, code A4. Attributs : duo, maille, afro.">
-            <span class="carte__code">A4</span>
-          </div>
-          <figcaption>
-            <span class="carte__nom">BEMA</span>
-          </figcaption>
-        </figure>
+      <ol class="distances montee">
+        <li class="distance" style="--plein:8%"><span class="distance__cle">D1</span><span class="distance__valeur">1 trio</span></li>
+        <li class="distance" style="--plein:20%"><span class="distance__cle">D2</span><span class="distance__valeur">5 trios</span></li>
+        <li class="distance" style="--plein:42%"><span class="distance__cle">D3</span><span class="distance__valeur">14 trios</span></li>
+        <li class="distance" style="--plein:68%"><span class="distance__cle">D4</span><span class="distance__valeur">27 trios</span></li>
+        <li class="distance" style="--plein:100%"><span class="distance__cle">D5</span><span class="distance__valeur">44 trios</span></li>
+      </ol>
+      <p class="distances__note">Une chaîne de <code>k</code> fusions donne au plus <code>C(2k,2) − 1</code> trios : chacun contient la carte finale et ne reproduit jamais une fusion connue.</p>
+    </div>
+  </section>
+
+  <!-- ========================= COLLECTIF ========================= -->
+  <section id="collectif" aria-labelledby="titre-collectif">
+    <div class="enveloppe collectif__mise">
+      <div class="table montee" aria-hidden="true">
+        <img src="/assets/cartes/B3.webp" width="380" height="540" loading="lazy" decoding="async" alt="">
+        <img src="/assets/cartes/M3.webp" width="380" height="540" loading="lazy" decoding="async" alt="">
+        <img src="/assets/cartes/A4.webp" width="380" height="540" loading="lazy" decoding="async" alt="">
+      </div>
+      <div>
+        <p class="surtitre"><b>05</b> Autour d'une table</p>
+        <h2 id="titre-collectif" data-cms="sections.collectif.titre">Le mode collectif</h2>
+        <p class="chapeau" data-cms="sections.collectif.texte">Les cartes physiques sur la table, un numéro de trio annoncé à voix haute, et chacun cherche. <strong>L'application n'arbitre que la réponse.</strong></p>
       </div>
     </div>
   </section>
 
   <!-- ========================= COMMENCER ========================= -->
-  <section id="commencer">
+  <section aria-labelledby="titre-telecharger">
     <div class="enveloppe">
-      <p class="surtitre"><span class="losange" aria-hidden="true"></span> Première partie</p>
-      <h2>Trois étapes, une seule fois</h2>
-
       <ol class="etapes montee">
-        <li class="etape">
-          <h3>Installer l'application</h3>
-          <p>
-            Le fichier APK s'installe directement sur Android. Votre téléphone
-            demandera d'autoriser une installation hors magasin : c'est normal
-            pour une application distribuée de cette manière.
-          </p>
-        </li>
-        <li class="etape">
-          <h3>Activer votre deck</h3>
-          <p>
-            Le code fourni avec votre jeu de cartes ouvre le deck correspondant.
-            Il ne fonctionne que sur un appareil, ce qui garantit qu'un code
-            vendu correspond bien à un joueur.
-          </p>
-        </li>
-        <li class="etape">
-          <h3>Jouer, même sans réseau</h3>
-          <p>
-            Le deck est téléchargé une fois, puis tout se passe sur l'appareil.
-            Les questions sont fabriquées localement, les images restent en
-            mémoire, et une partie entière se joue hors connexion.
-          </p>
-        </li>
+        <li class="etape"><h3>Installer</h3><p>L'APK s'installe directement sur Android.</p></li>
+        <li class="etape"><h3>Activer</h3><p>Le code livré avec les cartes ouvre votre deck.</p></li>
+        <li class="etape"><h3>Jouer</h3><p>Une fois le deck chargé, tout se joue hors connexion.</p></li>
       </ol>
-    </div>
-  </section>
 
-  <!-- ========================= TELECHARGEMENT ========================= -->
-  <section>
-    <div class="enveloppe">
       <div class="telecharger montee" id="telecharger">
-        <p class="surtitre" style="justify-content:center"><span class="losange" aria-hidden="true"></span> Disponible maintenant</p>
-        <h2>Prenez le deck en main</h2>
-        <p class="prose" style="text-align:center">
-          L'application est gratuite. C'est le code d'activation, livré avec les
-          cartes, qui ouvre un deck.
-        </p>
+        <p class="surtitre" style="justify-content:center"><b>06</b> Disponible maintenant</p>
+        <h2 id="titre-telecharger" data-cms="sections.telecharger.titre">Prenez le deck en main</h2>
+        <p class="telecharger__texte" data-cms="sections.telecharger.texte">L'application est gratuite. Le code d'activation, livré avec les cartes, ouvre un deck.</p>
         <div class="telecharger__actions">
-          <a class="bouton bouton--plein" id="bouton-apk"
-             href="/telechargements/mixalgo.apk" download>
+          <a class="bouton bouton--plein" id="bouton-apk" href="/telechargements/mixalgo.apk" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
             Télécharger l'APK
           </a>
-          <a class="bouton bouton--trait" href="#regle">Revoir la règle</a>
+          <a class="bouton" href="#jouer">Rejouer la démo</a>
         </div>
-        <p class="telecharger__mentions">
-          Version 1.0.0 &middot; Android &middot; Installation par fichier APK
-        </p>
-
-        <!-- Le pont vers le telephone. Retire par le script sur Android,
-             ou l'appareil sous les yeux est deja le bon. -->
+        <p class="telecharger__mentions">Version 1.0.0 · Android · Installation par fichier APK</p>
         <div class="pont" id="pont">
-          <div class="pont__code">
-            <img src="/assets/qr-telechargement.png" width="420" height="420"
-                 loading="lazy" decoding="async"
-                 alt="QR code menant à la page de téléchargement de MIXALGO.">
-          </div>
-          <p class="pont__texte">
-            <b>Vous êtes sur un ordinateur</b>
-            <span>MIXALGO s'installe sur un téléphone Android. Scannez ce code
-            pour ouvrir cette page sur le vôtre, et lancez le téléchargement
-            depuis le bon appareil.</span>
-          </p>
+          <div class="pont__code"><img src="/assets/qr-telechargement.png" width="420" height="420" loading="lazy" decoding="async" alt="QR code menant à la page de téléchargement de MIXALGO."></div>
+          <p class="pont__texte"><b>Vous êtes sur un ordinateur</b>Scannez ce code avec votre téléphone Android pour lancer le téléchargement depuis le bon appareil.</p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- ========================= FAQ ========================= -->
-  <section id="faq">
+  <section id="faq" aria-labelledby="titre-faq">
     <div class="enveloppe">
-      <p class="surtitre"><span class="losange" aria-hidden="true"></span> Questions fréquentes</p>
-      <h2>Ce qu'on nous demande</h2>
-
-      <div class="faq montee">
-        <details class="question" open>
-          <summary>Comment commencer une partie de MIXALGO ?</summary>
-          <p>Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil.</p>
-        </details>
-        <details class="question">
-          <summary>Faut-il posséder les cartes physiques pour jouer ?</summary>
-          <p>Non pour le mode solo, qui se joue entièrement dans l'application. Les cartes physiques servent au mode collectif, où un animateur annonce un numéro de trio et où les joueurs cherchent les trois cartes correspondantes sur la table.</p>
-        </details>
-        <details class="question">
-          <summary>Que veulent dire les attributs inscrits sur une carte ?</summary>
-          <p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p>
-        </details>
-        <details class="question">
-          <summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary>
-          <p>Oui. Le deck est téléchargé une seule fois au premier lancement, puis les questions sont fabriquées sur l'appareil. Une partie entière se joue sans réseau.</p>
-        </details>
-        <details class="question">
-          <summary>Que signifient les distances D1 à D5 ?</summary>
-          <p>La distance mesure l'éloignement entre les cartes d'un trio dans le graphe du jeu. En D1 les trois cartes forment une fusion directe. À partir de D2, elles sont prélevées le long d'une chaîne de fusions, ce qui rend le lien de moins en moins visible.</p>
-        </details>
-        <details class="question">
-          <summary>Combien de trios peut-on former dans une partie ?</summary>
-          <p>Une chaîne de k fusions donne au plus C(2k,2) moins 1 trios valides, soit 1 en D1, 5 en D2, 14 en D3, 27 en D4 et 44 en D5. Un deck de 76 cartes dépasse ainsi plusieurs centaines de questions distinctes.</p>
-        </details>
+      <div class="entete-section">
+        <p class="surtitre"><b>07</b> Questions fréquentes</p>
+        <h2 id="titre-faq">Ce qu'on nous demande</h2>
+      </div>
+      <div class="faq">
+        <details class="question"><summary>Comment commencer une partie de MIXALGO ?</summary><p>Installez l'application Android, créez votre compte, puis saisissez le code d'activation fourni avec votre jeu de cartes. Le code ouvre le deck correspondant et n'est utilisable que sur un seul appareil.</p></details>
+        <details class="question"><summary>Faut-il posséder les cartes physiques pour jouer ?</summary><p>Non pour le mode solo, qui se joue entièrement dans l'application. Les cartes physiques servent au mode collectif, où un animateur annonce un numéro de trio et où les joueurs cherchent les trois cartes correspondantes sur la table.</p></details>
+        <details class="question"><summary>Que veulent dire les attributs inscrits sur une carte ?</summary><p>Chaque carte porte deux ou trois mots-clés, comme « Maille », « Biotech » ou « Humain augmenté ». Ce sont des repères de lecture, pas des règles : ils aident à formuler ce que l'œil a vu. Certaines fusions se lisent entièrement dans ces attributs, d'autres pas du tout.</p></details>
+        <details class="question"><summary>MIXALGO fonctionne-t-il sans connexion internet ?</summary><p>Oui. Le deck est téléchargé une seule fois au premier lancement, puis les questions sont fabriquées sur l'appareil. Une partie entière se joue sans réseau.</p></details>
+        <details class="question"><summary>Que signifient les distances D1 à D5 ?</summary><p>La distance mesure l'éloignement entre les cartes d'un trio dans le graphe du jeu. En D1 les trois cartes forment une fusion directe. À partir de D2, elles sont prélevées le long d'une chaîne de fusions, ce qui rend le lien de moins en moins visible.</p></details>
+        <details class="question"><summary>Combien de trios peut-on former dans une partie ?</summary><p>Une chaîne de k fusions donne au plus C(2k,2) moins 1 trios valides, soit 1 en D1, 5 en D2, 14 en D3, 27 en D4 et 44 en D5. Un deck de 76 cartes dépasse ainsi plusieurs centaines de questions distinctes.</p></details>
       </div>
     </div>
   </section>
@@ -2494,25 +474,24 @@ section{ padding-block:var(--section); position:relative; }
 
 <footer class="pied">
   <div class="pied__interieur">
-    <p style="margin:0">MIXALGO &middot; Jeu d'observation visuelle</p>
-    <nav aria-label="Liens de pied de page">
+    <a class="marque" href="/"><span class="losange" aria-hidden="true"></span><span>MIX<b>ALGO</b></span></a>
+    <nav id="plan" aria-label="Plan du site">
+      <a href="#jouer">Jouer</a>
       <a href="#regle">La règle</a>
-      <a href="#anatomie">La carte</a>
+      <a href="#deck">Le deck</a>
       <a href="#distances">Les distances</a>
-      <a href="#faq">Questions fréquentes</a>
+      <a href="#collectif">Mode collectif</a>
+      <a href="#faq">Questions</a>
       <a href="https://dashboard.mixalgo.com" rel="noopener">Espace administrateur</a>
     </nav>
   </div>
 </footer>
 
-<!-- integrity : sans lui, le jour ou cdnjs sert autre chose que ce
-     fichier -- compromission, erreur de deploiement -- le navigateur
-     executerait ce « autre chose » avec tous les droits de
-     mixalgo.com. Le condensat fait echouer le chargement au lieu de
-     l'executer, et la vitrine retombe simplement sur son fond
-     degrade : monterLeCiel() renonce en silence si THREE est absent.
-     crossorigin est OBLIGATOIRE avec integrity, sinon la reponse est
-     opaque et le navigateur ne peut pas verifier le condensat. -->
+<!-- integrity : si cdnjs servait un jour autre chose que ce fichier
+     (compromission, erreur), le navigateur refuse de l'executer au
+     lieu de lui donner les droits de mixalgo.com. Le ciel renonce
+     alors en silence et le hero garde son degrade. crossorigin est
+     obligatoire avec integrity. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
         integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu"
         crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>

@@ -116,6 +116,29 @@ async def create_node(
     if not await db.get(Game, game_id):
         raise HTTPException(404, "Jeu introuvable")
 
+    # Trois cartes DISTINCTES (regle |T| = 3 du CORE). Le controle
+    # existait par accident : deux ids identiques ne ramenent qu'une
+    # ligne du SELECT plus bas, d'ou un 400 « cartes introuvables »
+    # qui faisait chercher une carte supprimee. Et il ne couvrait pas
+    # l'enfant, dont l'emettrice heritee (= produit du parent) n'est
+    # pas dans le corps de la requete. Une carte etant neutre, le
+    # studio laisse desormais choisir n'importe laquelle a chaque
+    # place : c'est ici que la regle doit tenir.
+    if body.cable_id == body.receptrice_id or (
+        body.emettrice_id and body.emettrice_id in (body.cable_id, body.receptrice_id)
+    ):
+        raise HTTPException(400, "Une fusion demande trois cartes differentes")
+    if body.parent_node_id:
+        heritee = await db.scalar(
+            select(GameNode.receptrice_id).where(GameNode.id == body.parent_node_id)
+        )
+        if heritee in (body.cable_id, body.receptrice_id):
+            raise HTTPException(
+                400,
+                "Une fusion demande trois cartes differentes : l'ingredient A "
+                "herite du parent est deja l'une des deux autres cartes",
+            )
+
     # Verifie que toutes les cartes referencees appartiennent bien
     # au jeu (evite cross-game node).
     ref_ids = [body.cable_id, body.receptrice_id]

@@ -32,6 +32,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/games_provider.dart';
 import '../admin/codes_page.dart';
 import '../admin/users_page.dart';
+import '../admin/vitrine_page.dart';
 import '../../providers/music_provider.dart';
 import '../../providers/wizard_provider.dart';
 import '../../widgets/app_logo.dart';
@@ -102,6 +103,17 @@ class GamesHubPage extends ConsumerWidget {
           // Regroupes dans un menu plutot qu'en icones separees :
           // ce sont des ecrans rarement utilises, la barre doit
           // rester lisible sur un telephone.
+          // Vitrine du site : icone directe et non entree du menu
+          // d'administration. Contrairement aux codes et comptes,
+          // c'est un ecran de contenu qu'on ouvre souvent (changer
+          // un texte, mettre une nouvelle carte en avant).
+          IconButton(
+            tooltip: 'Vitrine du site',
+            icon: const Icon(Icons.storefront_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const VitrinePage()),
+            ),
+          ),
           const _AdminMenuButton(),
           IconButton(
             tooltip: 'Se deconnecter',

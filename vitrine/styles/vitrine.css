@@ -1,0 +1,929 @@
+/* =============================================================
+   FICHIER : vitrine/styles/vitrine.css
+   ROLE    : L'habillage de la vitrine MIXALGO
+   =============================================================
+
+   PARTI PRIS
+   ----------
+   L'image d'abord. La version precedente posait le logo, un titre,
+   un paragraphe, deux boutons et quatre chiffres AVANT la premiere
+   illustration : sur un telephone, il fallait trois ecrans de texte
+   pour voir une carte. Or MIXALGO est un jeu d'OBSERVATION. Ce qui
+   doit convaincre, c'est ce qu'on voit, pas ce qu'on lit.
+
+   L'ordre de la page en decoule :
+     1. la fusion elle-meme, en grand, des le premier ecran ;
+     2. un double bandeau d'illustrations qui defile ;
+     3. une partie jouable, tout de suite ;
+     4. la regle, le deck, les distances -- en peu de mots ;
+     5. le texte long (FAQ) tout en bas, pour qui le cherche.
+
+   L'AMBIANCE
+   ----------
+   Elle n'est pas inventee : elle est prise dans les cartes. Villes
+   de nuit, neons cyan et rouges, armures de maille, orages
+   electriques. Le fond est une nuit bleu profond, les accents sont
+   les neons du logo (cyan, ambre, braise), et chaque surface vitree
+   laisse passer un peu de la lumiere des illustrations.
+
+   Un monde sombre unique, assume : pas de theme clair. Le logo est
+   une lumiere sur du noir ; le poser sur du blanc l'eteindrait.
+   ============================================================= */
+
+:root{
+  /* --- Fonds, du plus profond au plus proche ---------------- */
+  --nuit:       #05031A;
+  --voile:      #0C0930;
+  --voile-clair:#151052;
+  --abysse:     #001878;
+
+  /* --- Neons (echantillonnes dans le logo) ------------------ */
+  --cyan:       #00D8F0;
+  --cyan-doux:  #7FE9F7;
+  --ambre:      #F0A800;
+  --ambre-clair:#FFC93C;
+  --braise:     #FF2A3D;
+  --vert:       #3BE38B;
+
+  /* --- Texte : aucun gris pur, tout est biaise vers le bleu - */
+  --craie:      #EEF5FB;
+  --brume:      #A3AED6;
+  /* 5,9:1 sur --nuit : au-dessus du seuil AA (4,5) pour le petit
+     texte, tout en restant nettement en retrait de --brume. */
+  --brume-sourde:#7E88BE;
+
+  /* --- Verre, traits, ombres -------------------------------- */
+  --verre:      rgba(14, 10, 56, .62);
+  --trait:      rgba(0, 216, 240, .16);
+  --trait-fort: rgba(0, 216, 240, .42);
+  --ombre:      0 30px 80px -20px rgba(0, 4, 30, .9);
+  --halo-cyan:  0 0 0 1px rgba(0,216,240,.35), 0 0 32px rgba(0,216,240,.35);
+
+  /* --- Typographie ------------------------------------------ */
+  --titre: "Unbounded", "Trebuchet MS", sans-serif;
+  --texte: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+  /* --- Rythme ----------------------------------------------- */
+  /* 16 px de goutiere minimum sur telephone (2 x 1rem). */
+  --colonne: min(100% - 2rem, 76rem);
+  --section: clamp(4rem, 9vw, 7.5rem);
+  --rayon:   18px;
+
+  /* --- Courbes ---------------------------------------------- */
+  --sortie: cubic-bezier(.16, 1, .3, 1);
+  --rebond: cubic-bezier(.34, 1.56, .64, 1);
+
+  color-scheme: dark;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+
+body{
+  margin:0;
+  background:var(--nuit);
+  color:var(--craie);
+  font-family:var(--texte);
+  font-size:1.0625rem;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  /* clip et non hidden : hidden cree un conteneur de defilement et
+     casse position:sticky ; clip coupe sans rien creer. */
+  overflow-x:clip;
+}
+
+/* Le grain : un bruit tres fin sur toute la page, comme sur une
+   image de cinema. Sans lui, les grands aplats sombres se
+   decoupent en bandes visibles sur les ecrans 8 bits. */
+body::before{
+  content:""; position:fixed; inset:0; z-index:100; pointer-events:none;
+  opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* width/height du HTML reservent la place avant chargement ; sans
+   height:auto ils deviendraient une hauteur imposee et ecraseraient
+   l'image des que le CSS change sa largeur. */
+img{ max-width:100%; height:auto; display:block; }
+
+a{ color:var(--cyan); text-decoration-thickness:1px; text-underline-offset:3px; }
+a:hover{ color:var(--cyan-doux); }
+button{ font:inherit; color:inherit; }
+
+:focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; border-radius:6px; }
+
+::selection{ background:var(--cyan); color:var(--nuit); }
+
+.saut-lien{
+  position:absolute; left:-9999px; z-index:200;
+  background:var(--cyan); color:var(--nuit);
+  padding:.7rem 1.2rem; font-weight:600;
+}
+.saut-lien:focus{ left:1rem; top:1rem; }
+
+.enveloppe{ width:var(--colonne); margin-inline:auto; }
+
+.visuellement-cache{
+  position:absolute !important; width:1px; height:1px; overflow:hidden;
+  clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap;
+}
+
+/* =============================================================
+   TYPOGRAPHIE
+   ============================================================= */
+h1,h2,h3{ font-family:var(--titre); font-weight:900; line-height:1.04; margin:0; letter-spacing:-.02em; }
+h2{ font-size:clamp(2rem, 6.2vw, 3.6rem); }
+h3{ font-size:1.05rem; font-weight:700; letter-spacing:0; }
+
+/* Le surtitre : numero de section + intitule, en chasse fixe.
+   Le numero donne un fil a la page sans un mot de plus. */
+.surtitre{
+  display:flex; align-items:center; gap:.7rem;
+  margin:0 0 1rem;
+  font-family:var(--mono); font-size:.78rem; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--cyan);
+}
+.surtitre b{ color:var(--brume-sourde); font-weight:500; }
+.surtitre::after{
+  content:""; flex:0 0 3rem; height:1px;
+  background:linear-gradient(90deg, var(--cyan), transparent);
+}
+
+.chapeau{
+  max-width:38rem; margin:1.1rem 0 0;
+  color:var(--brume); font-size:clamp(1rem, 2.6vw, 1.15rem);
+}
+.chapeau strong{ color:var(--craie); font-weight:600; }
+
+/* Le degrade de titre : les trois neons du logo, dans l'ordre ou
+   ils apparaissent dans le mot MIXALGO. */
+.neon{
+  background:linear-gradient(92deg, var(--ambre-clair) 0%, var(--cyan) 55%, var(--vert) 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+section{ position:relative; padding-block:var(--section); }
+.entete-section{ margin-bottom:clamp(2rem, 5vw, 3.25rem); }
+
+/* =============================================================
+   BOUTONS
+   ============================================================= */
+.bouton{
+  --fond: transparent;
+  position:relative; isolation:isolate;
+  display:inline-flex; align-items:center; justify-content:center; gap:.6rem;
+  min-height:3.1rem; padding:.85rem 1.5rem;
+  border:1px solid var(--trait-fort); border-radius:999px;
+  background:var(--fond); color:var(--craie);
+  font-family:var(--titre); font-weight:700; font-size:.9rem; letter-spacing:.01em;
+  text-decoration:none; cursor:pointer; white-space:nowrap;
+  transition:transform .35s var(--sortie), box-shadow .35s var(--sortie), border-color .2s, background .2s, color .2s;
+}
+.bouton:hover{ color:var(--craie); border-color:var(--cyan); box-shadow:var(--halo-cyan); transform:translateY(-2px); }
+.bouton:active{ transform:translateY(0) scale(.98); }
+
+.bouton--plein{
+  --fond: linear-gradient(135deg, var(--ambre-clair), var(--ambre));
+  border-color:transparent; color:#1A0F00;
+  box-shadow:0 10px 30px -8px rgba(240,168,0,.65);
+}
+.bouton--plein:hover{ color:#1A0F00; border-color:transparent; box-shadow:0 14px 40px -8px rgba(240,168,0,.85); }
+
+.bouton svg{ width:1.1em; height:1.1em; flex:none; }
+
+/* =============================================================
+   L'ILLUSTRATION : la brique de toute la page
+   =============================================================
+   Une illustration originale, sans le cadre imprime de la carte
+   physique. Le bord neon est un degrade place SOUS l'image, dont
+   un pixel depasse : on obtient un liseré qui suit l'arrondi, ce
+   qu'une bordure CSS ne sait pas faire en degrade. */
+.illu{
+  --mx: 50%; --my: 30%;
+  position:relative; margin:0;
+  aspect-ratio:4 / 5;
+  border-radius:var(--rayon);
+  padding:1px;
+  background:linear-gradient(160deg, rgba(0,216,240,.75), rgba(240,168,0,.25) 45%, rgba(255,42,61,.55));
+  box-shadow:var(--ombre);
+}
+.illu img{
+  width:100%; height:100%; object-fit:cover;
+  border-radius:calc(var(--rayon) - 1px);
+  background:var(--voile);
+}
+/* Le reflet : une lumiere qui suit le pointeur (variables --mx/--my
+   ecrites par le script). Immobile au centre-haut sans script. */
+.illu::after{
+  content:""; position:absolute; inset:1px; border-radius:inherit; pointer-events:none;
+  background:radial-gradient(circle at var(--mx) var(--my), rgba(255,255,255,.22), transparent 45%);
+  mix-blend-mode:soft-light;
+}
+.illu__code{
+  position:absolute; left:.7rem; bottom:.7rem; z-index:1;
+  padding:.15rem .5rem; border-radius:6px;
+  background:rgba(5,3,26,.72); backdrop-filter:blur(6px);
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.08em; color:var(--cyan-doux);
+}
+.illu__nom{
+  position:absolute; right:.7rem; bottom:.7rem; z-index:1;
+  font-family:var(--titre); font-weight:700; font-size:.72rem; letter-spacing:.08em;
+  text-shadow:0 2px 10px rgba(0,0,0,.9);
+}
+
+/* =============================================================
+   EN-TETE
+   ============================================================= */
+.entete{
+  position:fixed; inset:0 0 auto; z-index:50;
+  transition:background .35s, backdrop-filter .35s, border-color .35s;
+  border-bottom:1px solid transparent;
+}
+.entete.est-defilee{
+  background:rgba(5,3,26,.72);
+  -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
+  border-bottom-color:var(--trait);
+}
+.entete__interieur{
+  width:var(--colonne); margin-inline:auto;
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  height:4.25rem;
+}
+.marque{
+  display:inline-flex; align-items:center; gap:.6rem;
+  font-family:var(--titre); font-weight:900; font-size:1.05rem; letter-spacing:.04em;
+  color:var(--craie); text-decoration:none;
+}
+.marque:hover{ color:var(--craie); }
+.marque b{ color:var(--cyan); font-weight:900; }
+.losange{
+  width:.6rem; height:.6rem; flex:none; transform:rotate(45deg);
+  background:var(--cyan); box-shadow:0 0 12px var(--cyan);
+}
+
+.navigation{ display:flex; align-items:center; gap:.4rem; }
+.navigation__liens{ display:none; gap:.2rem; margin-right:.6rem; }
+.navigation__liens a{
+  position:relative; padding:.5rem .75rem; border-radius:999px;
+  color:var(--brume); text-decoration:none; font-size:.92rem; font-weight:500;
+}
+.navigation__liens a:hover{ color:var(--craie); background:rgba(255,255,255,.05); }
+.navigation .bouton{ min-height:2.6rem; padding:.55rem 1.1rem; font-size:.8rem; }
+
+/* Le bouton du tiroir : trois traits qui deviennent une croix.
+   C'est un LIEN vers le plan du pied de page : sans script il
+   mene quelque part d'utile ; le script en fait un bouton. */
+.burger{
+  display:inline-grid; place-items:center;
+  width:2.75rem; height:2.75rem; border-radius:50%;
+  border:1px solid var(--trait-fort); background:rgba(5,3,26,.5);
+  color:var(--craie); cursor:pointer; text-decoration:none;
+}
+.burger span, .burger span::before, .burger span::after{
+  display:block; width:1.05rem; height:2px; border-radius:2px; background:currentColor;
+  transition:transform .35s var(--sortie), opacity .2s;
+}
+.burger span{ position:relative; }
+.burger span::before, .burger span::after{ content:""; position:absolute; left:0; }
+.burger span::before{ top:-6px; }
+.burger span::after{ top:6px; width:.7rem; }
+.tiroir-ouvert .entete{ background:transparent; border-bottom-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
+.tiroir-ouvert .burger span{ background:transparent; }
+.tiroir-ouvert .burger span::before{ transform:translateY(6px) rotate(45deg); }
+.tiroir-ouvert .burger span::after{ width:1.05rem; transform:translateY(-6px) rotate(-45deg); }
+
+@media (min-width: 64rem){
+  .navigation__liens{ display:flex; }
+}
+
+/* =============================================================
+   LE TIROIR
+   =============================================================
+   Un panneau qui glisse depuis la droite, plein ecran sur
+   telephone. Ferme, il est `hidden` : absent de l'arbre
+   d'accessibilite et de l'ordre de tabulation, pas seulement
+   invisible. Le script retire `hidden`, attend une image, puis
+   pose `est-ouvert` : sans cette image d'ecart, la transition ne
+   se jouerait pas (l'element passerait de "absent" a "ouvert"
+   sans etat intermediaire a animer). */
+/* z-index SOUS l'en-tete (50) : le bouton du tiroir, devenu croix,
+   reste visible et atteignable par-dessus le panneau. */
+.tiroir{
+  position:fixed; inset:0; z-index:45;
+  display:flex; justify-content:flex-end;
+}
+.tiroir[hidden]{ display:none; }
+.tiroir__fond{
+  position:absolute; inset:0; border:0; padding:0; cursor:pointer;
+  background:rgba(2,1,14,.55);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  opacity:0; transition:opacity .4s var(--sortie);
+}
+.tiroir__panneau{
+  position:relative; width:min(100%, 30rem); height:100%;
+  display:flex; flex-direction:column;
+  padding:5.5rem clamp(1.25rem, 5vw, 2.5rem) 2rem;
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgba(0,216,240,.18), transparent 60%),
+    radial-gradient(90% 50% at 0% 100%, rgba(255,42,61,.16), transparent 60%),
+    var(--voile);
+  border-left:1px solid var(--trait-fort);
+  box-shadow:-30px 0 80px rgba(0,0,0,.6);
+  transform:translateX(100%);
+  transition:transform .55s var(--sortie);
+  overflow-y:auto; overscroll-behavior:contain;
+}
+.tiroir.est-ouvert .tiroir__fond{ opacity:1; }
+.tiroir.est-ouvert .tiroir__panneau{ transform:none; }
+
+.tiroir__liens{ list-style:none; margin:0; padding:0; counter-reset:lien; }
+.tiroir__liens li{
+  counter-increment:lien;
+  opacity:0; transform:translateX(2rem);
+  transition:opacity .45s var(--sortie), transform .55s var(--sortie);
+}
+/* Les liens arrivent en cascade : chacun 50 ms apres le precedent. */
+.tiroir.est-ouvert .tiroir__liens li{ opacity:1; transform:none; }
+.tiroir.est-ouvert .tiroir__liens li:nth-child(1){ transition-delay:.08s; }
+.tiroir.est-ouvert .tiroir__liens li:nth-child(2){ transition-delay:.13s; }
+.tiroir.est-ouvert .tiroir__liens li:nth-child(3){ transition-delay:.18s; }
+.tiroir.est-ouvert .tiroir__liens li:nth-child(4){ transition-delay:.23s; }
+.tiroir.est-ouvert .tiroir__liens li:nth-child(5){ transition-delay:.28s; }
+.tiroir.est-ouvert .tiroir__liens li:nth-child(6){ transition-delay:.33s; }
+.tiroir__liens a{
+  display:flex; align-items:baseline; gap:1rem;
+  padding:.85rem 0; border-bottom:1px solid var(--trait);
+  font-family:var(--titre); font-weight:700; font-size:clamp(1.35rem, 5.5vw, 1.75rem);
+  color:var(--craie); text-decoration:none;
+  transition:color .2s, padding-left .35s var(--sortie);
+}
+.tiroir__liens a::before{
+  content:"0" counter(lien);
+  font-family:var(--mono); font-size:.75rem; font-weight:500; color:var(--cyan);
+}
+.tiroir__liens a:hover{ color:var(--cyan); padding-left:.5rem; }
+
+.tiroir__cartes{
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:.6rem;
+  margin:auto 0 1.5rem; padding-top:2rem;
+}
+.tiroir__cartes .illu{ --rayon:12px; box-shadow:none; }
+.tiroir__cartes .illu:nth-child(2){ transform:translateY(-.75rem); }
+.tiroir .bouton{ width:100%; }
+
+/* =============================================================
+   LE CURSEUR
+   =============================================================
+   Actif seulement si le script le decide : souris (pointer:fine),
+   pas de mouvement reduit. Sur tactile il n'y a pas de curseur a
+   remplacer ; sous mouvement reduit, un anneau qui suit avec
+   retard est precisement le genre d'effet qu'on a demande a ne
+   plus voir. Le curseur systeme reste alors en place. */
+.curseur{ display:none; }
+html.curseur-actif .curseur{ display:block; }
+html.curseur-actif,
+html.curseur-actif a,
+html.curseur-actif button,
+html.curseur-actif summary,
+html.curseur-actif label{ cursor:none; }
+
+.curseur__point, .curseur__anneau{
+  position:fixed; left:0; top:0; z-index:300; pointer-events:none;
+  border-radius:50%;
+  will-change:transform;
+}
+.curseur__point{
+  width:6px; height:6px; margin:-3px 0 0 -3px;
+  background:var(--cyan); box-shadow:0 0 10px var(--cyan);
+}
+.curseur__anneau{
+  width:38px; height:38px; margin:-19px 0 0 -19px;
+  display:grid; place-items:center;
+  border:1.5px solid rgba(0,216,240,.7);
+  transition:width .3s var(--sortie), height .3s var(--sortie), margin .3s var(--sortie),
+             background .25s, border-color .25s, border-radius .3s;
+}
+.curseur__libelle{
+  font-family:var(--mono); font-size:.62rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--nuit); opacity:0; transition:opacity .2s;
+}
+/* Sur un lien ou un bouton : l'anneau s'ouvre et se remplit. */
+.curseur.est-lien .curseur__anneau{
+  width:58px; height:58px; margin:-29px 0 0 -29px;
+  background:rgba(0,216,240,.14); border-color:var(--cyan);
+}
+/* Sur une carte : l'anneau devient un losange plein qui annonce
+   l'action (« Voir », « Choisir »). Le losange est la forme du logo. */
+.curseur.est-carte .curseur__anneau{
+  width:76px; height:76px; margin:-38px 0 0 -38px;
+  background:var(--cyan); border-color:var(--cyan); border-radius:22%;
+  transform:rotate(45deg);
+}
+.curseur.est-carte .curseur__libelle{ opacity:1; transform:rotate(-45deg); }
+.curseur.est-carte .curseur__point{ opacity:0; }
+.curseur.est-presse .curseur__anneau{ width:28px; height:28px; margin:-14px 0 0 -14px; }
+.curseur.est-cache .curseur__point,
+.curseur.est-cache .curseur__anneau{ opacity:0; }
+
+/* =============================================================
+   HERO
+   ============================================================= */
+.hero{
+  min-height:100svh;
+  display:grid; align-items:center;
+  padding:5.25rem 0 3rem;
+  overflow:hidden; isolation:isolate;
+}
+/* Le ciel WebGL, et sous lui un degrade qui suffit seul si WebGL
+   manque : la page n'a jamais de trou noir. */
+.hero::before{
+  content:""; position:absolute; inset:0; z-index:-2;
+  background:
+    radial-gradient(60% 50% at 70% 40%, rgba(0,24,120,.9), transparent 70%),
+    radial-gradient(40% 40% at 20% 80%, rgba(255,42,61,.18), transparent 70%),
+    var(--nuit);
+}
+#ciel{ position:absolute; inset:0; z-index:-1; width:100%; height:100%; opacity:.9; }
+.hero__lueur{
+  position:absolute; z-index:-1; inset:auto -10% -30% -10%; height:60%;
+  background:radial-gradient(50% 60% at 50% 100%, rgba(0,216,240,.22), transparent 70%);
+  pointer-events:none;
+}
+
+.hero__grille{
+  width:var(--colonne); margin-inline:auto;
+  display:grid; gap:clamp(1.5rem, 4vw, 3rem);
+  grid-template-columns:1fr;
+}
+/* Sur telephone, l'IMAGE passe devant le texte : c'est tout
+   l'objet de cette refonte. */
+.hero__visuel{ order:-1; }
+
+.hero h1{
+  font-size:clamp(2.1rem, 8.6vw, 3.7rem);
+  text-wrap:balance;
+}
+.hero h1 em{ font-style:normal; display:block; }
+.hero__accroche{ margin:1rem 0 0; max-width:32rem; color:var(--brume); font-size:clamp(1rem, 2.8vw, 1.15rem); }
+.hero__actions{ display:flex; flex-wrap:wrap; gap:.75rem; margin-top:1.6rem; }
+.hero__puces{
+  display:flex; flex-wrap:wrap; gap:.4rem 1.1rem; margin:1.4rem 0 0; padding:0; list-style:none;
+  font-family:var(--mono); font-size:.74rem; letter-spacing:.06em; color:var(--brume-sourde);
+}
+.hero__puces li::before{ content:"◆ "; color:var(--cyan); font-size:.6rem; vertical-align:2px; }
+
+@media (min-width: 60rem){
+  .hero__grille{ grid-template-columns:1fr 1.08fr; align-items:center; }
+  .hero__visuel{ order:0; }
+}
+
+/* ---- L'eventail : E + C = R, en grand ---------------------- */
+.eventail{
+  position:relative;
+  width:min(100%, 38rem); margin-inline:auto;
+  aspect-ratio:1.38;
+  perspective:1400px;
+}
+.eventail__carte{
+  position:absolute; top:12%; width:35%;
+  transition:transform .9s var(--sortie);
+}
+.eventail__carte .illu{ transition:transform .5s var(--sortie); }
+/* Lecture de gauche a droite, comme l'equation : E + C = R. La
+   reponse, a droite, est plus grande et passe DEVANT : c'est la
+   carte qui "apparait". */
+.eventail__carte--e{ left:0;   top:15%; transform:rotate(-7deg); }
+.eventail__carte--c{ left:50%; top:9%;  transform:translateX(-58%) rotate(2deg); }
+.eventail__carte--r{ right:0;  top:0; width:40%; z-index:2; transform:rotate(5deg); }
+.eventail__carte--r .illu{
+  box-shadow:0 0 0 1px rgba(0,216,240,.45), 0 0 60px rgba(0,216,240,.35), var(--ombre);
+}
+.eventail__op{
+  position:absolute; z-index:3; top:50%;
+  display:grid; place-items:center;
+  width:2.4rem; height:2.4rem; border-radius:50%;
+  background:var(--nuit); border:1px solid var(--trait-fort);
+  font-family:var(--titre); font-weight:900; font-size:1.1rem; color:var(--cyan);
+  box-shadow:0 0 20px rgba(0,216,240,.4);
+}
+.eventail__op--plus{ left:28.5%; }
+.eventail__op--egal{ left:59.5%; color:var(--ambre-clair); box-shadow:0 0 20px rgba(240,168,0,.4); }
+.eventail__roles{
+  position:absolute; left:0; right:0; bottom:0;
+  display:flex; justify-content:space-between;
+  font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--brume-sourde);
+}
+.eventail__roles span:nth-child(3){ color:var(--cyan); }
+
+/* L'entree en scene : les deux parents arrivent des bords, la
+   troisieme carte se leve au moment ou ils se touchent. Joue une
+   fois, au chargement. Le script ajoute `.est-jouee` ; sans lui,
+   l'eventail est simplement pose, deja complet. */
+.anime .eventail:not(.est-jouee) .eventail__carte--e{ transform:translateX(-30%) rotate(-20deg); opacity:0; }
+.anime .eventail:not(.est-jouee) .eventail__carte--c{ transform:translateX(-58%) translateY(-25%) rotate(-10deg); opacity:0; }
+.anime .eventail:not(.est-jouee) .eventail__carte--r{ transform:translateX(18%) scale(.8) rotate(18deg); opacity:0; }
+.anime .eventail:not(.est-jouee) .eventail__op{ opacity:0; transform:scale(.4); }
+.eventail__carte, .eventail__op{ transition:transform 1s var(--sortie), opacity .8s var(--sortie); }
+.eventail.est-jouee .eventail__carte--r{ transition-delay:.45s; }
+.eventail.est-jouee .eventail__op{ transition-delay:.85s; transition-timing-function:var(--rebond); }
+
+/* =============================================================
+   LE DOUBLE BANDEAU
+   ============================================================= */
+.defile{ padding-block:clamp(1.5rem, 4vw, 2.5rem); overflow:hidden; }
+.defile__rangee{ display:flex; width:max-content; gap:clamp(.6rem, 1.6vw, 1rem); }
+.defile__rangee + .defile__rangee{ margin-top:clamp(.6rem, 1.6vw, 1rem); }
+.defile__rangee .illu{
+  width:clamp(8.5rem, 22vw, 13rem); flex:none; --rayon:14px;
+  box-shadow:0 18px 40px -18px rgba(0,0,0,.9);
+}
+/* La rangee contient DEUX fois la meme suite : on la translate de
+   -50 %, soit exactement une suite, et la boucle est invisible. */
+.defile__rangee{ animation:defiler 80s linear infinite; }
+.defile__rangee--inverse{ animation-direction:reverse; animation-duration:95s; }
+.defile:hover .defile__rangee{ animation-play-state:paused; }
+@keyframes defiler{ to{ transform:translateX(-50%); } }
+
+/* Les bords s'effacent dans la nuit au lieu de couper net. */
+.defile{
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+          mask-image:linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* =============================================================
+   LA PARTIE DE DEMONSTRATION
+   ============================================================= */
+.demo{
+  background:
+    radial-gradient(70% 60% at 50% 0%, rgba(0,24,120,.55), transparent 70%),
+    linear-gradient(180deg, transparent, rgba(12,9,48,.6) 30%, transparent);
+}
+.jeu{
+  position:relative; overflow:hidden;
+  border-radius:28px; padding:clamp(1rem, 3.5vw, 2.25rem);
+  background:var(--verre);
+  -webkit-backdrop-filter:blur(18px); backdrop-filter:blur(18px);
+  border:1px solid var(--trait-fort);
+  box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 40px 120px -40px rgba(0,216,240,.35);
+}
+/* Une ligne de balayage, tres lente, sur le cadre de jeu : le
+   rappel des ecrans des villes de nuit des cartes. */
+.jeu::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 4px);
+}
+
+.jeu__hud{
+  position:relative;
+  display:grid; grid-template-columns:repeat(3, auto); justify-content:space-between; align-items:end; gap:.5rem;
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--brume-sourde);
+}
+.jeu__hud b{
+  display:block; margin-top:.15rem;
+  font-family:var(--titre); font-size:clamp(1.15rem, 4vw, 1.6rem); letter-spacing:0; color:var(--craie);
+}
+.jeu__hud > div:nth-child(2){ text-align:center; }
+.jeu__hud > div:nth-child(3){ text-align:right; }
+.jeu__temps{
+  position:relative; height:4px; margin:.9rem 0 clamp(1rem, 3vw, 1.6rem);
+  border-radius:4px; background:rgba(255,255,255,.08); overflow:hidden;
+}
+.jeu__temps i{
+  position:absolute; inset:0; transform-origin:left;
+  background:linear-gradient(90deg, var(--braise), var(--ambre) 40%, var(--cyan));
+  box-shadow:0 0 12px var(--cyan);
+}
+
+.jeu__plateau{
+  position:relative;
+  display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center;
+  gap:clamp(.35rem, 1.8vw, 1rem);
+  max-width:40rem; margin-inline:auto;
+}
+.jeu__op{
+  font-family:var(--titre); font-weight:900; font-size:clamp(1.1rem, 4vw, 2rem);
+  color:var(--cyan); text-shadow:0 0 18px var(--cyan);
+}
+.jeu__op--egal{ color:var(--ambre-clair); text-shadow:0 0 18px var(--ambre); }
+
+/* La case mystere : une carte retournee, son dos frappe du losange. */
+.jeu__mystere{
+  position:relative; aspect-ratio:4 / 5; border-radius:var(--rayon);
+  perspective:900px;
+}
+.jeu__mystere-face, .jeu__mystere-dos{
+  position:absolute; inset:0; border-radius:inherit;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  transition:transform .7s var(--sortie);
+}
+.jeu__mystere-dos{
+  display:grid; place-items:center;
+  border:1px dashed var(--trait-fort);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,216,240,.18), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(0,216,240,.06) 0 10px, transparent 10px 20px),
+    var(--voile);
+}
+.jeu__mystere-dos span{
+  width:28%; aspect-ratio:1; transform:rotate(45deg);
+  border:2px solid var(--cyan); box-shadow:0 0 24px var(--cyan), inset 0 0 18px rgba(0,216,240,.5);
+  animation:pulser 2.4s ease-in-out infinite;
+}
+.jeu__mystere-dos span::after{
+  content:"?"; display:grid; place-items:center; height:100%;
+  transform:rotate(-45deg);
+  font-family:var(--titre); font-weight:900; font-size:clamp(1rem, 4vw, 1.8rem); color:var(--cyan);
+}
+@keyframes pulser{ 50%{ box-shadow:0 0 40px var(--cyan), inset 0 0 26px rgba(0,216,240,.7); } }
+.jeu__mystere-face{ transform:rotateY(180deg); }
+.jeu__mystere.est-revele .jeu__mystere-face{ transform:none; }
+.jeu__mystere.est-revele .jeu__mystere-dos{ transform:rotateY(-180deg); }
+
+.jeu__consigne{
+  margin:clamp(1.1rem, 3vw, 1.6rem) 0 .9rem; text-align:center;
+  font-family:var(--titre); font-weight:700; font-size:clamp(.95rem, 3vw, 1.15rem);
+  min-height:1.6em;
+}
+.jeu__consigne.est-juste{ color:var(--vert); }
+.jeu__consigne.est-faux{ color:var(--braise); }
+
+.jeu__choix{
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:clamp(.55rem, 2vw, 1rem);
+  max-width:40rem; margin-inline:auto; padding:0; list-style:none;
+}
+@media (min-width: 40rem){ .jeu__choix{ grid-template-columns:repeat(4, 1fr); } }
+
+.choix{
+  position:relative; width:100%; padding:0; border:0; background:none; cursor:pointer;
+  border-radius:var(--rayon);
+  transition:transform .35s var(--sortie), opacity .3s, filter .3s;
+}
+.choix .illu{ transition:box-shadow .3s, transform .35s var(--sortie); }
+.choix:hover .illu, .choix:focus-visible .illu{ transform:translateY(-6px); box-shadow:var(--halo-cyan), var(--ombre); }
+.choix:focus-visible{ outline:none; }
+.choix__touche{
+  position:absolute; top:.55rem; right:.55rem; z-index:2;
+  display:grid; place-items:center; width:1.6rem; height:1.6rem; border-radius:7px;
+  background:rgba(5,3,26,.75); border:1px solid var(--trait-fort);
+  font-family:var(--mono); font-size:.72rem; color:var(--cyan-doux);
+}
+@media (pointer: coarse){ .choix__touche{ display:none; } }
+.choix[disabled]{ cursor:default; }
+.jeu.est-repondu .choix:not(.est-juste):not(.est-faux){ opacity:.35; filter:saturate(.3); }
+.choix.est-juste .illu{ box-shadow:0 0 0 2px var(--vert), 0 0 50px rgba(59,227,139,.6); transform:translateY(-6px) scale(1.03); }
+.choix.est-faux .illu{ box-shadow:0 0 0 2px var(--braise), 0 0 40px rgba(255,42,61,.55); }
+.choix.est-faux{ animation:secouer .45s; }
+@keyframes secouer{ 20%,60%{ transform:translateX(-7px); } 40%,80%{ transform:translateX(7px); } }
+
+/* L'eclair de fusion : un flash radial derriere le plateau. */
+.jeu__eclair{
+  position:absolute; inset:0; pointer-events:none; opacity:0;
+  background:radial-gradient(40% 50% at 50% 30%, rgba(59,227,139,.4), transparent 70%);
+}
+.jeu.est-gagne .jeu__eclair{ animation:eclair .9s var(--sortie); }
+@keyframes eclair{ 20%{ opacity:1; } }
+
+/* Ecran de fin : par-dessus le plateau, dans le meme cadre. */
+.jeu__fin{
+  position:absolute; inset:0; z-index:5;
+  display:grid; place-items:center; text-align:center; padding:1.5rem;
+  background:rgba(5,3,26,.88);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.jeu__fin[hidden]{ display:none; }
+.jeu__fin h3{ font-size:clamp(1.5rem, 5vw, 2.4rem); font-weight:900; }
+.jeu__fin p{ color:var(--brume); margin:.7rem auto 1.4rem; max-width:28rem; }
+.jeu__fin .score{ font-family:var(--titre); font-size:clamp(3rem, 12vw, 5.5rem); font-weight:900; line-height:1; }
+.jeu__fin-actions{ display:flex; flex-wrap:wrap; justify-content:center; gap:.7rem; }
+
+.jeu__sans-script{ text-align:center; color:var(--brume-sourde); font-size:.9rem; margin:1.2rem 0 0; }
+.js .jeu__sans-script{ display:none; }
+
+/* =============================================================
+   LA REGLE
+   ============================================================= */
+.regle__trio{
+  display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:start;
+  gap:clamp(.4rem, 2vw, 1.2rem);
+  max-width:52rem;
+}
+.regle__trio figure{ margin:0; }
+.regle__trio figcaption{ margin-top:.75rem; }
+.regle__role{
+  display:block; font-family:var(--mono); font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan);
+}
+.regle__nom{ display:block; font-family:var(--titre); font-weight:700; font-size:clamp(.8rem, 2.4vw, 1rem); }
+.regle__trio .jeu__op{ margin-top:38%; }
+.regle__trio.est-active figure{ animation:basculer .7s var(--sortie); }
+@keyframes basculer{ 40%{ transform:rotateY(80deg) scale(.95); opacity:.2; } }
+.regle__lecture{ max-width:40rem; margin:1.5rem 0 1rem; color:var(--brume); min-height:3.4em; }
+.regle__lecture strong{ color:var(--ambre-clair); }
+.regle__pilote{ display:flex; flex-wrap:wrap; align-items:center; gap:1rem; }
+.regle__legende{ margin:0; font-family:var(--mono); font-size:.75rem; color:var(--brume-sourde); }
+
+@media (min-width: 60rem){
+  .regle__mise{ display:grid; grid-template-columns:.8fr 1.2fr; gap:4rem; align-items:center; }
+}
+
+/* =============================================================
+   LE DECK
+   ============================================================= */
+.grille-deck{
+  display:grid; gap:clamp(.6rem, 1.8vw, 1.1rem);
+  grid-template-columns:repeat(2, 1fr);
+}
+@media (min-width: 36rem){ .grille-deck{ grid-template-columns:repeat(3, 1fr); } }
+@media (min-width: 56rem){ .grille-deck{ grid-template-columns:repeat(4, 1fr); } }
+/* Une carte sur cinq occupe deux lignes : le rythme d'une mosaique
+   plutot que la regularite d'un tableur. */
+@media (min-width: 56rem){
+  .grille-deck > :nth-child(5n+1){ grid-row:span 2; }
+  .grille-deck > :nth-child(5n+1) .vignette,
+  .grille-deck > :nth-child(5n+1) .illu{ height:100%; aspect-ratio:auto; }
+}
+.vignette{
+  display:block; width:100%; padding:0; border:0; background:none; cursor:zoom-in;
+  border-radius:var(--rayon); text-align:left;
+}
+.vignette .illu{ transition:transform .5s var(--sortie), box-shadow .3s; }
+.vignette:hover .illu{ transform:translateY(-5px); box-shadow:var(--halo-cyan), var(--ombre); }
+.grille-deck .est-replie{ display:none; }
+.deck__pied{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; margin-top:1.75rem; }
+.deck__etat{ margin:0; font-family:var(--mono); font-size:.78rem; color:var(--brume-sourde); }
+
+/* ---- La visionneuse ---------------------------------------- */
+.visionneuse{
+  width:100%; height:100%; max-width:none; max-height:none; margin:0; padding:0; border:0;
+  background:transparent; color:var(--craie);
+}
+.visionneuse::backdrop{ background:rgba(2,1,14,.9); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+.visionneuse__cadre{
+  height:100%; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.5rem;
+  padding:4rem clamp(.5rem, 3vw, 2rem) 2rem;
+}
+.visionneuse figure{ margin:0; justify-self:center; display:grid; gap:.9rem; justify-items:center; }
+.visionneuse img{
+  max-height:min(78vh, 60rem); width:auto; max-width:min(100%, 48rem);
+  border-radius:var(--rayon); box-shadow:0 0 0 1px var(--trait-fort), 0 30px 100px rgba(0,0,0,.8);
+}
+.visionneuse figcaption{ font-family:var(--mono); font-size:.85rem; letter-spacing:.1em; color:var(--brume); }
+.rond{
+  display:grid; place-items:center; width:3rem; height:3rem; border-radius:50%;
+  border:1px solid var(--trait-fort); background:rgba(5,3,26,.7); cursor:pointer;
+  transition:border-color .2s, box-shadow .2s;
+}
+.rond:hover{ border-color:var(--cyan); box-shadow:var(--halo-cyan); }
+.rond svg{ width:1.2rem; height:1.2rem; }
+.visionneuse__fermer{ position:fixed; top:1rem; right:1rem; }
+@media (max-width: 40rem){
+  .visionneuse__cadre{ grid-template-columns:1fr; }
+  .visionneuse__cadre > .rond{ position:fixed; bottom:1.25rem; }
+  .visionneuse__cadre > .rond:first-child{ left:1.25rem; }
+  .visionneuse__cadre > .rond:last-child{ right:1.25rem; }
+}
+
+/* =============================================================
+   LES DISTANCES
+   ============================================================= */
+.distances{
+  display:grid; gap:.7rem; padding:0; margin:0; list-style:none;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+}
+.distance{
+  position:relative; display:flex; flex-direction:column; justify-content:flex-end;
+  min-height:clamp(9rem, 26vw, 14rem); padding:.8rem;
+  border-radius:16px; border:1px solid var(--trait); background:var(--verre); overflow:hidden;
+}
+/* La jauge monte depuis le bas : plus la distance est grande, plus
+   la colonne est pleine. Lisible d'un coup d'oeil, sans legende. */
+.distance::before{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:var(--plein);
+  background:linear-gradient(180deg, rgba(0,216,240,.32), rgba(0,216,240,.04));
+  border-top:1px solid var(--cyan);
+}
+.distance > *{ position:relative; }
+.distance__cle{ font-family:var(--titre); font-weight:900; font-size:clamp(1.1rem, 4vw, 2rem); }
+.distance__valeur{ font-family:var(--mono); font-size:.72rem; color:var(--brume); }
+.distances__note{ margin:1.2rem 0 0; color:var(--brume-sourde); font-size:.92rem; max-width:44rem; }
+
+/* =============================================================
+   LE MODE COLLECTIF
+   ============================================================= */
+.collectif__mise{ display:grid; gap:2.5rem; align-items:center; }
+@media (min-width: 60rem){ .collectif__mise{ grid-template-columns:1fr 1fr; gap:4rem; } }
+/* Les cartes PHYSIQUES, cadre compris : c'est le seul endroit de la
+   page ou on les montre telles qu'on les tient, et c'est voulu. */
+.table{
+  position:relative; aspect-ratio:1.3; max-width:34rem; width:100%; margin-inline:auto;
+  border-radius:28px;
+  background:
+    radial-gradient(70% 70% at 50% 50%, rgba(240,168,0,.18), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 2px, transparent 2px 9px),
+    #120a24;
+  border:1px solid rgba(240,168,0,.25);
+}
+.table img{
+  position:absolute; width:30%; border-radius:10px; box-shadow:0 20px 40px rgba(0,0,0,.7);
+}
+.table img:nth-child(1){ left:8%;  top:14%; transform:rotate(-12deg); }
+.table img:nth-child(2){ left:35%; top:8%;  transform:rotate(3deg); }
+.table img:nth-child(3){ right:8%; top:18%; transform:rotate(14deg); }
+
+/* =============================================================
+   COMMENCER + TELECHARGER
+   ============================================================= */
+.etapes{ display:grid; gap:1rem; padding:0; margin:0 0 2.5rem; list-style:none; counter-reset:etape; }
+@media (min-width: 48rem){ .etapes{ grid-template-columns:repeat(3, 1fr); } }
+.etape{
+  counter-increment:etape;
+  padding:1.3rem; border-radius:18px; border:1px solid var(--trait); background:var(--verre);
+}
+.etape::before{
+  content:"0" counter(etape); display:block; margin-bottom:.6rem;
+  font-family:var(--titre); font-weight:900; font-size:1.6rem; color:var(--cyan);
+}
+.etape p{ margin:.4rem 0 0; color:var(--brume); font-size:.95rem; }
+
+.telecharger{
+  position:relative; overflow:hidden; text-align:center;
+  padding:clamp(2rem, 6vw, 4rem) clamp(1.25rem, 4vw, 3rem);
+  border-radius:32px; border:1px solid var(--trait-fort);
+  background:
+    radial-gradient(60% 80% at 50% 0%, rgba(0,216,240,.25), transparent 70%),
+    radial-gradient(50% 60% at 50% 100%, rgba(240,168,0,.18), transparent 70%),
+    var(--voile);
+}
+.telecharger h2{ font-size:clamp(1.8rem, 6vw, 3.2rem); }
+.telecharger__texte{ color:var(--brume); max-width:32rem; margin:1rem auto 1.6rem; }
+.telecharger__actions{ display:flex; flex-wrap:wrap; justify-content:center; gap:.75rem; }
+.telecharger__mentions{ margin:1rem 0 0; font-family:var(--mono); font-size:.74rem; color:var(--brume-sourde); }
+.pont{
+  display:flex; align-items:center; justify-content:center; gap:1.2rem; text-align:left;
+  max-width:30rem; margin:2rem auto 0; padding:1rem; border-radius:18px;
+  border:1px solid var(--trait); background:rgba(5,3,26,.5);
+}
+.pont__code{ flex:none; width:6.5rem; padding:.4rem; border-radius:10px; background:#fff; }
+.pont__texte{ margin:0; font-size:.9rem; color:var(--brume); }
+.pont__texte b{ display:block; color:var(--craie); margin-bottom:.2rem; }
+
+/* =============================================================
+   FAQ
+   ============================================================= */
+.faq{ display:grid; gap:.6rem; max-width:52rem; }
+.question{ border-radius:16px; border:1px solid var(--trait); background:var(--verre); }
+.question summary{
+  display:flex; justify-content:space-between; gap:1rem; align-items:center;
+  padding:1rem 1.2rem; cursor:pointer; list-style:none;
+  font-weight:600;
+}
+.question summary::-webkit-details-marker{ display:none; }
+.question summary::after{
+  content:"+"; flex:none; font-family:var(--titre); font-size:1.2rem; color:var(--cyan);
+  transition:transform .3s var(--sortie);
+}
+.question[open] summary::after{ transform:rotate(45deg); }
+.question p{ margin:0; padding:0 1.2rem 1.1rem; color:var(--brume); }
+
+/* =============================================================
+   PIED
+   ============================================================= */
+.pied{ border-top:1px solid var(--trait); padding:2.5rem 0 3rem; }
+.pied__interieur{
+  width:var(--colonne); margin-inline:auto;
+  display:flex; flex-wrap:wrap; gap:1.25rem 2rem; justify-content:space-between; align-items:center;
+  color:var(--brume-sourde); font-size:.9rem;
+}
+.pied nav{ display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; }
+.pied a{ color:var(--brume); text-decoration:none; }
+.pied a:hover{ color:var(--cyan); }
+
+/* =============================================================
+   ARRIVEES AU DEFILEMENT
+   =============================================================
+   `.anime` est posee dans le <head> par un script en ligne (avec
+   son minuteur de secours) ; `.est-visible` par l'observateur. Sans
+   script : aucune des deux classes, tout est visible. */
+.anime .montee{ opacity:0; transform:translateY(28px); transition:opacity .9s var(--sortie), transform .9s var(--sortie); }
+.anime .montee.est-visible{ opacity:1; transform:none; }
+
+/* =============================================================
+   MOUVEMENT REDUIT
+   ============================================================= */
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior:auto; }
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  /* Le bandeau ne defile plus : il devient une rangee qu'on fait
+     glisser soi-meme. */
+  .defile{ overflow-x:auto; -webkit-mask-image:none; mask-image:none; }
+  .defile__rangee{ animation:none; }
+  .defile__rangee [aria-hidden="true"]{ display:none; }
+}
+
+/* L'ecran de depart laisse VOIR le plateau : les cartes d'exemple
+   sont l'invitation, le voile ne fait que poser la question. */
+#jeu-debut{
+  background:radial-gradient(60% 60% at 50% 55%, rgba(5,3,26,.85), rgba(5,3,26,.35));
+  -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+}

@@ -33,6 +33,8 @@ from .played_nodes.routes import router as played_nodes_router
 from .profiles.routes import router as profiles_router
 from .public.routes import router as public_router
 from .sessions_history.routes import router as sessions_history_router
+from .site.routes import admin_router as site_admin_router
+from .site.routes import public_router as site_public_router
 from .stars.routes import router as stars_router
 from .unlocked_cards.routes import router as unlocked_cards_router
 from .user_games.routes import router as user_games_router
@@ -109,6 +111,10 @@ def create_app() -> FastAPI:
     app.include_router(nodes_router,       prefix="/api",        tags=["nodes"])
     app.include_router(public_router,      prefix="/api/public", tags=["public"])
     app.include_router(admin_users_router, prefix="/api/admin",  tags=["admin-users"])
+    # Contenu editable de la vitrine : lu par mixalgo.com, publie
+    # depuis le studio. Deux prefixes, un seul module (app/site/).
+    app.include_router(site_public_router, prefix="/api/public/site", tags=["site"])
+    app.include_router(site_admin_router,  prefix="/api/admin/site",  tags=["site"])
 
     # ----- Routers JOUEUR (porte depuis Supabase) -----
     # Profil + wallet etoiles : GET/PATCH /api/me/profile.

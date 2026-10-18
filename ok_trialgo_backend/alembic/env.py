@@ -21,6 +21,7 @@ from app.config import settings
 from app.db import Base
 from app.games.models import Game  # noqa: F401
 from app.nodes.models import GameNode  # noqa: F401
+from app.site.models import SiteContent  # noqa: F401
 
 config = context.config
 # Injecte l'URL DB depuis .env (driver psycopg2 sync requis par Alembic).
