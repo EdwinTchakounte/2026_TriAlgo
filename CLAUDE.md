@@ -89,6 +89,14 @@ Il n'y a **pas** de module `app/play/` : la migration `0004_reset_play_extend_us
 `user_games` + `sessions_history` (`/api/me/sessions`). La section « Play » du README backend
 est obsolète sur ce point.
 
+### Dependances figees
+
+`requirements.lock.txt` fige les versions installees dans l'image ; le Dockerfile
+n'installe que lui. `pyproject.toml` declare, le lock fige. L'ancien `pip-compile`
+au build rendait chaque image differente et, le 2026-10-18, ne terminait plus
+(99 % CPU) : le deploiement etait bloque par un calcul. Mise a jour volontaire :
+`pip-compile --upgrade --output-file requirements.lock.txt pyproject.toml`.
+
 ### Stockage des cartes
 
 L'abstraction `CardStorage` (`app/storage/base.py`) a deux implémentations, choisies par

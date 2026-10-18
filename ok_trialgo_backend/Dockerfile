@@ -19,11 +19,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY pyproject.toml .
-# Genere requirements.txt depuis pyproject.toml (sans dev-deps).
-RUN pip install --no-cache-dir pip-tools \
-    && pip-compile --quiet --output-file requirements.txt pyproject.toml \
-    && pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+# Versions FIGEES (requirements.lock.txt), plus de resolution au build.
+# Le pip-compile qui tournait ici rendait chaque build different, et le
+# 2026-10-18 il ne terminait plus du tout (99 % CPU, plus de dix
+# minutes). Voir l'en-tete de requirements.lock.txt pour le mettre a
+# jour volontairement.
+COPY requirements.lock.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.lock.txt
 
 # ---------- STAGE 2 : runtime ----------
 FROM python:3.12-slim
