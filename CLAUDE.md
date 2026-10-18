@@ -661,11 +661,12 @@ ailleurs, et la deduction de libelle a ses tests unitaires.
 - L'app joueur en Flutter web : `device_info_plus` n'y fournit pas d'identifiant stable, donc le
   binding « un code d'activation = un appareil » ne tient pas. Le studio admin en web, lui, est
   sans problème.
-- **Images MinIO introuvables sur quay.io** (constaté le 2026-10-18) : les tags
-  épinglés dans `docker-compose.yml` et `docker-compose.prod.yml`
-  (`minio:RELEASE.2025-09-07T16-13-09Z`, `mc:RELEASE.2025-08-13T08-35-41Z`)
-  répondent 401. Un serveur qui les a déjà en cache tourne, mais tout `pull`
-  (nouvelle machine, `docker system prune`) échouera. À re-épingler.
+- **MinIO tourne sur le fork `pgsty/minio`** (depuis le 2026-10-18) : MinIO ne publie
+  plus d'images, ni sur le Docker Hub ni sur quay.io (toutes les étiquettes y répondent
+  401). Vérifié en dev sur le volume existant : 166 clés de la base toutes présentes,
+  politique du bucket reposée (objet 200, inventaire 403), `backup.sh` fonctionnel.
+  **En production**, faire `./scripts/backup.sh` AVANT le premier
+  `docker compose ... up -d` qui changera l'image.
 - **`card_type` des cartes importées** : `scripts/referentiel.py` pose `emettrice`
   partout, alors que l'étape « Fusions » du studio filtre ses bandeaux par rôle.
   Un jeu importé n'y offre donc aucun ingrédient B ni produit.

@@ -179,7 +179,7 @@ echo "         OK  ($TAILLE_DUMP)"
 
 # --- 2. Les images ------------------------------------------
 # On reutilise le service `create_bucket` : c'est deja l'image
-# minio/mc, deja branchee au reseau interne, et ses cles S3 sont
+# mc (pgsty/mc), deja branchee au reseau interne, et ses cles S3 sont
 # deja injectees par compose. --no-deps evite de reveiller MinIO
 # si la stack est partiellement arretee, --entrypoint remplace
 # le script de creation du bucket.
