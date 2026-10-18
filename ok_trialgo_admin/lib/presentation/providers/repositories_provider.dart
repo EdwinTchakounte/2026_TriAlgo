@@ -28,6 +28,8 @@ import '../../data/repositories/http_game_repository.dart';
 import '../../data/repositories/http_node_repository.dart';
 import '../../data/repositories/http_admin_users_repository.dart';
 import '../../data/repositories/http_codes_repository.dart';
+import '../../data/repositories/fake_site_repository.dart';
+import '../../data/repositories/http_site_repository.dart';
 import '../../data/repositories/node_repository_impl.dart';
 import '../../data/repositories/unsupported_admin_repositories.dart';
 import '../../domain/repositories/admin_users_repository.dart';
@@ -36,6 +38,7 @@ import '../../domain/repositories/codes_repository.dart';
 import '../../domain/repositories/card_repository.dart';
 import '../../domain/repositories/game_repository.dart';
 import '../../domain/repositories/node_repository.dart';
+import '../../domain/repositories/site_repository.dart';
 
 // SupabaseClient global. Utilise UNIQUEMENT en ApiMode.supabase.
 // Lu via lateinit : Supabase.initialize doit avoir tourne dans main().
@@ -117,4 +120,25 @@ final adminUsersRepositoryProvider = Provider<AdminUsersRepository>((ref) {
   return ApiConfig.mode == ApiMode.fastapi
       ? HttpAdminUsersRepository()
       : const UnsupportedAdminUsersRepository();
+});
+
+// -----------------------------------------------------------
+// Vitrine du site : contenu editable de mixalgo.com.
+//
+// Contrairement aux codes et comptes, celui-ci a une variante
+// fake EN MEMOIRE : l'ecran est surtout du formulaire, et pouvoir
+// le manipuler sans serveur aide a le mettre au point. En mode
+// supabase, en revanche, on refuse explicitement (le contenu
+// n'existe que cote FastAPI).
+// -----------------------------------------------------------
+
+final siteRepositoryProvider = Provider<SiteRepository>((ref) {
+  switch (ApiConfig.mode) {
+    case ApiMode.fake:
+      return FakeSiteRepository();
+    case ApiMode.supabase:
+      return const UnsupportedSiteRepository();
+    case ApiMode.fastapi:
+      return HttpSiteRepository();
+  }
 });
