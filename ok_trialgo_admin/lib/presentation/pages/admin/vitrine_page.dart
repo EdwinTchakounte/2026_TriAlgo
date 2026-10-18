@@ -812,6 +812,15 @@ class _BoutonPublier extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ElevatedButton.icon(
+      // Le theme impose minimumSize: Size.fromHeight(48), soit une
+      // largeur minimale INFINIE (boutons pleine largeur des
+      // formulaires). Dans les actions d'une AppBar, cette largeur
+      // impossible effondrait toute la barre : ni titre, ni bouton,
+      // et la pastille « non publie » glissait sur la fleche retour.
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(0, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+      ),
       // Publier un document identique a celui en ligne n'a pas de
       // sens : le bouton ne s'active que s'il y a quelque chose a
       // envoyer.
