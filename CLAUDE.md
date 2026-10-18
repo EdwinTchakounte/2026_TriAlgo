@@ -80,7 +80,9 @@ alors que `login` et `refresh` les renvoient **à plat**. Ne pas confondre les d
 
 `auth` · `games` · `cards` (+`image`) · `nodes` (+`analyzer`) · `public` · `admin_users` ·
 `codes` · `user_games` (+`refill` vies) · `sessions_history` · `unlocked_cards` ·
-`played_nodes` · `stars` (+`regen`) · `collective` · `leaderboard` · `mail` · `storage`.
+`played_nodes` · `stars` (+`regen`) · `collective` · `leaderboard` · `mail` · `storage` ·
+`site` (contenu éditable de la vitrine : `GET /api/public/site/accueil`, `GET|PUT /api/admin/site/accueil`,
+`POST /api/admin/site/images` ; document JSONB unique validé par Pydantic, clés inconnues refusées).
 
 Il n'y a **pas** de module `app/play/` : la migration `0004_reset_play_extend_users` a supprimé
 `game_sessions`/`session_attempts` (modèle de gameplay abandonné). Le vrai gameplay passe par
@@ -602,6 +604,28 @@ ailleurs, et la deduction de libelle a ses tests unitaires.
 
 ---
 
+### Vitrine « l'image d'abord » et contenu editable (octobre 2026)
+
+- `vitrine/` refondue : illustrations ORIGINALES sans cadre (`assets/originaux/`,
+  rapatriees par `vitrine/outils/recuperer_originaux.py` depuis le jeu « MixAlgo
+  Puzzle 1 » en production), partie de demonstration jouable sur dix vrais trios du
+  referentiel, curseur neon, tiroir, visionneuse. Styles sortis dans
+  `styles/vitrine.css` (le vhost nginx a un bloc `/styles/`). Voir `vitrine/README.md`.
+- Module backend `site` + migration `0011` : `GET /api/public/site/accueil`,
+  `GET|PUT /api/admin/site/accueil`, `POST /api/admin/site/images`. Document JSON
+  unique, `extra="forbid"`, images http(s) seulement.
+- Studio : ecran « Vitrine du site » (icone vitrine dans la barre du hub) pour
+  editer textes et galerie. Les 3 premieres images = eventail du hero.
+
+### Studio : deux defauts corriges
+
+- Les bandeaux horizontaux de cartes (etape Fusions) ne defilaient ni a la souris
+  ni a la molette sur le web : les cartes au-dela de l'ecran etaient inatteignables.
+  Widget `HorizontalStrip` (barre visible, glisser souris, molette).
+- L'apercu de l'arbre n'affichait que la premiere racine : `graphview`
+  (BuchheimWalker) ne part que du premier noeud sans parent. Une racine virtuelle
+  rattache toutes les D1, et le graphe est cadre en entier a l'ouverture.
+
 ## 8. Points ouverts
 
 - Le paquet `supabase_flutter` reste une dépendance de `pubspec.yaml` : le mode `supabase`
@@ -637,6 +661,14 @@ ailleurs, et la deduction de libelle a ses tests unitaires.
 - L'app joueur en Flutter web : `device_info_plus` n'y fournit pas d'identifiant stable, donc le
   binding « un code d'activation = un appareil » ne tient pas. Le studio admin en web, lui, est
   sans problème.
+- **Images MinIO introuvables sur quay.io** (constaté le 2026-10-18) : les tags
+  épinglés dans `docker-compose.yml` et `docker-compose.prod.yml`
+  (`minio:RELEASE.2025-09-07T16-13-09Z`, `mc:RELEASE.2025-08-13T08-35-41Z`)
+  répondent 401. Un serveur qui les a déjà en cache tourne, mais tout `pull`
+  (nouvelle machine, `docker system prune`) échouera. À re-épingler.
+- **`card_type` des cartes importées** : `scripts/referentiel.py` pose `emettrice`
+  partout, alors que l'étape « Fusions » du studio filtre ses bandeaux par rôle.
+  Un jeu importé n'y offre donc aucun ingrédient B ni produit.
 - `README.md` du backend : la section « Play » décrit des endpoints (`/api/sessions/...`) qui
   n'existent plus depuis la migration `0004`.
 
